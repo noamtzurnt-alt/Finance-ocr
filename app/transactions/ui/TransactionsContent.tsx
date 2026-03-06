@@ -11,7 +11,7 @@ export default async function TransactionsContent(props: { userId: string }) {
     prisma.transaction.findMany({
       where: { userId: props.userId },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      take: 100,
+      take: 100_000,
       include: { category: { select: { name: true } } },
     }),
   ]);

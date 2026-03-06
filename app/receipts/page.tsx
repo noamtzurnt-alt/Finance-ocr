@@ -13,7 +13,7 @@ export default async function ReceiptsPage(props: { searchParams?: Promise<{ all
   if (!user) redirect("/login");
 
   const sp = (await props.searchParams) ?? {};
-  const showAll = sp.all === "1";
+  const showAll = sp.all !== "0";
 
   return (
     <div className="space-y-6">
@@ -27,7 +27,7 @@ export default async function ReceiptsPage(props: { searchParams?: Promise<{ all
           <Link className="btn btn-primary" href="/receipts/upload">
             קבלת החזר מס חדשה
           </Link>
-          <Link className="btn" href={showAll ? "/receipts" : "/receipts?all=1"}>
+          <Link className="btn" href={showAll ? "/receipts?all=0" : "/receipts"}>
             {showAll ? "הצג החודש" : "הצג הכל"}
           </Link>
           <Link className="btn" href="/dashboard">

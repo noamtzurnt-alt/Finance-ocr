@@ -10,7 +10,8 @@ export default async function InvoicesPage(props: { searchParams?: Promise<{ all
   if (!user) redirect("/login");
 
   const sp = (await props.searchParams) ?? {};
-  const showAll = sp.all === "1";
+  // Default to "show all" so newly saved invoices are visible (no month filter)
+  const showAll = sp.all !== "0";
 
   return (
     <div className="space-y-6">
@@ -24,7 +25,7 @@ export default async function InvoicesPage(props: { searchParams?: Promise<{ all
           <Link className="btn btn-primary" href="/invoices/upload">
             חשבונית חדשה
           </Link>
-          <Link className="btn" href={showAll ? "/invoices" : "/invoices?all=1"}>
+          <Link className="btn" href={showAll ? "/invoices?all=0" : "/invoices"}>
             {showAll ? "הצג החודש" : "הצג הכל"}
           </Link>
           <Link className="btn" href="/dashboard">

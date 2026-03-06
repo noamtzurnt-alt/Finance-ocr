@@ -7,7 +7,7 @@ import { deleteObject, getObjectReadUrl } from "@/app/lib/r2/objects";
 const numOrStr = z.union([z.string(), z.number()]).transform((v) => (typeof v === "string" ? parseFloat(v) : v));
 
 const updateSchema = z.object({
-  type: z.enum(["expense", "income"]).optional(),
+  type: z.enum(["expense", "income", "payment_receipt"]).optional(),
   date: z.string().optional(), // YYYY-MM-DD
   amount: numOrStr.optional(),
   vatAmount: numOrStr.optional(),

@@ -46,6 +46,16 @@ export default async function SettingsPage() {
       </div>
 
       <div className="card p-4">
+        <h2 className="text-lg font-medium text-zinc-900">WhatsApp ל-Production</h2>
+        <p className="mt-1 text-sm text-zinc-600">
+          כדי שלקוחות יוכלו לשלוח קבלות למספר משלך בלי Sandbox ו-&quot;join&quot; – צריך לחבר Meta Business, WhatsApp Business Account ו-Twilio.
+        </p>
+        <Link href="/settings/whatsapp-setup" className="btn btn-primary mt-3">
+          מדריך הגדרת WhatsApp ל-Production
+        </Link>
+      </div>
+
+      <div className="card p-4">
         <h2 className="text-lg font-medium text-zinc-900">כניסה עם Face ID / Touch ID</h2>
         <p className="mt-1 text-sm text-zinc-600">
           ניתן להוסיף כניסה מהירה עם Face ID (טלפון) או Touch ID (מחשב) בעמוד אוצר סיסמאות.

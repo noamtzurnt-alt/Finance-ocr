@@ -19,7 +19,7 @@ export default async function ReceiptsTable(props: { userId: string; showAll: bo
     prisma.document.findMany({
       where,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-      take: props.showAll ? 200 : 50,
+      take: props.showAll ? 100_000 : 50,
       select: { id: true, date: true, vendor: true, amount: true, currency: true, description: true, ocrStatus: true, ocrText: true },
     }),
     prisma.document.aggregate({

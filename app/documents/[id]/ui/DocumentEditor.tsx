@@ -8,8 +8,7 @@ import { parseReceiptText } from "@/app/lib/ocr/parse";
 type Category = { id: string; name: string };
 
 type DocData = {
-  id: string;
-  type: "expense" | "income";
+  id: string;  type: "expense" | "income" | "payment_receipt";
   date: string;
   amount: string;
   vatAmount: string;

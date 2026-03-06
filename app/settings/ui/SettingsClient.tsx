@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 type BusinessType = "exempt" | "licensed" | "company";
 
@@ -106,6 +107,12 @@ export default function SettingsClient({ initial }: SettingsProps) {
         />
         <p className="mt-1 text-xs text-zinc-500">
           כשהלקוח שולח תמונת קבלה למספר הזה (ה־WhatsApp העסקי שלך ב־Twilio), הקבלה נשמרת אוטומטית באתר שלך. הלקוח לא נכנס לאתר בכלל.
+        </p>
+        <p className="mt-1 text-xs text-zinc-500">
+          ל-Production (מספר משלך, לקוחות בלי &quot;join&quot;): צריך לחבר Meta Business + WhatsApp Business + Twilio.{" "}
+          <Link href="/settings/whatsapp-setup" className="underline font-medium text-zinc-700 hover:text-zinc-900">
+            מדריך הגדרת WhatsApp ל-Production
+          </Link>
         </p>
       </div>
 
