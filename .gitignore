@@ -22,7 +22,6 @@
 
 # misc
 .DS_Store
-*.pem
 
 # debug
 npm-debug.log*
@@ -30,8 +29,18 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env & secrets — never commit real values
+.env
+.env.*
+!.env.example
+*.pem
+# Google / service account JSON files (often placed in repo root by mistake)
+*credentials*.json
+service-account*.json
+google-service-account*.json
+# Local secret dumps
+secrets/
+*.secret
 
 # vercel
 .vercel
@@ -41,4 +50,3 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
-.env*.local
