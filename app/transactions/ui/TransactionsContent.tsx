@@ -3,8 +3,11 @@ import TransactionsClient from "./TransactionsClient";
 
 const DEFAULT_CATEGORIES = ["כללי", "אוכל", "רכב/דלק", "תוכנות/מנויים", "בגדים"];
 
+// Remember which users already have default categories (within this server instance lifetime)
+const ensuredUsers = new Set<string>();
+
 async function ensureDefaultCategories(userId: string) {
-  // Single cheap query — only create defaults if "כללי" doesn't exist yet
+  if (ensuredUsers.has(userId)) return; // already done this instance
   const exists = await prisma.category.findFirst({ where: { userId, name: "כללי" }, select: { id: true } });
   if (!exists) {
     await prisma.category.createMany({
@@ -12,6 +15,7 @@ async function ensureDefaultCategories(userId: string) {
       skipDuplicates: true,
     });
   }
+  ensuredUsers.add(userId);
 }
 
 export default async function TransactionsContent(props: { userId: string }) {

@@ -46,7 +46,7 @@
     "eslint-config-next": "16.1.5",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vercel": "^50.9.6"
+    "vercel": "^53.1.0"
   },
   "overrides": {
     "fast-xml-parser": ">=5.3.4",
