@@ -42,6 +42,16 @@ export default function TransactionsClient(props: { categories: Category[] }) {
   const [saving, setSaving] = useState(false);
   const editRef = useRef<HTMLTableRowElement | null>(null);
 
+  const sortedCategories = useMemo(() => {
+    const sorted = [...props.categories];
+    sorted.sort((a, b) => {
+      if (a.name === "כללי") return -1;
+      if (b.name === "כללי") return 1;
+      return a.name.localeCompare(b.name, "he");
+    });
+    return sorted;
+  }, [props.categories]);
+
   const defaultCategoryId = useMemo(
     () => props.categories.find((c) => c.name === "כללי")?.id ?? props.categories[0]?.id ?? "",
     [props.categories],
@@ -234,7 +244,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
           <label className="text-sm font-medium">קטגוריה</label>
           <select className="field mt-1" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
             {props.categories.length === 0 && <option value="">אין קטגוריות — הוסף בעמוד קטגוריות</option>}
-            {props.categories.map((c) => (
+            {sortedCategories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
               </option>
@@ -359,7 +369,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
                         <td className="px-2 py-2">
                           <select className="field" value={editState.categoryId} onChange={(e) => setEditState({ ...editState, categoryId: e.target.value })}>
                             <option value="">—</option>
-                            {props.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                           </select>
                         </td>
                         <td className="px-2 py-2">
