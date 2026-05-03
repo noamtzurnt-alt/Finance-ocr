@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 function monthLabelFromKey(key: string) {
   // key: YYYY-MM
@@ -24,18 +24,42 @@ type Row = {
   updatedAt: string;
 };
 
+type EditState = {
+  id: string;
+  date: string;
+  amount: string;
+  vendor: string;
+  description: string;
+  categoryId: string;
+  cardLast4: string;
+};
+
 export default function TransactionsClient(props: { categories: Category[]; initial: Row[] }) {
   const [items, setItems] = useState<Row[]>(props.initial);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editState, setEditState] = useState<EditState | null>(null);
+  const [saving, setSaving] = useState(false);
+  const editRef = useRef<HTMLTableRowElement | null>(null);
+
+  const defaultCategoryId = useMemo(
+    () => props.categories.find((c) => c.name === "כללי")?.id ?? props.categories[0]?.id ?? "",
+    [props.categories],
+  );
 
   const today = useMemo(() => new Date(), []);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [amount, setAmount] = useState("");
   const [vendor, setVendor] = useState("");
   const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [categoryId, setCategoryId] = useState(defaultCategoryId);
   const [cardLast4, setCardLast4] = useState("7374");
+
+  // Keep categoryId in sync when categories load
+  useEffect(() => {
+    if (!categoryId && defaultCategoryId) setCategoryId(defaultCategoryId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultCategoryId]);
 
   const [filterYear, setFilterYear] = useState(String(new Date().getFullYear()));
   const [filterMonth, setFilterMonth] = useState(String(new Date().getMonth() + 1));
@@ -110,6 +134,65 @@ export default function TransactionsClient(props: { categories: Category[]; init
     if (res.ok) setItems((prev) => prev.filter((x) => x.id !== id));
   }
 
+  function startEdit(t: Row) {
+    setEditState({
+      id: t.id,
+      date: t.date,
+      amount: t.amount,
+      vendor: t.vendor,
+      description: t.description ?? "",
+      categoryId: t.categoryId ?? "",
+      cardLast4: t.cardLast4 ?? "",
+    });
+    setTimeout(() => editRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+  }
+
+  function cancelEdit() {
+    setEditState(null);
+  }
+
+  async function saveEdit() {
+    if (!editState) return;
+    setSaving(true);
+    setError(null);
+    const res = await fetch(`/api/transactions/${editState.id}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        date: editState.date,
+        amount: editState.amount,
+        vendor: editState.vendor,
+        description: editState.description || null,
+        categoryId: editState.categoryId || null,
+        cardLast4: editState.cardLast4 || null,
+      }),
+    });
+    setSaving(false);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setError(body?.error ?? "שגיאת שמירה");
+      return;
+    }
+    const updatedCategory = props.categories.find((c) => c.id === editState.categoryId) ?? null;
+    setItems((prev) =>
+      prev.map((x) =>
+        x.id === editState.id
+          ? {
+              ...x,
+              date: editState.date,
+              amount: editState.amount,
+              vendor: editState.vendor,
+              description: editState.description || null,
+              categoryId: editState.categoryId || null,
+              categoryName: updatedCategory?.name ?? null,
+              cardLast4: editState.cardLast4 || null,
+            }
+          : x,
+      ),
+    );
+    setEditState(null);
+  }
+
   return (
     <div className="space-y-6">
       <form onSubmit={create} className="grid gap-3 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-4 lg:grid-cols-6">
@@ -140,7 +223,7 @@ export default function TransactionsClient(props: { categories: Category[]; init
         <div className="lg:col-span-3">
           <label className="text-sm font-medium">קטגוריה</label>
           <select className="field mt-1" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
-            <option value="">בחר קטגוריה…</option>
+            {props.categories.length === 0 && <option value="">אין קטגוריות — הוסף בעמוד קטגוריות</option>}
             {props.categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -251,25 +334,66 @@ export default function TransactionsClient(props: { categories: Category[]; init
                       </tr>,
                     );
                   }
-                  out.push(
-                    <tr key={t.id} className="border-t border-zinc-100 hover:bg-zinc-50/60">
-                      <td className="px-3 py-2">{t.date}</td>
-                      <td className="px-3 py-2">
-                        <div className="font-medium text-zinc-900">{t.vendor}</div>
-                        {t.description ? <div className="mt-0.5 text-xs text-zinc-600">{t.description}</div> : null}
-                      </td>
-                      <td className="px-3 py-2">{t.categoryName ?? "—"}</td>
-                      <td className="px-3 py-2">
-                        {t.amount} <span className="text-xs text-zinc-600">{t.currency}</span>
-                      </td>
-                      <td className="px-3 py-2">{t.cardLast4 ? `•••• ${t.cardLast4}` : "—"}</td>
-                      <td className="px-3 py-2">
-                        <button className="btn" type="button" onClick={() => void remove(t.id)}>
-                          מחק
-                        </button>
-                      </td>
-                    </tr>,
-                  );
+                  const isEditing = editState?.id === t.id;
+
+                  if (isEditing) {
+                    out.push(
+                      <tr key={`edit-${t.id}`} ref={editRef} className="border-t border-blue-200 bg-blue-50/60">
+                        <td className="px-2 py-2">
+                          <input className="field w-28" type="date" value={editState.date} onChange={(e) => setEditState({ ...editState, date: e.target.value })} />
+                        </td>
+                        <td className="px-2 py-2 space-y-1">
+                          <input className="field w-full" value={editState.vendor} onChange={(e) => setEditState({ ...editState, vendor: e.target.value })} placeholder="בית עסק" />
+                          <input className="field w-full" value={editState.description} onChange={(e) => setEditState({ ...editState, description: e.target.value })} placeholder="הערה (אופציונלי)" />
+                        </td>
+                        <td className="px-2 py-2">
+                          <select className="field" value={editState.categoryId} onChange={(e) => setEditState({ ...editState, categoryId: e.target.value })}>
+                            <option value="">—</option>
+                            {props.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-2 py-2">
+                          <input className="field w-24" value={editState.amount} onChange={(e) => setEditState({ ...editState, amount: e.target.value })} inputMode="decimal" placeholder="סכום" />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input className="field w-20" value={editState.cardLast4} onChange={(e) => setEditState({ ...editState, cardLast4: e.target.value })} placeholder="4 ספרות" maxLength={4} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <div className="flex gap-1">
+                            <button className="btn btn-primary" type="button" onClick={() => void saveEdit()} disabled={saving}>
+                              {saving ? "…" : "שמור"}
+                            </button>
+                            <button className="btn" type="button" onClick={cancelEdit}>ביטול</button>
+                          </div>
+                        </td>
+                      </tr>,
+                    );
+                  } else {
+                    out.push(
+                      <tr key={t.id} className="border-t border-zinc-100 hover:bg-zinc-50/60">
+                        <td className="px-3 py-2">{t.date}</td>
+                        <td className="px-3 py-2">
+                          <div className="font-medium text-zinc-900">{t.vendor}</div>
+                          {t.description ? <div className="mt-0.5 text-xs text-zinc-600">{t.description}</div> : null}
+                        </td>
+                        <td className="px-3 py-2">{t.categoryName ?? "—"}</td>
+                        <td className="px-3 py-2">
+                          {t.amount} <span className="text-xs text-zinc-600">{t.currency}</span>
+                        </td>
+                        <td className="px-3 py-2">{t.cardLast4 ? `•••• ${t.cardLast4}` : "—"}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex gap-1">
+                            <button className="btn" type="button" onClick={() => startEdit(t)} title="ערוך">
+                              ✏️
+                            </button>
+                            <button className="btn" type="button" onClick={() => void remove(t.id)}>
+                              מחק
+                            </button>
+                          </div>
+                        </td>
+                      </tr>,
+                    );
+                  }
                 }
                 return out;
               })()

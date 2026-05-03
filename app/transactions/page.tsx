@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import TransactionsContent from "./ui/TransactionsContent";
 
+export const dynamic = "force-dynamic";
+
 export default async function TransactionsPage() {
   const user = await requireUser();
   if (!user) redirect("/login");

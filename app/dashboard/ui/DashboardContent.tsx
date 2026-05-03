@@ -1,5 +1,6 @@
 import { prisma } from "@/app/lib/prisma";
 import Link from "next/link";
+import DashboardCards from "./DashboardCards";
 
 function monthLabel(d: Date) {
   return new Intl.DateTimeFormat("he-IL", { month: "long", year: "numeric" }).format(d);
@@ -10,7 +11,7 @@ export default async function DashboardContent(props: { userId: string; now: Dat
   const end = new Date(props.now.getFullYear(), props.now.getMonth() + 1, 1);
   const month = `${props.now.getFullYear()}-${String(props.now.getMonth() + 1).padStart(2, "0")}`;
 
-  const [budget, recentTx, sums] = await Promise.all([
+  const [budget, recentTx, docSums, txSums] = await Promise.all([
     prisma.budget.findUnique({
       where: { userId_month: { userId: props.userId, month } },
       select: { expenseLimit: true },
@@ -20,63 +21,43 @@ export default async function DashboardContent(props: { userId: string; now: Dat
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       take: 10,
     }),
+    // Documents: income (חשבוניות) + expense (קבלות החזר מס)
     prisma.document.groupBy({
       by: ["type"],
       where: { userId: props.userId, date: { gte: start, lt: end } },
       _sum: { amount: true },
     }),
+    // Transactions: expenses this month
+    prisma.transaction.aggregate({
+      where: { userId: props.userId, date: { gte: start, lt: end } },
+      _sum: { amount: true },
+    }),
   ]);
 
-  const income = sums.find((s) => s.type === "income")?._sum.amount?.toString() ?? "0";
-  const expense = sums.find((s) => s.type === "expense")?._sum.amount?.toString() ?? "0";
-  const net = (Number(income) - Number(expense)).toFixed(2);
+  // הכנסות = חשבוניות (income documents) בלבד
+  const incomeFromDocs = Number(docSums.find((s) => s.type === "income")?._sum.amount ?? 0);
+  // הוצאות = קבלות החזר מס (expense docs) + תנועות (transactions)
+  const expenseFromDocs = Number(docSums.find((s) => s.type === "expense")?._sum.amount ?? 0);
+  const expenseFromTx = Number(txSums._sum.amount ?? 0);
+  const totalExpense = (expenseFromDocs + expenseFromTx).toFixed(2);
+  const income = incomeFromDocs.toFixed(2);
+  const net = (incomeFromDocs - expenseFromDocs - expenseFromTx).toFixed(2);
+
   const budgetLimit = budget?.expenseLimit?.toString() ?? "";
   const pct =
-    budgetLimit && Number(budgetLimit) > 0 ? Math.min(100, Math.round((Number(expense) / Number(budgetLimit)) * 100)) : 0;
+    budgetLimit && Number(budgetLimit) > 0
+      ? Math.min(100, Math.round((Number(totalExpense) / Number(budgetLimit)) * 100))
+      : 0;
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-4">
-        <div className="card p-4">
-          <div className="text-sm text-zinc-600">הכנסות החודש</div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">{income}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-zinc-600">הוצאות החודש</div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">{expense}</div>
-        </div>
-        <div className="card p-4">
-          <div className="text-sm text-zinc-600">נטו</div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">{net}</div>
-        </div>
-        <div className="card p-4">
-          <div className="flex items-center justify-between gap-2">
-            <div className="text-sm text-zinc-600">תקציב החודש</div>
-            <Link className="text-xs underline" href="/budget">
-              עריכה
-            </Link>
-          </div>
-          <div className="mt-2 text-3xl font-semibold tracking-tight text-zinc-900">{budgetLimit ? budgetLimit : "—"}</div>
-          {budgetLimit ? (
-            <div className="mt-2">
-              <div className="flex items-center justify-between text-xs text-zinc-600">
-                <span>נוצל</span>
-                <span className={pct >= 100 ? "text-red-700" : pct >= 80 ? "text-amber-700" : "text-zinc-700"}>
-                  {pct}%
-                </span>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-zinc-200">
-                <div
-                  className={`h-full ${pct >= 100 ? "bg-red-600" : pct >= 80 ? "bg-amber-500" : "bg-emerald-600"}`}
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="mt-2 text-xs text-zinc-600">הגדר תקציב כדי לראות התקדמות.</div>
-          )}
-        </div>
-      </div>
+      <DashboardCards
+        income={income}
+        expense={totalExpense}
+        net={net}
+        budgetLimit={budgetLimit}
+        pct={pct}
+      />
 
       <div className="card p-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -147,4 +128,3 @@ export default async function DashboardContent(props: { userId: string; now: Dat
     </>
   );
 }
-

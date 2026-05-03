@@ -5,6 +5,8 @@ import LiveRefresh from "@/app/ui/LiveRefresh";
 import { Suspense } from "react";
 import DashboardContent from "./ui/DashboardContent";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const user = await requireUser();
   if (!user) redirect("/login");
