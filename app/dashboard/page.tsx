@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/app/lib/auth/server";
 import LogoutButton from "./ui/LogoutButton";
 import LiveRefresh from "@/app/ui/LiveRefresh";
-import { Suspense } from "react";
 import DashboardContent from "./ui/DashboardContent";
 
 export const dynamic = "force-dynamic";
@@ -11,14 +10,12 @@ export default async function DashboardPage() {
   const user = await requireUser();
   if (!user) redirect("/login");
 
-  const now = new Date();
-
   const todayLabel = new Intl.DateTimeFormat("he-IL", {
     weekday: "long",
     day: "2-digit",
     month: "long",
     year: "numeric",
-  }).format(now);
+  }).format(new Date());
 
   return (
     <div className="space-y-6">
@@ -33,20 +30,8 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <Suspense
-        fallback={
-          <div className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-24 animate-pulse rounded-2xl border border-zinc-200/70 bg-white" />
-              ))}
-            </div>
-            <div className="h-72 animate-pulse rounded-2xl border border-zinc-200/70 bg-white" />
-          </div>
-        }
-      >
-        <DashboardContent userId={user.id} now={now} />
-      </Suspense>
+      {/* DashboardContent is a client component — fetches data after page load, no DB wait */}
+      <DashboardContent />
     </div>
   );
 }

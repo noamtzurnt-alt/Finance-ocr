@@ -34,9 +34,9 @@ type EditState = {
   cardLast4: string;
 };
 
-export default function TransactionsClient(props: { categories: Category[]; initial: Row[] }) {
-  const [items, setItems] = useState<Row[]>(props.initial);
-  const [loading, setLoading] = useState(false);
+export default function TransactionsClient(props: { categories: Category[] }) {
+  const [items, setItems] = useState<Row[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -55,11 +55,26 @@ export default function TransactionsClient(props: { categories: Category[]; init
   const [categoryId, setCategoryId] = useState(defaultCategoryId);
   const [cardLast4, setCardLast4] = useState("7374");
 
-  // Keep categoryId in sync when categories load
+  // Keep categoryId in sync when categories load, and fetch initial data
   useEffect(() => {
     if (!categoryId && defaultCategoryId) setCategoryId(defaultCategoryId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultCategoryId]);
+
+  // Fetch current month's transactions on mount
+  useEffect(() => {
+    const now = new Date();
+    const qs = new URLSearchParams({
+      limit: "200",
+      year: String(now.getFullYear()),
+      month: String(now.getMonth() + 1),
+    });
+    fetch(`/api/transactions?${qs.toString()}`)
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((data: Row[]) => { setItems(data); setLoading(false); })
+      .catch(() => { setError("שגיאה בטעינת תנועות"); setLoading(false); });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [filterYear, setFilterYear] = useState(String(new Date().getFullYear()));
   const [filterMonth, setFilterMonth] = useState(String(new Date().getMonth() + 1));
@@ -75,11 +90,6 @@ export default function TransactionsClient(props: { categories: Category[]; init
     const mm = String(filterMonth).padStart(2, "0");
     return monthLabelFromKey(`${filterYear}-${mm}`);
   }, [filterYear, filterMonth]);
-
-  useEffect(() => {
-    setItems(props.initial);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(props.initial)]);
 
   async function reload() {
     setLoading(true);
