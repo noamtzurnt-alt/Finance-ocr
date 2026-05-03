@@ -12,16 +12,14 @@ export default async function TransactionsPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <LiveRefresh />
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="section-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">תנועות אחרונות</h1>
-          <p className="mt-1 text-sm text-zinc-600">העמוד נטען בהדרגה — הרשימה תופיע מיד כשמוכן.</p>
+          <h1 className="section-title">תנועות</h1>
+          <p className="section-sub">הוסף, ערוך וחפש תנועות</p>
         </div>
-        <Link className="btn" href="/dashboard">
-          דשבורד
-        </Link>
+        <Link className="btn" href="/dashboard">← דשבורד</Link>
       </div>
 
       <Suspense

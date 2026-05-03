@@ -1,188 +1,337 @@
 @import "tailwindcss";
 
 :root {
-  /* Modern light theme */
-  --background: #f7f8fb;
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface2: #f8f9fb;
+  --border: rgba(15, 23, 42, 0.09);
   --foreground: #0f172a;
-  --surface: rgba(255, 255, 255, 0.86);
-  --surfaceSolid: #ffffff;
-  --border: rgba(15, 23, 42, 0.10);
-  --muted: rgba(15, 23, 42, 0.60);
-  --primary: #4f46e5; /* indigo-600 */
-  --primary2: #06b6d4; /* cyan-500 */
-  --ring: rgba(79, 70, 229, 0.35);
+  --muted: #64748b;
+
+  /* Sidebar */
+  --sidebar-bg: #0f172a;
+  --sidebar-border: rgba(255,255,255,0.07);
+  --sidebar-text: rgba(255,255,255,0.72);
+  --sidebar-text-active: #ffffff;
+  --sidebar-active-bg: rgba(255,255,255,0.1);
+  --sidebar-hover-bg: rgba(255,255,255,0.06);
+
+  /* Accents */
+  --indigo: #6366f1;
+  --indigo-dark: #4f46e5;
+  --cyan: #06b6d4;
+  --ring: rgba(99,102,241,0.3);
 
   color-scheme: light;
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --color-background: var(--bg);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+* { box-sizing: border-box; }
+
 body {
   color: var(--foreground);
+  background: var(--bg);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-}
-
-/* Default RTL for Hebrew UI */
-body {
   direction: rtl;
   text-align: start;
+  -webkit-font-smoothing: antialiased;
 }
 
 @layer base {
-  html,
-  body {
-    height: 100%;
-  }
+  html, body { height: 100%; }
 }
 
 @layer components {
-  /* App background */
+
+  /* ─── Shell ───────────────────────────────── */
   .app-shell {
     min-height: 100dvh;
-    background:
-      radial-gradient(900px 500px at 80% -10%, color-mix(in srgb, var(--primary2) 20%, transparent), transparent 60%),
-      radial-gradient(900px 500px at 10% 0%, color-mix(in srgb, var(--primary) 18%, transparent), transparent 60%),
-      linear-gradient(180deg, #ffffff, var(--background));
+    background: var(--bg);
   }
 
+  /* ─── Top bar ─────────────────────────────── */
   .app-topbar {
     position: sticky;
     top: 0;
     z-index: 40;
-    background: color-mix(in srgb, #ffffff 70%, transparent);
-    backdrop-filter: blur(12px);
+    background: color-mix(in srgb, #ffffff 85%, transparent);
+    backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--border);
   }
 
-  .brand-badge {
-    width: 12px;
-    height: 12px;
-    border-radius: 9999px;
-    background: linear-gradient(135deg, var(--primary), var(--primary2));
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 16%, transparent);
+  /* ─── Sidebar ─────────────────────────────── */
+  .sidebar {
+    background: var(--sidebar-bg);
+    border-radius: 1.25rem;
+    overflow: hidden;
+    position: sticky;
+    top: 6rem;
+    height: fit-content;
   }
 
-  /* Cards */
+  .sidebar-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 1.25rem 1rem 0.75rem;
+  }
+
+  .sidebar-logo-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.625rem;
+    background: linear-gradient(135deg, var(--indigo), var(--cyan));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+    flex-shrink: 0;
+  }
+
+  .sidebar-section-label {
+    padding: 0.75rem 1rem 0.375rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.3);
+  }
+
+  .sidebar-nav {
+    padding: 0 0.5rem 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    color: var(--sidebar-text);
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background 120ms ease, color 120ms ease;
+  }
+  .nav-link:hover {
+    background: var(--sidebar-hover-bg);
+    color: var(--sidebar-text-active);
+  }
+  .nav-link-active {
+    background: var(--sidebar-active-bg);
+    color: var(--sidebar-text-active);
+  }
+
+  .nav-icon {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.07);
+    color: rgba(255,255,255,0.6);
+    transition: background 120ms, color 120ms;
+  }
+  .nav-link:hover .nav-icon {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+  }
+  .nav-icon-active {
+    background: linear-gradient(135deg, var(--indigo), var(--cyan)) !important;
+    color: #fff !important;
+    box-shadow: 0 3px 8px rgba(99,102,241,0.35);
+  }
+
+  /* brand badge (topbar) */
+  .brand-badge {
+    width: 10px;
+    height: 10px;
+    border-radius: 9999px;
+    background: linear-gradient(135deg, var(--indigo), var(--cyan));
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+  }
+
+  /* ─── Cards ───────────────────────────────── */
   .card {
     border-radius: 1rem;
     border: 1px solid var(--border);
-    background: var(--surfaceSolid);
-    box-shadow:
-      0 1px 0 rgba(15, 23, 42, 0.03),
-      0 10px 30px rgba(15, 23, 42, 0.06);
-  }
-  .card-soft {
     background: var(--surface);
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.05);
+  }
+
+  .card-soft {
+    background: rgba(255,255,255,0.7);
     backdrop-filter: blur(10px);
   }
 
-  /* Buttons */
+  /* Stat card number */
+  .stat-value {
+    font-size: 1.875rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    margin-top: 0.625rem;
+  }
+
+  .stat-label {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.01em;
+  }
+
+  /* ─── Buttons ─────────────────────────────── */
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 0.9rem;
-    padding: 0.55rem 0.9rem;
+    border-radius: 0.75rem;
+    padding: 0.5rem 0.875rem;
     font-size: 0.875rem;
     font-weight: 600;
     border: 1px solid var(--border);
-    background: var(--surfaceSolid);
+    background: var(--surface);
     color: var(--foreground);
-    transition: transform 120ms ease, background 120ms ease, box-shadow 120ms ease;
+    transition: background 120ms, box-shadow 120ms, transform 80ms;
+    cursor: pointer;
   }
   .btn:hover {
-    background: color-mix(in srgb, #000 3%, var(--surfaceSolid));
+    background: #f1f3f6;
+    box-shadow: 0 2px 8px rgba(15,23,42,0.07);
   }
-  .btn:active {
-    transform: translateY(1px);
-  }
+  .btn:active { transform: translateY(1px); }
   .btn:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 4px var(--ring);
+    box-shadow: 0 0 0 3px var(--ring);
   }
 
   .btn-primary {
-    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
-    background: linear-gradient(135deg, var(--primary), var(--primary2));
+    border-color: transparent;
+    background: linear-gradient(135deg, var(--indigo-dark), var(--indigo));
     color: white;
-    box-shadow:
-      0 6px 20px color-mix(in srgb, var(--primary) 20%, transparent),
-      0 1px 0 rgba(0, 0, 0, 0.06);
+    box-shadow: 0 4px 14px rgba(99,102,241,0.3);
   }
   .btn-primary:hover {
-    filter: saturate(1.05);
-    background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 92%, #000), var(--primary2));
+    background: linear-gradient(135deg, var(--indigo), #818cf8);
+    box-shadow: 0 6px 18px rgba(99,102,241,0.38);
   }
 
   .btn-ghost {
     background: transparent;
     border-color: transparent;
   }
-  .btn-ghost:hover {
-    background: color-mix(in srgb, #000 6%, transparent);
-  }
+  .btn-ghost:hover { background: rgba(15,23,42,0.05); }
 
-  /* Inputs */
+  .btn-danger {
+    border-color: transparent;
+    background: #fee2e2;
+    color: #dc2626;
+  }
+  .btn-danger:hover { background: #fecaca; }
+
+  /* ─── Inputs ──────────────────────────────── */
   .field {
     width: 100%;
-    border-radius: 0.9rem;
+    border-radius: 0.75rem;
     border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.92);
-    padding: 0.6rem 0.8rem;
-    font-size: 0.95rem;
+    background: var(--surface2);
+    padding: 0.575rem 0.75rem;
+    font-size: 0.9rem;
     color: var(--foreground);
-    transition: box-shadow 120ms ease, border-color 120ms ease;
+    transition: box-shadow 120ms, border-color 120ms;
   }
-  .field::placeholder {
-    color: color-mix(in srgb, var(--foreground) 45%, transparent);
-  }
+  .field::placeholder { color: #94a3b8; }
   .field:focus {
     outline: none;
-    box-shadow: 0 0 0 4px var(--ring);
-    border-color: color-mix(in srgb, var(--primary) 55%, var(--border));
+    background: #fff;
+    box-shadow: 0 0 0 3px var(--ring);
+    border-color: var(--indigo);
   }
 
-  /* Nav */
-  .nav-link {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    border-radius: 0.9rem;
-    padding: 0.65rem 0.75rem;
-    color: color-mix(in srgb, var(--foreground) 80%, transparent);
-    transition: background 120ms ease, color 120ms ease;
+  /* ─── Table ───────────────────────────────── */
+  .data-table {
+    width: 100%;
+    font-size: 0.875rem;
+    border-collapse: collapse;
   }
-  .nav-link:hover {
-    background: color-mix(in srgb, var(--primary) 8%, transparent);
-    color: var(--foreground);
+  .data-table thead tr {
+    background: var(--surface2);
   }
-  .nav-link-active {
-    background: color-mix(in srgb, var(--primary) 12%, transparent);
-    color: var(--foreground);
-    border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+  .data-table thead th {
+    padding: 0.625rem 0.875rem;
+    text-align: right;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
   }
-  .nav-icon {
+  .data-table tbody tr {
+    border-top: 1px solid var(--border);
+    transition: background 80ms;
+  }
+  .data-table tbody tr:hover { background: #f8f9fb; }
+  .data-table tbody td {
+    padding: 0.7rem 0.875rem;
+    vertical-align: middle;
+  }
+
+  /* ─── Category badge ──────────────────────── */
+  .cat-badge {
     display: inline-flex;
-    height: 2rem;
-    width: 2rem;
     align-items: center;
-    justify-content: center;
-    border-radius: 0.85rem;
-    border: 1px solid var(--border);
-    background: rgba(255, 255, 255, 0.9);
-  }
-  .nav-icon-active {
-    border-color: color-mix(in srgb, var(--primary) 25%, var(--border));
-    background: color-mix(in srgb, var(--primary) 10%, rgba(255, 255, 255, 0.9));
+    border-radius: 999px;
+    padding: 0.175rem 0.6rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
   }
 
-  /* Device preview (iPhone 15 Pro – CSS pixels) */
+  /* ─── Section header ──────────────────────── */
+  .section-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .section-title {
+    font-size: 1.375rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--foreground);
+  }
+  .section-sub {
+    font-size: 0.825rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+  }
+
+  /* ─── Divider month row ───────────────────── */
+  .month-divider td {
+    padding: 0.5rem 0.875rem 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface2);
+  }
+
+  /* ─── iPhone device frame ─────────────────── */
   .device-iphone {
     position: relative;
     width: 393px;
@@ -190,12 +339,9 @@ body {
     border-radius: 44px;
     background: #0b0f19;
     padding: 14px;
-    box-shadow:
-      0 30px 80px rgba(2, 6, 23, 0.35),
-      0 10px 25px rgba(2, 6, 23, 0.18);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 30px 80px rgba(2,6,23,0.35), 0 10px 25px rgba(2,6,23,0.18);
+    border: 1px solid rgba(255,255,255,0.08);
   }
-
   .device-notch {
     position: absolute;
     top: 10px;
@@ -204,11 +350,10 @@ body {
     width: 150px;
     height: 30px;
     border-radius: 9999px;
-    background: rgba(0, 0, 0, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(255,255,255,0.08);
     z-index: 2;
   }
-
   .device-screen {
     width: 100%;
     height: 100%;
@@ -216,7 +361,6 @@ body {
     border-radius: 34px;
     background: white;
   }
-
   @media (max-width: 520px) {
     .device-iphone {
       width: min(92vw, 393px);

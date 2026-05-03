@@ -213,129 +213,137 @@ export default function TransactionsClient(props: { categories: Category[] }) {
     setEditState(null);
   }
 
+  // Category color map
+  const CAT_COLORS: Record<string, string> = {
+    "כללי":            "bg-zinc-100 text-zinc-600",
+    "אוכל":            "bg-orange-100 text-orange-700",
+    "רכב/דלק":         "bg-blue-100 text-blue-700",
+    "תוכנות/מנויים":   "bg-violet-100 text-violet-700",
+    "בגדים":           "bg-pink-100 text-pink-700",
+  };
+  function catColor(name: string | null) {
+    return name ? (CAT_COLORS[name] ?? "bg-teal-100 text-teal-700") : "bg-zinc-100 text-zinc-400";
+  }
+
   return (
-    <div className="space-y-6">
-      <form onSubmit={create} className="grid gap-3 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-4 lg:grid-cols-6">
-        <div className="lg:col-span-1">
-          <label className="text-sm font-medium">תאריך</label>
-          <input className="field mt-1" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
-        </div>
-        <div className="lg:col-span-1">
-          <label className="text-sm font-medium">סכום</label>
-          <input
-            className="field mt-1"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            inputMode="decimal"
-            placeholder="למשל 89.90"
-            required
-          />
-        </div>
-        <div className="lg:col-span-2">
-          <label className="text-sm font-medium">בית עסק</label>
-          <input className="field mt-1" value={vendor} onChange={(e) => setVendor(e.target.value)} required />
-        </div>
-        <div className="lg:col-span-2">
-          <label className="text-sm font-medium">הערה</label>
-          <input className="field mt-1" value={description} onChange={(e) => setDescription(e.target.value)} />
-        </div>
-
-        <div className="lg:col-span-3">
-          <label className="text-sm font-medium">קטגוריה</label>
-          <select className="field mt-1" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
-            {props.categories.length === 0 && <option value="">אין קטגוריות — הוסף בעמוד קטגוריות</option>}
-            {sortedCategories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="lg:col-span-1">
-          <label className="text-sm font-medium">כרטיס אשראי</label>
-          <select className="field mt-1" value={cardLast4} onChange={(e) => setCardLast4(e.target.value)}>
-            <option value="7374">•••• 7374 (ברירת מחדל)</option>
-            <option value="5622">•••• 5622 (בהצדעה)</option>
-            <option value="9537">•••• 9537 (חיוב מידי)</option>
-            <option value="7539">•••• 7539 (עסקי)</option>
-          </select>
-        </div>
-        <div className="lg:col-span-2 flex items-end justify-end gap-2">
-          <button className="btn" type="button" onClick={reload} disabled={loading}>
-            רענן
-          </button>
-          <button className="btn btn-primary disabled:opacity-60" type="submit" disabled={loading}>
-            הוסף תנועה
-          </button>
-        </div>
-      </form>
-
-      <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto] lg:items-end">
-        <div>
-          <label className="text-sm font-medium">חיפוש חופשי</label>
-          <div className="mt-1 text-xs text-zinc-600">
-            מציג לפי חודש: <span className="font-semibold text-zinc-900">{selectedMonthLabel}</span>
+    <div className="space-y-5">
+      {/* Add form */}
+      <div className="card p-5">
+        <div className="mb-4 flex items-center gap-2">
+          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
+            <svg viewBox="0 0 20 20" className="h-4 w-4 text-white" fill="currentColor">
+              <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+            </svg>
           </div>
-          <input
-            className="field mt-1"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="חיפוש לפי בית עסק / הערה…"
-          />
+          <span className="font-semibold text-zinc-900">הוספת תנועה חדשה</span>
         </div>
-        <div>
-          <label className="text-sm font-medium">שנה</label>
-          <select className="field mt-1" value={filterYear} onChange={(e) => setFilterYear(e.target.value)}>
-            {Array.from({ length: 6 }, (_, i) => String(today.getFullYear() - i)).map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-sm font-medium">חודש</label>
-          <select className="field mt-1" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)}>
-            {Array.from({ length: 12 }, (_, i) => {
-              const m = String(i + 1);
-              return (
-                <option key={m} value={m}>
-                  {m.padStart(2, "0")}
-                </option>
-              );
-            })}
-          </select>
-        </div>
-        <div className="flex items-center justify-end gap-2">
-          <button className="btn" type="button" onClick={reload} disabled={loading}>
-            החל פילטר
-          </button>
-          <div className="text-sm text-zinc-600">
-            סה״כ: <span className="font-semibold text-zinc-900">{filtered.length}</span>
+        <form onSubmit={create} className="grid gap-3 lg:grid-cols-6">
+          <div className="lg:col-span-1">
+            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">תאריך</label>
+            <input className="field mt-1.5" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+          </div>
+          <div className="lg:col-span-1">
+            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">סכום ₪</label>
+            <input className="field mt-1.5" value={amount} onChange={(e) => setAmount(e.target.value)}
+              inputMode="decimal" placeholder="89.90" required />
+          </div>
+          <div className="lg:col-span-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">בית עסק</label>
+            <input className="field mt-1.5" value={vendor} onChange={(e) => setVendor(e.target.value)} required />
+          </div>
+          <div className="lg:col-span-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">הערה</label>
+            <input className="field mt-1.5" value={description} onChange={(e) => setDescription(e.target.value)} />
+          </div>
+          <div className="lg:col-span-3">
+            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">קטגוריה</label>
+            <select className="field mt-1.5" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
+              {props.categories.length === 0 && <option value="">הוסף קטגוריות תחילה</option>}
+              {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="lg:col-span-1">
+            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">כרטיס</label>
+            <select className="field mt-1.5" value={cardLast4} onChange={(e) => setCardLast4(e.target.value)}>
+              <option value="7374">•••• 7374</option>
+              <option value="5622">•••• 5622</option>
+              <option value="9537">•••• 9537</option>
+              <option value="7539">•••• 7539</option>
+            </select>
+          </div>
+          <div className="lg:col-span-2 flex items-end justify-end gap-2">
+            <button className="btn btn-primary disabled:opacity-60" type="submit" disabled={loading}>
+              + הוסף תנועה
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Filters */}
+      <div className="card p-4">
+        <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto_auto] lg:items-end">
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">
+              חיפוש · {selectedMonthLabel}
+            </label>
+            <input className="field mt-1.5" value={query}
+              onChange={(e) => setQuery(e.target.value)} placeholder="חיפוש לפי בית עסק / הערה…" />
+          </div>
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">שנה</label>
+            <select className="field mt-1.5" value={filterYear} onChange={(e) => setFilterYear(e.target.value)}>
+              {Array.from({ length: 6 }, (_, i) => String(today.getFullYear() - i)).map((y) => (
+                <option key={y} value={y}>{y}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">חודש</label>
+            <select className="field mt-1.5" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)}>
+              {Array.from({ length: 12 }, (_, i) => String(i + 1)).map((m) => (
+                <option key={m} value={m}>{m.padStart(2, "0")}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-end">
+            <button className="btn" type="button" onClick={reload} disabled={loading}>החל</button>
+          </div>
+          <div className="flex items-end">
+            <span className="rounded-xl bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700">
+              {filtered.length} תנועות
+            </span>
           </div>
         </div>
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {loading ? <p className="text-sm text-zinc-600">טוען…</p> : null}
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</div>
+      ) : null}
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-zinc-500">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
+          טוען תנועות…
+        </div>
+      ) : null}
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-zinc-700">
+      {/* Table */}
+      <div className="card overflow-hidden">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="px-3 py-2 text-right font-medium">תאריך</th>
-              <th className="px-3 py-2 text-right font-medium">בית עסק</th>
-              <th className="px-3 py-2 text-right font-medium">קטגוריה</th>
-              <th className="px-3 py-2 text-right font-medium">סכום</th>
-              <th className="px-3 py-2 text-right font-medium">כרטיס</th>
-              <th className="px-3 py-2 text-right font-medium">פעולות</th>
+              <th>תאריך</th>
+              <th>בית עסק</th>
+              <th>קטגוריה</th>
+              <th>סכום</th>
+              <th>כרטיס</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td className="px-3 py-12 text-center text-zinc-600" colSpan={6}>
-                  אין תנועות. הוסף תנועה למעלה.
+                <td className="py-14 text-center text-zinc-400" colSpan={6}>
+                  אין תנועות לחודש זה. הוסף תנועה למעלה.
                 </td>
               </tr>
             ) : (
@@ -347,10 +355,8 @@ export default function TransactionsClient(props: { categories: Category[] }) {
                   if (m !== lastMonth) {
                     lastMonth = m;
                     out.push(
-                      <tr key={`m-${m}`} className="bg-zinc-50/60">
-                        <td className="px-3 py-2 text-xs font-semibold text-zinc-700" colSpan={6}>
-                          {monthLabelFromKey(m)}
-                        </td>
+                      <tr key={`m-${m}`} className="month-divider">
+                        <td colSpan={6}>{monthLabelFromKey(m)}</td>
                       </tr>,
                     );
                   }
@@ -358,56 +364,77 @@ export default function TransactionsClient(props: { categories: Category[] }) {
 
                   if (isEditing) {
                     out.push(
-                      <tr key={`edit-${t.id}`} ref={editRef} className="border-t border-blue-200 bg-blue-50/60">
+                      <tr key={`edit-${t.id}`} ref={editRef} className="border-t-2 border-indigo-200 bg-indigo-50/40">
                         <td className="px-2 py-2">
-                          <input className="field w-28" type="date" value={editState.date} onChange={(e) => setEditState({ ...editState, date: e.target.value })} />
+                          <input className="field w-28" type="date" value={editState.date}
+                            onChange={(e) => setEditState({ ...editState, date: e.target.value })} />
                         </td>
-                        <td className="px-2 py-2 space-y-1">
-                          <input className="field w-full" value={editState.vendor} onChange={(e) => setEditState({ ...editState, vendor: e.target.value })} placeholder="בית עסק" />
-                          <input className="field w-full" value={editState.description} onChange={(e) => setEditState({ ...editState, description: e.target.value })} placeholder="הערה (אופציונלי)" />
+                        <td className="px-2 py-2 space-y-1.5">
+                          <input className="field w-full" value={editState.vendor}
+                            onChange={(e) => setEditState({ ...editState, vendor: e.target.value })} placeholder="בית עסק" />
+                          <input className="field w-full" value={editState.description}
+                            onChange={(e) => setEditState({ ...editState, description: e.target.value })} placeholder="הערה" />
                         </td>
                         <td className="px-2 py-2">
-                          <select className="field" value={editState.categoryId} onChange={(e) => setEditState({ ...editState, categoryId: e.target.value })}>
+                          <select className="field" value={editState.categoryId}
+                            onChange={(e) => setEditState({ ...editState, categoryId: e.target.value })}>
                             <option value="">—</option>
                             {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                           </select>
                         </td>
                         <td className="px-2 py-2">
-                          <input className="field w-24" value={editState.amount} onChange={(e) => setEditState({ ...editState, amount: e.target.value })} inputMode="decimal" placeholder="סכום" />
+                          <input className="field w-24" value={editState.amount}
+                            onChange={(e) => setEditState({ ...editState, amount: e.target.value })}
+                            inputMode="decimal" placeholder="סכום" />
                         </td>
                         <td className="px-2 py-2">
-                          <input className="field w-20" value={editState.cardLast4} onChange={(e) => setEditState({ ...editState, cardLast4: e.target.value })} placeholder="4 ספרות" maxLength={4} />
+                          <input className="field w-20" value={editState.cardLast4}
+                            onChange={(e) => setEditState({ ...editState, cardLast4: e.target.value })}
+                            placeholder="4 ספרות" maxLength={4} />
                         </td>
                         <td className="px-2 py-2">
-                          <div className="flex gap-1">
-                            <button className="btn btn-primary" type="button" onClick={() => void saveEdit()} disabled={saving}>
+                          <div className="flex gap-1.5">
+                            <button className="btn btn-primary text-xs" type="button" onClick={() => void saveEdit()} disabled={saving}>
                               {saving ? "…" : "שמור"}
                             </button>
-                            <button className="btn" type="button" onClick={cancelEdit}>ביטול</button>
+                            <button className="btn text-xs" type="button" onClick={cancelEdit}>ביטול</button>
                           </div>
                         </td>
                       </tr>,
                     );
                   } else {
                     out.push(
-                      <tr key={t.id} className="border-t border-zinc-100 hover:bg-zinc-50/60">
-                        <td className="px-3 py-2">{t.date}</td>
-                        <td className="px-3 py-2">
+                      <tr key={t.id}>
+                        <td className="text-zinc-500 text-xs">{t.date}</td>
+                        <td>
                           <div className="font-medium text-zinc-900">{t.vendor}</div>
-                          {t.description ? <div className="mt-0.5 text-xs text-zinc-600">{t.description}</div> : null}
+                          {t.description && <div className="mt-0.5 text-xs text-zinc-400">{t.description}</div>}
                         </td>
-                        <td className="px-3 py-2">{t.categoryName ?? "—"}</td>
-                        <td className="px-3 py-2">
-                          {t.amount} <span className="text-xs text-zinc-600">{t.currency}</span>
+                        <td>
+                          <span className={`cat-badge ${catColor(t.categoryName)}`}>
+                            {t.categoryName ?? "—"}
+                          </span>
                         </td>
-                        <td className="px-3 py-2">{t.cardLast4 ? `•••• ${t.cardLast4}` : "—"}</td>
-                        <td className="px-3 py-2">
+                        <td>
+                          <span className="font-semibold text-zinc-900">{t.amount}</span>
+                          <span className="mr-1 text-xs text-zinc-400">{t.currency}</span>
+                        </td>
+                        <td className="text-xs text-zinc-400">{t.cardLast4 ? `•••• ${t.cardLast4}` : "—"}</td>
+                        <td>
                           <div className="flex gap-1">
-                            <button className="btn" type="button" onClick={() => startEdit(t)} title="ערוך">
-                              ✏️
+                            <button
+                              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-indigo-50 hover:text-indigo-600"
+                              type="button" onClick={() => startEdit(t)} title="ערוך">
+                              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.5 12.974l-3 .527.527-3 7.986-7.988Z" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
                             </button>
-                            <button className="btn" type="button" onClick={() => void remove(t.id)}>
-                              מחק
+                            <button
+                              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-50 hover:text-red-600"
+                              type="button" onClick={() => void remove(t.id)} title="מחק">
+                              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
                             </button>
                           </div>
                         </td>
