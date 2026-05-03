@@ -11,9 +11,11 @@ export async function GET() {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), 1);
   const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-  const [budget, recentTx, docSums, txSums] = await Promise.all([
+  const [budget, recentTx, docSums, txSums, todayTxSums, todayDocSums] = await Promise.all([
     prisma.budget.findUnique({
       where: { userId_month: { userId: user.id, month } },
       select: { expenseLimit: true, manualIncome: true },
@@ -33,6 +35,15 @@ export async function GET() {
       where: { userId: user.id, date: { gte: start, lt: end } },
       _sum: { amount: true },
     }),
+    prisma.transaction.aggregate({
+      where: { userId: user.id, date: { gte: todayStart, lt: todayEnd } },
+      _sum: { amount: true },
+    }),
+    prisma.document.groupBy({
+      by: ["type"],
+      where: { userId: user.id, type: "expense", date: { gte: todayStart, lt: todayEnd } },
+      _sum: { amount: true },
+    }),
   ]);
 
   const incomeFromDocs = Number(docSums.find((s) => s.type === "income")?._sum.amount ?? 0);
@@ -43,6 +54,9 @@ export async function GET() {
   const totalExpense = (expenseFromDocs + expenseFromTx).toFixed(2);
   const income = effectiveIncome.toFixed(2);
   const net = (effectiveIncome - expenseFromDocs - expenseFromTx).toFixed(2);
+  const todayExpenseFromTx = Number(todayTxSums._sum.amount ?? 0);
+  const todayExpenseFromDocs = Number(todayDocSums.find((s) => s.type === "expense")?._sum.amount ?? 0);
+  const todayExpense = (todayExpenseFromTx + todayExpenseFromDocs).toFixed(2);
   const budgetLimit = budget?.expenseLimit ? budget.expenseLimit.toString() : "";
   const pct =
     budgetLimit && Number(budgetLimit) > 0
@@ -54,6 +68,7 @@ export async function GET() {
     manualIncome: manualIncome !== null ? manualIncome.toFixed(2) : null,
     incomeFromDocs: incomeFromDocs.toFixed(2),
     expense: totalExpense,
+    todayExpense,
     net,
     budgetLimit,
     pct,

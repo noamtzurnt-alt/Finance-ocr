@@ -8,6 +8,7 @@ type Summary = {
   manualIncome: string | null;
   incomeFromDocs: string;
   expense: string;
+  todayExpense: string;
   net: string;
   budgetLimit: string;
   pct: number;
@@ -31,7 +32,7 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={`animate-pulse rounded bg-zinc-200 ${className ?? ""}`} />;
 }
 
-type EditField = "income" | "expense" | "net" | null;
+type EditField = "income" | "expense" | null;
 
 export default function DashboardCards() {
   const [data, setData] = useState<Summary | null>(null);
@@ -87,7 +88,7 @@ export default function DashboardCards() {
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-4">
         {/* הכנסות */}
-        <div className="card p-4">
+        <div className="card p-4 border-r-4 border-r-emerald-500">
           <div className="flex items-center justify-between gap-1">
             <div className="text-sm text-zinc-600">
               הכנסות החודש
@@ -155,7 +156,7 @@ export default function DashboardCards() {
         </div>
 
         {/* הוצאות */}
-        <div className="card p-4">
+        <div className="card p-4 border-r-4 border-r-red-500">
           <div className="flex items-center justify-between gap-1">
             <div className="text-sm text-zinc-600">הוצאות החודש</div>
             <button
@@ -183,34 +184,25 @@ export default function DashboardCards() {
           )}
         </div>
 
-        {/* נטו */}
-        <div className="card p-4">
-          <div className="flex items-center justify-between gap-1">
-            <div className="text-sm text-zinc-600">נטו</div>
-            <button
-              type="button"
-              className="text-zinc-400 hover:text-zinc-700 transition-colors"
-              onClick={() => setEditing(editing === "net" ? null : "net")}
-            >
-              ✏️
-            </button>
-          </div>
+        {/* הוצאות היום */}
+        <div className="card p-4 border-r-4 border-r-orange-400">
+          <div className="text-sm text-zinc-600">הוצאות היום</div>
           {data ? (
-            <div className={`mt-2 text-3xl font-semibold tracking-tight ${Number(data.net) >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-              {data.net} ₪
+            <div className={`mt-2 text-3xl font-semibold tracking-tight ${Number(data.todayExpense) === 0 ? "text-zinc-900" : "text-orange-600"}`}>
+              {data.todayExpense} ₪
             </div>
           ) : (
             <Skeleton className="mt-2 h-9 w-28" />
           )}
-          {editing === "net" && data && (
-            <div className="mt-2 text-xs text-zinc-600 bg-zinc-50 rounded-lg p-2">
-              הכנסות ({data.income} ₪) פחות הוצאות ({data.expense} ₪).
+          {data && Number(data.todayExpense) > 0 && (
+            <div className="mt-1 text-xs text-zinc-500">
+              <Link className="underline" href="/transactions">פירוט →</Link>
             </div>
           )}
         </div>
 
         {/* תקציב */}
-        <div className="card p-4">
+        <div className="card p-4 border-r-4 border-r-blue-400">
           <div className="flex items-center justify-between gap-2">
             <div className="text-sm text-zinc-600">תקציב החודש</div>
             <Link className="text-xs underline text-zinc-500" href="/budget">עריכה</Link>
