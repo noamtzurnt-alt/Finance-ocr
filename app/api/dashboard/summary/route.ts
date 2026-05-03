@@ -16,7 +16,7 @@ export async function GET() {
   const [budget, recentTx, docSums, txSums] = await Promise.all([
     prisma.budget.findUnique({
       where: { userId_month: { userId: user.id, month } },
-      select: { expenseLimit: true },
+      select: { expenseLimit: true, manualIncome: true },
     }),
     prisma.transaction.findMany({
       where: { userId: user.id },
@@ -36,12 +36,14 @@ export async function GET() {
   ]);
 
   const incomeFromDocs = Number(docSums.find((s) => s.type === "income")?._sum.amount ?? 0);
+  const manualIncome = budget?.manualIncome != null ? Number(budget.manualIncome) : null;
+  const effectiveIncome = manualIncome ?? incomeFromDocs;
   const expenseFromDocs = Number(docSums.find((s) => s.type === "expense")?._sum.amount ?? 0);
   const expenseFromTx = Number(txSums._sum.amount ?? 0);
   const totalExpense = (expenseFromDocs + expenseFromTx).toFixed(2);
-  const income = incomeFromDocs.toFixed(2);
-  const net = (incomeFromDocs - expenseFromDocs - expenseFromTx).toFixed(2);
-  const budgetLimit = budget?.expenseLimit?.toString() ?? "";
+  const income = effectiveIncome.toFixed(2);
+  const net = (effectiveIncome - expenseFromDocs - expenseFromTx).toFixed(2);
+  const budgetLimit = budget?.expenseLimit ? budget.expenseLimit.toString() : "";
   const pct =
     budgetLimit && Number(budgetLimit) > 0
       ? Math.min(100, Math.round((Number(totalExpense) / Number(budgetLimit)) * 100))
@@ -49,6 +51,8 @@ export async function GET() {
 
   return NextResponse.json({
     income,
+    manualIncome: manualIncome !== null ? manualIncome.toFixed(2) : null,
+    incomeFromDocs: incomeFromDocs.toFixed(2),
     expense: totalExpense,
     net,
     budgetLimit,

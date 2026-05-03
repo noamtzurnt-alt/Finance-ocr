@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 
 type Summary = {
   income: string;
+  manualIncome: string | null;
+  incomeFromDocs: string;
   expense: string;
   net: string;
   budgetLimit: string;
@@ -35,13 +37,39 @@ export default function DashboardCards() {
   const [data, setData] = useState<Summary | null>(null);
   const [error, setError] = useState(false);
   const [editing, setEditing] = useState<EditField>(null);
+  const [incomeInput, setIncomeInput] = useState("");
+  const [savingIncome, setSavingIncome] = useState(false);
 
-  useEffect(() => {
+  function loadData() {
     fetch("/api/dashboard/summary")
       .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((d: Summary) => setData(d))
+      .then((d: Summary) => {
+        setData(d);
+        setIncomeInput(d.manualIncome ?? "");
+      })
       .catch(() => setError(true));
-  }, []);
+  }
+
+  useEffect(() => { loadData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function saveIncome() {
+    setSavingIncome(true);
+    const res = await fetch("/api/dashboard/income", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ amount: incomeInput }),
+    });
+    setSavingIncome(false);
+    if (res.ok) { setEditing(null); loadData(); }
+  }
+
+  async function clearIncome() {
+    setSavingIncome(true);
+    await fetch("/api/dashboard/income", { method: "DELETE" });
+    setSavingIncome(false);
+    setEditing(null);
+    loadData();
+  }
 
   if (error) {
     return (
@@ -61,11 +89,21 @@ export default function DashboardCards() {
         {/* הכנסות */}
         <div className="card p-4">
           <div className="flex items-center justify-between gap-1">
-            <div className="text-sm text-zinc-600">הכנסות החודש</div>
+            <div className="text-sm text-zinc-600">
+              הכנסות החודש
+              {data?.manualIncome != null && (
+                <span className="mr-1 text-xs text-amber-600">(ידני)</span>
+              )}
+            </div>
             <button
               type="button"
               className="text-zinc-400 hover:text-zinc-700 transition-colors"
-              onClick={() => setEditing(editing === "income" ? null : "income")}
+              onClick={() => {
+                if (editing === "income") { setEditing(null); } else {
+                  setIncomeInput(data?.manualIncome ?? data?.income ?? "");
+                  setEditing("income");
+                }
+              }}
             >
               ✏️
             </button>
@@ -76,9 +114,42 @@ export default function DashboardCards() {
             <Skeleton className="mt-2 h-9 w-28" />
           )}
           {editing === "income" && data && (
-            <div className="mt-2 text-xs text-zinc-600 bg-zinc-50 rounded-lg p-2">
-              מחושב מחשבוניות החודש.{" "}
-              <Link className="underline font-medium" href="/invoices">חשבוניות →</Link>
+            <div className="mt-2 space-y-2">
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={incomeInput}
+                onChange={(e) => setIncomeInput(e.target.value)}
+                placeholder="סכום ₪"
+                className="field w-full text-sm"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={saveIncome}
+                  disabled={savingIncome || !incomeInput}
+                  className="btn btn-primary text-xs disabled:opacity-60"
+                >
+                  {savingIncome ? "שומר..." : "שמור"}
+                </button>
+                {data.manualIncome != null && (
+                  <button
+                    type="button"
+                    onClick={clearIncome}
+                    disabled={savingIncome}
+                    className="btn text-xs text-zinc-500"
+                  >
+                    איפוס לפי חשבוניות
+                  </button>
+                )}
+              </div>
+              {data.incomeFromDocs !== "0.00" && (
+                <div className="text-xs text-zinc-500">
+                  מחשבוניות: {data.incomeFromDocs} ₪ ·{" "}
+                  <Link className="underline" href="/invoices">חשבוניות →</Link>
+                </div>
+              )}
             </div>
           )}
         </div>
