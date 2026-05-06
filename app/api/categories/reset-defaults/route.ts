@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/app/lib/auth/server";
 import { prisma } from "@/app/lib/prisma";
 
-const DEFAULT_CATEGORIES = ["כללי", "אוכל", "רכב/דלק", "תוכנות/מנויים", "בגדים"];
+const DEFAULT_CATEGORIES = ["כללי", "אוכל", "בגדים", "דלק/רכב", "תוכנות ומנויים"];
 
 export async function POST() {
   const user = await requireUser();

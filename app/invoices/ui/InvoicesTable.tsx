@@ -40,29 +40,40 @@ export default async function InvoicesTable(props: { userId: string; showAll: bo
   const sum = agg._sum.amount?.toString() ?? "0";
 
   return (
-    <div className="card p-4">
-      <div className="mb-3 text-sm text-zinc-600">
-        סה״כ הכנסות ({props.showAll ? "כל הזמן" : monthLabel(start)}): <span className="font-semibold text-zinc-900">{sum}</span>
+    <div className="space-y-4">
+      {/* Summary strip */}
+      <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-3.5">
+        <div className="h-9 w-9 rounded-xl bg-emerald-100 flex items-center justify-center">
+          <svg viewBox="0 0 20 20" className="h-5 w-5 text-emerald-600" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M10 2a8 8 0 1 0 0 16A8 8 0 0 0 10 2Zm0 4v4l3 3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <div>
+          <div className="text-xs font-medium text-zinc-500">סה״כ הכנסות · {props.showAll ? "כל הזמן" : monthLabel(start)}</div>
+          <div className="text-xl font-bold tracking-tight text-emerald-700">{sum} ₪</div>
+        </div>
+        <div className="mr-auto text-xs text-zinc-400">{docs.length} חשבוניות</div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-zinc-700">
+      <div className="card overflow-hidden">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="px-3 py-2 text-right font-medium">תאריך</th>
-              <th className="px-3 py-2 text-right font-medium">לקוח/ספק</th>
-              <th className="px-3 py-2 text-right font-medium">תיאור</th>
-              <th className="px-3 py-2 text-right font-medium">מס׳ חשבונית</th>
-              <th className="px-3 py-2 text-right font-medium">סכום</th>
-              <th className="px-3 py-2 text-right font-medium">OCR</th>
-              <th className="px-3 py-2 text-right font-medium">פעולה</th>
+              <th>תאריך</th>
+              <th>לקוח/ספק</th>
+              <th>תיאור</th>
+              <th>מס׳ חשבונית</th>
+              <th>סכום</th>
+              <th>OCR</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {docs.length === 0 ? (
               <tr>
-                <td className="px-3 py-12 text-center text-zinc-600" colSpan={7}>
-                  אין חשבוניות עדיין. <Link className="underline" href="/invoices/upload">העלה חשבונית</Link>
+                <td className="py-14 text-center text-zinc-400" colSpan={7}>
+                  אין חשבוניות עדיין.{" "}
+                  <Link className="font-semibold text-indigo-600 underline" href="/invoices/upload">העלה חשבונית</Link>
                 </td>
               </tr>
             ) : (
@@ -75,36 +86,33 @@ export default async function InvoicesTable(props: { userId: string; showAll: bo
                     lastMonth = m;
                     const dt = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1);
                     out.push(
-                      <tr key={`m-${m}`} className="bg-zinc-50/60">
-                        <td className="px-3 py-2 text-xs font-semibold text-zinc-700" colSpan={7}>
-                          {monthLabel(dt)}
-                        </td>
+                      <tr key={`m-${m}`} className="month-divider">
+                        <td colSpan={7}>{monthLabel(dt)}</td>
                       </tr>,
                     );
                   }
                   out.push(
-                    <tr key={d.id} className="border-t border-zinc-100 hover:bg-zinc-50/60">
-                      <td className="px-3 py-2">{d.date.toISOString().slice(0, 10)}</td>
-                      <td className="px-3 py-2">
-                        <Link
-                          className="font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2"
-                          href={`/documents/${d.id}?from=invoices`}
-                        >
+                    <tr key={d.id}>
+                      <td className="text-zinc-500 text-xs">{d.date.toISOString().slice(0, 10)}</td>
+                      <td>
+                        <Link className="font-semibold text-indigo-600 hover:text-indigo-800"
+                          href={`/documents/${d.id}?from=invoices`}>
                           {d.vendor}
                         </Link>
                       </td>
-                      <td className="px-3 py-2">{d.description ?? "—"}</td>
-                      <td className="px-3 py-2">{d.docNumber ?? "—"}</td>
-                      <td className="px-3 py-2">
-                        {d.amount.toString()} <span className="text-xs text-zinc-600">{d.currency}</span>
+                      <td className="text-zinc-500">{d.description ?? "—"}</td>
+                      <td>
+                        {d.docNumber
+                          ? <span className="cat-badge bg-zinc-100 text-zinc-600">{d.docNumber}</span>
+                          : <span className="text-zinc-400">—</span>}
                       </td>
-                      <td className="px-3 py-2">
-                        <OcrStatusCell docId={d.id} status={d.ocrStatus} />
+                      <td>
+                        <span className="font-semibold text-emerald-700">{d.amount.toString()}</span>
+                        <span className="mr-1 text-xs text-zinc-400">{d.currency}</span>
                       </td>
-                      <td className="px-3 py-2">
-                        <Link className="btn" href={`/documents/${d.id}?from=invoices`}>
-                          ערוך
-                        </Link>
+                      <td><OcrStatusCell docId={d.id} status={d.ocrStatus} /></td>
+                      <td>
+                        <Link className="btn text-xs" href={`/documents/${d.id}?from=invoices`}>ערוך</Link>
                       </td>
                     </tr>,
                   );

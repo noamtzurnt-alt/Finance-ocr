@@ -1,7 +1,7 @@
 import { prisma } from "@/app/lib/prisma";
 import TransactionsClient from "./TransactionsClient";
 
-const DEFAULT_CATEGORIES = ["כללי", "אוכל", "רכב/דלק", "תוכנות/מנויים", "בגדים"];
+const DEFAULT_CATEGORIES = ["כללי", "אוכל", "בגדים", "דלק/רכב", "תוכנות ומנויים"];
 
 const ensuredUsers = new Set<string>();
 

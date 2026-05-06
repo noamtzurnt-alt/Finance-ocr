@@ -11,16 +11,13 @@ export default async function CredentialsPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <LiveRefresh url="/api/stream/events?full=1" />
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="section-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">סיסמאות</h1>
-          <p className="mt-1 text-sm text-zinc-600">כספת אישית מוצפנת — לשמירת פרטי התחברות.</p>
+          <h1 className="section-title">סיסמאות</h1>
+          <p className="section-sub">כספת אישית מוצפנת לשמירת פרטי התחברות</p>
         </div>
-        <Link className="btn" href="/dashboard">
-          חזרה לדשבורד
-        </Link>
       </div>
 
       <PasskeysCard />

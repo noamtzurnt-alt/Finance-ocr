@@ -25,11 +25,13 @@ export default async function SettingsPage() {
   if (!dbUser) redirect("/login");
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <LiveRefresh />
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">הגדרות עסק</h1>
-        <p className="mt-1 text-sm text-zinc-600">הגדר את סוג העסק שלך לצורך חישובי מע&quot;מ ודו&quot;חות לרו&quot;ח.</p>
+      <div className="section-header">
+        <div>
+          <h1 className="section-title">הגדרות עסק</h1>
+          <p className="section-sub">סוג עסק, מע״מ ופרטי התקשרות</p>
+        </div>
       </div>
 
       <div className="card p-6">

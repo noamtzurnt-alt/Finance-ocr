@@ -215,11 +215,11 @@ export default function TransactionsClient(props: { categories: Category[] }) {
 
   // Category color map
   const CAT_COLORS: Record<string, string> = {
-    "כללי":            "bg-zinc-100 text-zinc-600",
-    "אוכל":            "bg-orange-100 text-orange-700",
-    "רכב/דלק":         "bg-blue-100 text-blue-700",
-    "תוכנות/מנויים":   "bg-violet-100 text-violet-700",
-    "בגדים":           "bg-pink-100 text-pink-700",
+    "כללי":             "bg-zinc-100 text-zinc-600",
+    "אוכל":             "bg-orange-100 text-orange-700",
+    "דלק/רכב":          "bg-blue-100 text-blue-700",
+    "תוכנות ומנויים":   "bg-violet-100 text-violet-700",
+    "בגדים":            "bg-pink-100 text-pink-700",
   };
   function catColor(name: string | null) {
     return name ? (CAT_COLORS[name] ?? "bg-teal-100 text-teal-700") : "bg-zinc-100 text-zinc-400";
@@ -244,7 +244,8 @@ export default function TransactionsClient(props: { categories: Category[] }) {
           </div>
           <div className="lg:col-span-1">
             <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">סכום ₪</label>
-            <input className="field mt-1.5" value={amount} onChange={(e) => setAmount(e.target.value)}
+            <input className="field mt-1.5" value={amount}
+              onChange={(e) => { const v = e.target.value.replace(/[^0-9.]/g, ""); if ((v.match(/\./g) ?? []).length <= 1) setAmount(v); }}
               inputMode="decimal" placeholder="89.90" required />
           </div>
           <div className="lg:col-span-2">
@@ -384,7 +385,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
                         </td>
                         <td className="px-2 py-2">
                           <input className="field w-24" value={editState.amount}
-                            onChange={(e) => setEditState({ ...editState, amount: e.target.value })}
+                            onChange={(e) => { const v = e.target.value.replace(/[^0-9.]/g, ""); if ((v.match(/\./g) ?? []).length <= 1) setEditState({ ...editState, amount: v }); }}
                             inputMode="decimal" placeholder="סכום" />
                         </td>
                         <td className="px-2 py-2">

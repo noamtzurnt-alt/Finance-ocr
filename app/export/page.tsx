@@ -11,18 +11,14 @@ export default async function ExportPage() {
   const year = new Date().getFullYear();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <LiveRefresh />
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="section-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">ייצוא לרו״ח</h1>
-          <p className="mt-1 text-sm text-zinc-600">
-            הורד XLSX מסודר (קבלות/חשבוניות בנפרד + סיכומים) או ZIP של כל הקבצים לפי חודשים.
-          </p>
+          <h1 className="section-title">ייצוא לרו״ח</h1>
+          <p className="section-sub">הורד XLSX או ZIP לפי חודשים לשליחה לרואה חשבון</p>
         </div>
-        <a className="btn" href="/dashboard">
-          חזרה לדשבורד
-        </a>
+      </div>
       </div>
 
       <div

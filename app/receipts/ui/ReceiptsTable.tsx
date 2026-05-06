@@ -31,28 +31,38 @@ export default async function ReceiptsTable(props: { userId: string; showAll: bo
   const sum = agg._sum.amount?.toString() ?? "0";
 
   return (
-    <div className="card p-4">
-      <div className="mb-3 text-sm text-zinc-600">
-        סה״כ הוצאות (קבלות החזר מס) ({props.showAll ? "כל הזמן" : monthLabel(start)}): <span className="font-semibold text-zinc-900">{sum}</span>
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3.5">
+        <div className="h-9 w-9 rounded-xl bg-amber-100 flex items-center justify-center">
+          <svg viewBox="0 0 20 20" className="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <path d="M5 10h10M10 5l5 5-5 5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <div>
+          <div className="text-xs font-medium text-zinc-500">סה״כ הוצאות (קבלות) · {props.showAll ? "כל הזמן" : monthLabel(start)}</div>
+          <div className="text-xl font-bold tracking-tight text-amber-700">{sum} ₪</div>
+        </div>
+        <div className="mr-auto text-xs text-zinc-400">{docs.length} קבלות</div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-zinc-700">
+      <div className="card overflow-hidden">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="px-3 py-2 text-right font-medium">תאריך</th>
-              <th className="px-3 py-2 text-right font-medium">בית עסק</th>
-              <th className="px-3 py-2 text-right font-medium">תיאור</th>
-              <th className="px-3 py-2 text-right font-medium">סכום</th>
-              <th className="px-3 py-2 text-right font-medium">OCR</th>
-              <th className="px-3 py-2 text-right font-medium">פעולה</th>
+              <th>תאריך</th>
+              <th>בית עסק</th>
+              <th>תיאור</th>
+              <th>סכום</th>
+              <th>OCR</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             {docs.length === 0 ? (
               <tr>
-                <td className="px-3 py-12 text-center text-zinc-600" colSpan={6}>
-                  אין קבלות החזר מס עדיין. <Link className="underline" href="/receipts/upload">העלה קבלת החזר מס</Link>
+                <td className="py-14 text-center text-zinc-400" colSpan={6}>
+                  אין קבלות עדיין.{" "}
+                  <Link className="font-semibold text-indigo-600 underline" href="/receipts/upload">העלה קבלה</Link>
                 </td>
               </tr>
             ) : (
@@ -65,45 +75,36 @@ export default async function ReceiptsTable(props: { userId: string; showAll: bo
                     lastMonth = m;
                     const dt = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1);
                     out.push(
-                      <tr key={`m-${m}`} className="bg-zinc-50/60">
-                        <td className="px-3 py-2 text-xs font-semibold text-zinc-700" colSpan={6}>
-                          {monthLabel(dt)}
-                        </td>
+                      <tr key={`m-${m}`} className="month-divider">
+                        <td colSpan={6}>{monthLabel(dt)}</td>
                       </tr>,
                     );
                   }
                   out.push(
-                    <tr key={d.id} className="border-t border-zinc-100 hover:bg-zinc-50/60">
-                      <td className="px-3 py-2">{d.date.toISOString().slice(0, 10)}</td>
-                      <td className="px-3 py-2">
-                        <Link
-                          className="font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2"
-                          href={`/documents/${d.id}?from=receipts`}
-                        >
+                    <tr key={d.id}>
+                      <td className="text-zinc-500 text-xs">{d.date.toISOString().slice(0, 10)}</td>
+                      <td>
+                        <Link className="font-semibold text-indigo-600 hover:text-indigo-800"
+                          href={`/documents/${d.id}?from=receipts`}>
                           {d.vendor}
                         </Link>
                       </td>
-                      <td className="px-3 py-2">{d.description ?? "—"}</td>
-                      <td className="px-3 py-2">
-                        {d.amount.toString()} <span className="text-xs text-zinc-600">{d.currency}</span>
+                      <td className="text-zinc-500">{d.description ?? "—"}</td>
+                      <td>
+                        <span className="font-semibold text-red-600">{d.amount.toString()}</span>
+                        <span className="mr-1 text-xs text-zinc-400">{d.currency}</span>
                       </td>
-                      <td className="px-3 py-2">
-                        <OcrStatusCell
-                          docId={d.id}
-                          status={d.ocrStatus}
-                          errorMessage={
-                            d.ocrStatus === "failed" && d.ocrText
-                              ? d.ocrText.startsWith("OCR job failed:")
-                                ? d.ocrText.slice("OCR job failed:".length).trim().slice(0, 120)
-                                : d.ocrText.slice(0, 120)
-                              : null
-                          }
+                      <td>
+                        <OcrStatusCell docId={d.id} status={d.ocrStatus}
+                          errorMessage={d.ocrStatus === "failed" && d.ocrText
+                            ? d.ocrText.startsWith("OCR job failed:")
+                              ? d.ocrText.slice("OCR job failed:".length).trim().slice(0, 120)
+                              : d.ocrText.slice(0, 120)
+                            : null}
                         />
                       </td>
-                      <td className="px-3 py-2">
-                        <Link className="btn" href={`/documents/${d.id}?from=receipts`}>
-                          ערוך
-                        </Link>
+                      <td>
+                        <Link className="btn text-xs" href={`/documents/${d.id}?from=receipts`}>ערוך</Link>
                       </td>
                     </tr>,
                   );
