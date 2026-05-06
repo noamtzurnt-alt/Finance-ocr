@@ -3,6 +3,21 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+type DfsiData = {
+  status: "excellent" | "on_track" | "warning" | "over";
+  spendingVelocity: number;
+  dailyBudget: string;
+  safeToSpendToday: string;
+  variableExpenses: string;
+  fixedExpenses: string;
+  disposableIncome: string;
+  daysElapsed: number;
+  daysInMonth: number;
+  daysRemaining: number;
+  nudge: string;
+  hasIncome: boolean;
+};
+
 type Summary = {
   income: string;
   manualIncome: string | null;
@@ -12,27 +27,21 @@ type Summary = {
   net: string;
   budgetLimit: string;
   pct: number;
-  recentTx: {
-    id: string;
-    date: string;
-    amount: string;
-    currency: string;
-    vendor: string;
-    description: string | null;
-    cardLast4: string | null;
-  }[];
+  dfsi: DfsiData;
 };
-
-function monthLabel(dateStr: string) {
-  const [y, m] = dateStr.split("-").map(Number);
-  return new Intl.DateTimeFormat("he-IL", { month: "long", year: "numeric" }).format(new Date(y, m - 1, 1));
-}
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={`animate-pulse rounded-lg bg-zinc-100 ${className ?? ""}`} />;
 }
 
 type EditField = "income" | "expense" | null;
+
+const DFSI_CONFIG = {
+  excellent: { label: "מעולה", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", bar: "bg-gradient-to-r from-emerald-400 to-teal-500", icon: "✓" },
+  on_track:  { label: "במסלול", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", bar: "bg-gradient-to-r from-blue-400 to-indigo-500", icon: "→" },
+  warning:   { label: "שים לב", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", bar: "bg-gradient-to-r from-amber-400 to-orange-500", icon: "!" },
+  over:      { label: "חריגה", color: "text-red-700", bg: "bg-red-50", border: "border-red-200", bar: "bg-gradient-to-r from-red-500 to-rose-600", icon: "✗" },
+};
 
 export default function DashboardCards() {
   const [data, setData] = useState<Summary | null>(null);
@@ -80,7 +89,9 @@ export default function DashboardCards() {
     );
   }
 
-  const net = data ? Number(data.income) - Number(data.expense) : 0;
+  const dfsi = data?.dfsi;
+  const dfsiCfg = dfsi ? DFSI_CONFIG[dfsi.status] : DFSI_CONFIG.on_track;
+  const velCapped = Math.min(dfsi?.spendingVelocity ?? 0, 150);
 
   return (
     <div className="space-y-5">
@@ -89,7 +100,6 @@ export default function DashboardCards() {
 
         {/* הכנסות */}
         <div className="card p-5 relative overflow-hidden">
-          {/* gradient accent strip */}
           <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-emerald-400 to-teal-500" />
           <div className="flex items-center justify-between">
             <span className="stat-label">הכנסות החודש</span>
@@ -238,99 +248,123 @@ export default function DashboardCards() {
         </div>
       </div>
 
-      {/* Net summary strip */}
-      {data && (
-        <div className={`flex items-center gap-3 rounded-2xl border px-5 py-3.5 ${net >= 0 ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}>
-          <div className={`h-9 w-9 rounded-xl flex items-center justify-center ${net >= 0 ? "bg-emerald-100" : "bg-red-100"}`}>
-            <svg viewBox="0 0 20 20" className={`h-5 w-5 ${net >= 0 ? "text-emerald-600" : "text-red-600"}`} fill="none" stroke="currentColor" strokeWidth="1.8">
-              {net >= 0
-                ? <path d="M10 17V3m0 0-4 4m4-4 4 4" strokeLinecap="round" strokeLinejoin="round" />
-                : <path d="M10 3v14m0 0-4-4m4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-              }
-            </svg>
-          </div>
-          <div>
-            <div className="text-xs font-medium text-zinc-500">נטו החודש</div>
-            <div className={`text-xl font-bold tracking-tight ${net >= 0 ? "text-emerald-700" : "text-red-700"}`}>
-              {net >= 0 ? "+" : ""}{net.toFixed(2)} ₪
-            </div>
-          </div>
-          <div className="mr-auto text-xs text-zinc-400">
-            {data.income} ₪ הכנסות − {data.expense} ₪ הוצאות
-          </div>
-        </div>
-      )}
-
-      {/* Recent transactions */}
-      <div className="card overflow-hidden">
+      {/* ── DFSI: Daily Financial Status Indicator ── */}
+      <div className={`card overflow-hidden border ${dfsi ? dfsiCfg.border : "border-zinc-200"}`}>
+        {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4">
           <div>
-            <div className="font-semibold text-zinc-900">תנועות אחרונות</div>
-            <div className="mt-0.5 text-xs text-zinc-500">10 התנועות האחרונות שלך</div>
+            <div className="flex items-center gap-2.5">
+              <div className="font-semibold text-zinc-900">מדד פיננסי יומי</div>
+              {dfsi && (
+                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${dfsiCfg.bg} ${dfsiCfg.color} ${dfsiCfg.border} border`}>
+                  <span>{dfsiCfg.icon}</span>
+                  {dfsiCfg.label}
+                </span>
+              )}
+            </div>
+            <div className="mt-0.5 text-xs text-zinc-500">
+              מחשב על בסיס הוצאות משתנות בלבד — הוצאות קבועות (שכירות, אשראי) לא פוגעות בציון
+            </div>
           </div>
-          <Link className="btn text-sm" href="/transactions">לכל התנועות</Link>
+          <Link className="btn text-sm" href="/transactions">תנועות</Link>
         </div>
 
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>תאריך</th>
-              <th>בית עסק</th>
-              <th>סכום</th>
-              <th>כרטיס</th>
-            </tr>
-          </thead>
-          <tbody>
-            {!data ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <tr key={i}>
-                  <td><Skeleton className="h-4 w-20" /></td>
-                  <td><Skeleton className="h-4 w-32" /></td>
-                  <td><Skeleton className="h-4 w-16" /></td>
-                  <td><Skeleton className="h-4 w-16" /></td>
-                </tr>
-              ))
-            ) : data.recentTx.length === 0 ? (
-              <tr>
-                <td className="py-12 text-center text-zinc-400" colSpan={4}>
-                  אין תנועות עדיין.{" "}
-                  <Link className="font-semibold text-indigo-600 underline" href="/transactions">הוסף תנועה</Link>
-                </td>
-              </tr>
-            ) : (
-              (() => {
-                const out: React.ReactNode[] = [];
-                let lastMonth = "";
-                for (const t of data.recentTx) {
-                  const m = t.date.slice(0, 7);
-                  if (m !== lastMonth) {
-                    lastMonth = m;
-                    out.push(
-                      <tr key={`m-${m}`} className="month-divider">
-                        <td colSpan={4}>{monthLabel(t.date)}</td>
-                      </tr>,
-                    );
-                  }
-                  out.push(
-                    <tr key={t.id}>
-                      <td className="text-zinc-500">{t.date}</td>
-                      <td>
-                        <span className="font-medium text-zinc-900">{t.vendor}</span>
-                        {t.description && <div className="mt-0.5 text-xs text-zinc-400">{t.description}</div>}
-                      </td>
-                      <td>
-                        <span className="font-semibold text-zinc-900">{t.amount}</span>
-                        <span className="mr-1 text-xs text-zinc-400">{t.currency}</span>
-                      </td>
-                      <td className="text-zinc-400 text-xs">{t.cardLast4 ? `•••• ${t.cardLast4}` : "—"}</td>
-                    </tr>,
-                  );
-                }
-                return out;
-              })()
-            )}
-          </tbody>
-        </table>
+        <div className="p-5">
+          {!data ? (
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          ) : !dfsi?.hasIncome ? (
+            /* No income set */
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-2xl">💡</div>
+              <div>
+                <div className="font-semibold text-zinc-800">הגדר הכנסה חודשית לקבל תמונת מצב</div>
+                <div className="mt-1 text-sm text-zinc-500">לחץ על ✏️ ליד "הכנסות החודש" כדי להזין הכנסה</div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {/* Velocity bar */}
+              <div>
+                <div className="mb-2 flex items-center justify-between text-sm">
+                  <span className="font-medium text-zinc-700">קצב הוצאות משתנות</span>
+                  <span className={`font-bold text-lg ${dfsiCfg.color}`}>{dfsi.spendingVelocity}%</span>
+                </div>
+                <div className="relative h-4 overflow-hidden rounded-full bg-zinc-100">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ${dfsiCfg.bar}`}
+                    style={{ width: `${Math.min(velCapped / 1.5, 100)}%` }}
+                  />
+                  {/* 100% marker */}
+                  <div className="absolute top-0 bottom-0 w-px bg-zinc-400 opacity-40" style={{ left: "66.67%" }} />
+                </div>
+                <div className="mt-1.5 flex justify-between text-xs text-zinc-400">
+                  <span>0%</span>
+                  <span>100% (יעד יומי)</span>
+                  <span>150%</span>
+                </div>
+              </div>
+
+              {/* Nudge message */}
+              <div className={`rounded-xl border px-4 py-3 text-sm font-medium ${dfsiCfg.bg} ${dfsiCfg.border} ${dfsiCfg.color}`}>
+                {dfsi.nudge}
+              </div>
+
+              {/* Key stats grid */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="rounded-xl bg-zinc-50 p-3 text-center">
+                  <div className="text-xs text-zinc-400 mb-1">מותר להוציא היום</div>
+                  <div className={`text-xl font-bold ${Number(dfsi.safeToSpendToday) > 0 ? "text-emerald-600" : "text-red-600"}`}>
+                    {Number(dfsi.safeToSpendToday) > 0 ? dfsi.safeToSpendToday : "0"} ₪
+                  </div>
+                </div>
+                <div className="rounded-xl bg-zinc-50 p-3 text-center">
+                  <div className="text-xs text-zinc-400 mb-1">תקציב יומי</div>
+                  <div className="text-xl font-bold text-zinc-700">{Number(dfsi.dailyBudget).toFixed(0)} ₪</div>
+                </div>
+                <div className="rounded-xl bg-zinc-50 p-3 text-center">
+                  <div className="text-xs text-zinc-400 mb-1">הוצ׳ משתנות</div>
+                  <div className="text-xl font-bold text-zinc-700">{dfsi.variableExpenses} ₪</div>
+                </div>
+                <div className="rounded-xl bg-zinc-50 p-3 text-center">
+                  <div className="text-xs text-zinc-400 mb-1">ימים נותרים</div>
+                  <div className="text-xl font-bold text-zinc-700">{dfsi.daysRemaining}</div>
+                </div>
+              </div>
+
+              {/* Days progress bar */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between text-xs text-zinc-500">
+                  <span>יום {dfsi.daysElapsed} מתוך {dfsi.daysInMonth}</span>
+                  {Number(dfsi.fixedExpenses) > 0 && (
+                    <span className="text-zinc-400">קבועות החודש: {dfsi.fixedExpenses} ₪</span>
+                  )}
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-zinc-300 to-zinc-400 transition-all"
+                    style={{ width: `${(dfsi.daysElapsed / dfsi.daysInMonth) * 100}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Fixed expenses tip if none set */}
+              {Number(dfsi.fixedExpenses) === 0 && (
+                <div className="flex items-start gap-3 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 p-3 text-xs text-zinc-500">
+                  <span className="mt-0.5 shrink-0 text-base">💡</span>
+                  <span>
+                    סמן תנועות קבועות (שכירות, ביטוח, אשראי חודשי) כ"קבועה" בעמוד{" "}
+                    <Link href="/transactions" className="font-semibold text-indigo-600 underline">תנועות</Link>{" "}
+                    כדי שהמדד יחשב נכון יותר.
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/app/lib/auth/server";
 import LiveRefresh from "@/app/ui/LiveRefresh";
-import Link from "next/link";
 import { Suspense } from "react";
 import BudgetContent from "./ui/BudgetContent";
+import BudgetWizard from "./ui/BudgetWizard";
+import BankFeeDetector from "./ui/BankFeeDetector";
 
 export default async function BudgetPage() {
   const user = await requireUser();
@@ -12,16 +13,14 @@ export default async function BudgetPage() {
   return (
     <div className="space-y-6">
       <LiveRefresh url="/api/stream/events?full=1" />
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="section-header">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">תקציב</h1>
-          <p className="mt-1 text-sm text-zinc-600">העמוד נטען בהדרגה — הנתונים יופיעו מיד כשמוכן.</p>
+          <h1 className="section-title">תקציב</h1>
+          <p className="section-sub">ניהול תקציב, צ׳ק-אפ פיננסי וזיהוי עמלות</p>
         </div>
-        <Link className="btn" href="/dashboard">
-          חזרה לדשבורד
-        </Link>
       </div>
 
+      {/* Current budget tracker */}
       <Suspense
         fallback={
           <div className="card p-4">
@@ -32,8 +31,12 @@ export default async function BudgetPage() {
       >
         <BudgetContent userId={user.id} />
       </Suspense>
+
+      {/* Deep financial check-up wizard */}
+      <BudgetWizard />
+
+      {/* Bank fee detector */}
+      <BankFeeDetector />
     </div>
   );
 }
-
-

@@ -11,6 +11,7 @@ const patchSchema = z.object({
   categoryId: z.string().nullable().optional(),
   currency: z.string().optional(),
   cardLast4: z.string().nullable().optional(),
+  isFixed: z.boolean().optional(),
 });
 
 function parseDateOnly(s: string) {
@@ -50,6 +51,7 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if ("description" in parsed.data) data.description = parsed.data.description ?? null;
   if ("categoryId" in parsed.data) data.categoryId = parsed.data.categoryId ?? null;
   if ("cardLast4" in parsed.data) data.cardLast4 = parsed.data.cardLast4 ?? null;
+  if ("isFixed" in parsed.data) data.isFixed = parsed.data.isFixed ?? false;
 
   const updated = await prisma.transaction.updateMany({
     where: { id, userId: user.id },

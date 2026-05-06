@@ -21,6 +21,7 @@ type Row = {
   categoryId: string | null;
   categoryName: string | null;
   cardLast4: string | null;
+  isFixed: boolean;
   updatedAt: string;
 };
 
@@ -32,6 +33,7 @@ type EditState = {
   description: string;
   categoryId: string;
   cardLast4: string;
+  isFixed: boolean;
 };
 
 export default function TransactionsClient(props: { categories: Category[] }) {
@@ -64,6 +66,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState(defaultCategoryId);
   const [cardLast4, setCardLast4] = useState("7374");
+  const [isFixed, setIsFixed] = useState(false);
 
   // Keep categoryId in sync when categories load, and fetch initial data
   useEffect(() => {
@@ -133,6 +136,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
         categoryId,
         currency: "ILS",
         cardLast4: cardLast4 || null,
+        isFixed,
       }),
     });
     setLoading(false);
@@ -163,6 +167,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
       description: t.description ?? "",
       categoryId: t.categoryId ?? "",
       cardLast4: t.cardLast4 ?? "",
+      isFixed: t.isFixed,
     });
     setTimeout(() => editRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   }
@@ -185,6 +190,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
         description: editState.description || null,
         categoryId: editState.categoryId || null,
         cardLast4: editState.cardLast4 || null,
+        isFixed: editState.isFixed,
       }),
     });
     setSaving(false);
@@ -206,6 +212,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
               categoryId: editState.categoryId || null,
               categoryName: updatedCategory?.name ?? null,
               cardLast4: editState.cardLast4 || null,
+              isFixed: editState.isFixed,
             }
           : x,
       ),
@@ -272,8 +279,17 @@ export default function TransactionsClient(props: { categories: Category[] }) {
               <option value="7539">•••• 7539</option>
             </select>
           </div>
-          <div className="lg:col-span-2 flex items-end justify-end gap-2">
-            <button className="btn btn-primary disabled:opacity-60" type="submit" disabled={loading}>
+          <div className="lg:col-span-2 flex items-end gap-3">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={isFixed}
+                onChange={(e) => setIsFixed(e.target.checked)}
+                className="h-4 w-4 rounded border-zinc-300 accent-indigo-600"
+              />
+              <span className="text-xs font-medium text-zinc-600">הוצאה קבועה</span>
+            </label>
+            <button className="btn btn-primary disabled:opacity-60 mr-auto" type="submit" disabled={loading}>
               + הוסף תנועה
             </button>
           </div>
@@ -394,11 +410,22 @@ export default function TransactionsClient(props: { categories: Category[] }) {
                             placeholder="4 ספרות" maxLength={4} />
                         </td>
                         <td className="px-2 py-2">
-                          <div className="flex gap-1.5">
-                            <button className="btn btn-primary text-xs" type="button" onClick={() => void saveEdit()} disabled={saving}>
-                              {saving ? "…" : "שמור"}
-                            </button>
-                            <button className="btn text-xs" type="button" onClick={cancelEdit}>ביטול</button>
+                          <div className="space-y-2">
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input
+                                type="checkbox"
+                                checked={editState.isFixed}
+                                onChange={(e) => setEditState({ ...editState, isFixed: e.target.checked })}
+                                className="h-4 w-4 rounded border-zinc-300 accent-indigo-600"
+                              />
+                              <span className="text-xs font-medium text-zinc-600">קבועה</span>
+                            </label>
+                            <div className="flex gap-1.5">
+                              <button className="btn btn-primary text-xs" type="button" onClick={() => void saveEdit()} disabled={saving}>
+                                {saving ? "…" : "שמור"}
+                              </button>
+                              <button className="btn text-xs" type="button" onClick={cancelEdit}>ביטול</button>
+                            </div>
                           </div>
                         </td>
                       </tr>,
@@ -408,7 +435,12 @@ export default function TransactionsClient(props: { categories: Category[] }) {
                       <tr key={t.id}>
                         <td className="text-zinc-500 text-xs">{t.date}</td>
                         <td>
-                          <div className="font-medium text-zinc-900">{t.vendor}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-zinc-900">{t.vendor}</span>
+                            {t.isFixed && (
+                              <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[0.6rem] font-bold text-indigo-600 leading-none">קבועה</span>
+                            )}
+                          </div>
                           {t.description && <div className="mt-0.5 text-xs text-zinc-400">{t.description}</div>}
                         </td>
                         <td>

@@ -156,15 +156,16 @@ model Document {
 }
 
 model Transaction {
-  id        String   @id @default(uuid())
-  userId    String
-  date      DateTime @db.Date
-  amount    Decimal  @db.Decimal(12, 2)
-  currency  String   @default("ILS")
-  vendor    String
+  id          String   @id @default(uuid())
+  userId      String
+  date        DateTime @db.Date
+  amount      Decimal  @db.Decimal(12, 2)
+  currency    String   @default("ILS")
+  vendor      String
   description String?
-  categoryId String?
-  cardLast4  String?
+  categoryId  String?
+  cardLast4   String?
+  isFixed     Boolean  @default(false)
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
