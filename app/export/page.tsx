@@ -19,7 +19,6 @@ export default async function ExportPage() {
           <p className="section-sub">הורד XLSX או ZIP לפי חודשים לשליחה לרואה חשבון</p>
         </div>
       </div>
-      </div>
 
       <div
         className="rounded-lg border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900"
