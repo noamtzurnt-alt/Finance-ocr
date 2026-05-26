@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Suspense } from "react";
 import InvoicesTable from "./ui/InvoicesTable";
 
+export const dynamic = "force-dynamic";
+
 export default async function InvoicesPage(props: { searchParams?: Promise<{ all?: string }> }) {
   const user = await requireUser();
   if (!user) redirect("/login");
@@ -18,14 +20,14 @@ export default async function InvoicesPage(props: { searchParams?: Promise<{ all
       <LiveRefresh />
       <div className="section-header">
         <div>
-          <h1 className="section-title">חשבוניות</h1>
-          <p className="section-sub">חשבוניות שהוצאת ללקוחות</p>
+          <h1 className="section-title">חשבונות עסקה (דרישות תשלום)</h1>
+          <p className="section-sub">דרישות תשלום ששלחת ללקוחות</p>
         </div>
         <div className="flex items-center gap-2">
           <Link className="btn" href={showAll ? "/invoices?all=0" : "/invoices"}>
             {showAll ? "החודש בלבד" : "הצג הכל"}
           </Link>
-          <Link className="btn btn-primary" href="/invoices/upload">+ חשבונית חדשה</Link>
+          <Link className="btn btn-primary" href="/invoices/upload">+ חשבון עסקה חדש</Link>
         </div>
       </div>
 

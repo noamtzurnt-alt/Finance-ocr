@@ -68,7 +68,6 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           ...form,
-          // Convert back to numbers for API
           amount: parseFloat(form.amount) || 0,
           vatAmount: parseFloat(form.vatAmount) || 0,
           preVatAmount: parseFloat(form.preVatAmount) || 0,
@@ -76,8 +75,7 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
         }),
       });
       if (!res.ok) throw new Error("שמירה נכשלה");
-      setSavedSuccess(true);
-      setTimeout(() => setSavedSuccess(false), 3000);
+      router.push(defaultBackHref);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "שגיאה");
@@ -135,7 +133,7 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
                 onChange={(e) => setForm({ ...form, docNumber: e.target.value })}
                 placeholder="למשל: INV-0001 או 10234"
               />
-              <p className="text-xs text-zinc-500 mt-1">מספר חשבונית או קבלה מהמסמך – ימולא אוטומטית אחרי סריקת OCR</p>
+              <p className="text-xs text-zinc-500 mt-1">מספר מסמך (חשבון עסקה / קבלה) – ימולא אוטומטית אחרי סריקת OCR</p>
             </div>
           </div>
 
