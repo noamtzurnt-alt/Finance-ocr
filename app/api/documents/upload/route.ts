@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/app/lib/auth/server";
 import { putObject } from "@/app/lib/r2/objects";
@@ -8,10 +9,10 @@ import { enqueueOcrJob } from "@/app/lib/ocr/worker";
 
 const metaSchema = z.object({
   type: z.enum(["expense", "income", "payment_receipt"]),
-  date: z.string().optional(),
-  vendor: z.string().optional(),
-  amount: z.string().optional(),
-  categoryId: z.string().optional(),
+  date: z.string().nullable().optional(),
+  vendor: z.string().nullable().optional(),
+  amount: z.string().nullable().optional(),
+  categoryId: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   docNumber: z.string().nullable().optional(),
 });
@@ -79,6 +80,13 @@ export async function POST(req: Request) {
   });
 
   await enqueueOcrJob({ userId: user.id, docId: doc.id });
+
+  const listPath =
+    meta.type === "expense" ? "/receipts"
+    : meta.type === "income" ? "/invoices"
+    : "/payment-receipts";
+  revalidatePath(listPath);
+  revalidatePath("/dashboard");
 
   return NextResponse.json({ ok: true, id: doc.id });
 }

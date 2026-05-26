@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/app/lib/prisma";
 import { requireUser } from "@/app/lib/auth/server";
@@ -89,6 +90,12 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
     data,
   });
   if (updated.count === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  revalidatePath("/receipts");
+  revalidatePath("/invoices");
+  revalidatePath("/payment-receipts");
+  revalidatePath("/dashboard");
+
   return NextResponse.json({ ok: true });
 }
 
@@ -102,6 +109,11 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
 
   await deleteObject(doc.fileKey);
   await prisma.document.delete({ where: { id: doc.id } });
+
+  revalidatePath("/receipts");
+  revalidatePath("/invoices");
+  revalidatePath("/payment-receipts");
+  revalidatePath("/dashboard");
 
   return NextResponse.json({ ok: true });
 }
