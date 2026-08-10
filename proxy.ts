@@ -44,14 +44,21 @@ export async function proxy(req: NextRequest) {
   if (isCron) return NextResponse.next();
   if (isPublicPath(pathname)) return NextResponse.next();
 
+  const loginWithNext = () => {
+    const url = new URL("/login", req.url);
+    const next = `${pathname}${req.nextUrl.search}`;
+    if (next && next !== "/login") url.searchParams.set("next", next);
+    return NextResponse.redirect(url);
+  };
+
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
-  if (!token) return NextResponse.redirect(new URL("/login", req.url));
+  if (!token) return loginWithNext();
 
   const secret = process.env.AUTH_SECRET;
-  if (!secret) return NextResponse.redirect(new URL("/login", req.url));
+  if (!secret) return loginWithNext();
 
   const payload = await verifySessionToken(token, secret);
-  if (!payload?.sub) return NextResponse.redirect(new URL("/login", req.url));
+  if (!payload?.sub) return loginWithNext();
 
   return NextResponse.next();
 }
