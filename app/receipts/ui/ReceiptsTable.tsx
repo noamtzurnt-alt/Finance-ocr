@@ -1,5 +1,4 @@
 import { prisma } from "@/app/lib/prisma";
-import OcrStatusCell from "@/app/ui/OcrStatusCell";
 import Link from "next/link";
 
 function monthLabel(d: Date) {
@@ -20,7 +19,7 @@ export default async function ReceiptsTable(props: { userId: string; showAll: bo
       where,
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       take: props.showAll ? 3_000 : 50,
-      select: { id: true, date: true, vendor: true, amount: true, currency: true, description: true, ocrStatus: true, ocrText: true },
+      select: { id: true, date: true, vendor: true, amount: true, currency: true, description: true },
     }),
     prisma.document.aggregate({
       where,
@@ -39,7 +38,7 @@ export default async function ReceiptsTable(props: { userId: string; showAll: bo
           </svg>
         </div>
         <div>
-          <div className="text-xs font-medium text-zinc-500">סה״כ הוצאות (קבלות) · {props.showAll ? "כל הזמן" : monthLabel(start)}</div>
+          <div className="text-xs font-medium text-zinc-500">סה״כ הוצאות מוכרות · {props.showAll ? "כל הזמן" : monthLabel(start)}</div>
           <div className="text-xl font-bold tracking-tight text-amber-700">{sum} ₪</div>
         </div>
         <div className="mr-auto text-xs text-zinc-400">{docs.length} קבלות</div>
@@ -50,19 +49,18 @@ export default async function ReceiptsTable(props: { userId: string; showAll: bo
           <thead>
             <tr>
               <th>תאריך</th>
-              <th>בית עסק</th>
+              <th>ספק</th>
               <th>תיאור</th>
               <th>סכום</th>
-              <th>OCR</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {docs.length === 0 ? (
               <tr>
-                <td className="py-14 text-center text-zinc-400" colSpan={6}>
-                  אין קבלות עדיין.{" "}
-                  <Link className="font-semibold text-indigo-600 underline" href="/receipts/upload">העלה קבלה</Link>
+                <td className="py-14 text-center text-zinc-400" colSpan={5}>
+                  אין הוצאות עדיין.{" "}
+                  <Link className="font-semibold text-indigo-600 underline" href="/receipts">העלה לתיקייה</Link>
                 </td>
               </tr>
             ) : (
@@ -76,36 +74,20 @@ export default async function ReceiptsTable(props: { userId: string; showAll: bo
                     const dt = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1);
                     out.push(
                       <tr key={`m-${m}`} className="month-divider">
-                        <td colSpan={6}>{monthLabel(dt)}</td>
+                        <td colSpan={5}>{monthLabel(dt)}</td>
                       </tr>,
                     );
                   }
                   out.push(
                     <tr key={d.id}>
                       <td className="text-zinc-500 text-xs">{d.date.toISOString().slice(0, 10)}</td>
-                      <td>
-                        <Link className="font-semibold text-indigo-600 hover:text-indigo-800"
-                          href={`/documents/${d.id}?from=receipts`}>
-                          {d.vendor}
-                        </Link>
-                      </td>
-                      <td className="text-zinc-500">{d.description ?? "—"}</td>
+                      <td className="font-medium text-zinc-900">{d.vendor}</td>
+                      <td className="text-zinc-500">{d.description ?? ""}</td>
                       <td>
                         <span className="font-semibold text-red-600">{d.amount.toString()}</span>
                         <span className="mr-1 text-xs text-zinc-400">{d.currency}</span>
                       </td>
-                      <td>
-                        <OcrStatusCell docId={d.id} status={d.ocrStatus}
-                          errorMessage={d.ocrStatus === "failed" && d.ocrText
-                            ? d.ocrText.startsWith("OCR job failed:")
-                              ? d.ocrText.slice("OCR job failed:".length).trim().slice(0, 120)
-                              : d.ocrText.slice(0, 120)
-                            : null}
-                        />
-                      </td>
-                      <td>
-                        <Link className="btn text-xs" href={`/documents/${d.id}?from=receipts`}>ערוך</Link>
-                      </td>
+                      <td />
                     </tr>,
                   );
                 }

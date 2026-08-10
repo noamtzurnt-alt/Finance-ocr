@@ -36,6 +36,7 @@ yarn-error.log*
 *.pem
 # Google / service account JSON files (often placed in repo root by mistake)
 *credentials*.json
+client_secret*.json
 service-account*.json
 google-service-account*.json
 # Local secret dumps

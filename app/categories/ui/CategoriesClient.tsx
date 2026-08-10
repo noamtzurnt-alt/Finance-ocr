@@ -45,7 +45,7 @@ export default function CategoriesClient(props: { initial: Category[] }) {
   }
 
   async function resetDefaults() {
-    if (!confirm("פעולה זו תמחק את כל הקטגוריות שאינן בברירת המחדל ותשאיר רק: כללי, אוכל, רכב/דלק, תוכנות/מנויים, בגדים. להמשיך?")) return;
+    if (!confirm("פעולה זו תמחק את כל הקטגוריות שאינן בברירת המחדל ותשאיר רק: כללי, אוכל, בגדים, דלק/רכב, תוכנות/מנויים, שכירות. להמשיך?")) return;
     setResetting(true);
     setError(null);
     const res = await fetch("/api/categories/reset-defaults", { method: "POST" });

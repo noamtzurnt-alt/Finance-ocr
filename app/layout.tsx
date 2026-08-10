@@ -8,21 +8,29 @@ import { Suspense } from "react";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Finance OCR",
-  description: "כספת דיגיטלית לניהול קבלות וחשבוניות",
+  title: "Noam Finance",
+  description: "כספת דיגיטלית לניהול הכנסות, הוצאות ומסמכים פיננסיים",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
-    title: "Finance OCR",
+    statusBarStyle: "black-translucent",
+    title: "Noam Finance",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#000000",
+  themeColor: "#07111f",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  viewportFit: "cover",
 };
 
 // Make all pages dynamic to avoid stale/cached data between devices.

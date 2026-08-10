@@ -29,34 +29,31 @@ export default async function DocumentPage(props: {
   ]);
 
   if (!doc || !dbUser) redirect("/dashboard");
+  if (doc.type === "income") redirect("/dashboard");
+
+  if (doc.type === "expense") {
+    const year = doc.date.getFullYear();
+    if (doc.expenseFolderId) {
+      redirect(`/receipts/folder/${doc.expenseFolderId}?year=${year}`);
+    }
+    redirect(`/receipts?year=${year}`);
+  }
 
   const backHref =
-    from === "receipts" || doc.type === "expense"
-      ? "/receipts"
-      : from === "invoices" || doc.type === "income"
-        ? "/invoices"
-        : from === "payment-receipts" || doc.type === "payment_receipt"
-          ? "/payment-receipts"
-          : "/dashboard";
+    from === "payment-receipts" || doc.type === "payment_receipt"
+      ? "/payment-receipts"
+      : "/dashboard";
 
   const backLabel =
-    backHref === "/receipts"
-      ? "חזרה לקבלות החזר מס"
-      : backHref === "/invoices"
-        ? "חזרה לחשבוניות"
-        : backHref === "/payment-receipts"
-          ? "חזרה לקבלות על תשלום"
-          : "חזרה לדשבורד";
+    backHref === "/payment-receipts"
+      ? "חזרה לקבלות הכנסות"
+      : "חזרה לדשבורד";
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
-          {doc.type === "expense"
-            ? "קבלת החזר מס"
-            : doc.type === "payment_receipt"
-              ? "קבלה על תשלום"
-              : "חשבונית"}
+          קבלה (הכנסה)
         </h1>
         <a className="btn" href={backHref}>
           {backLabel}
@@ -83,8 +80,6 @@ export default async function DocumentPage(props: {
           fileName: doc.fileName,
           fileKey: doc.fileKey,
           fileMime: doc.fileMime,
-          ocrStatus: doc.ocrStatus,
-          ocrText: doc.ocrText,
         }}
       />
     </div>

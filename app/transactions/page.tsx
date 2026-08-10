@@ -16,8 +16,8 @@ export default async function TransactionsPage() {
       <LiveRefresh />
       <div className="section-header">
         <div>
-          <h1 className="section-title">תנועות</h1>
-          <p className="section-sub">הוסף, ערוך וחפש תנועות</p>
+          <h1 className="section-title">כל התנועות</h1>
+          <p className="section-sub">הכנסות והוצאות יחד — תזרים מזומנים</p>
         </div>
         <Link className="btn" href="/dashboard">← דשבורד</Link>
       </div>

@@ -5,8 +5,6 @@ import { requireUser } from "@/app/lib/auth/server";
 import { putObject } from "@/app/lib/r2/objects";
 import { prisma } from "@/app/lib/prisma";
 import crypto from "crypto";
-import { enqueueOcrJob } from "@/app/lib/ocr/worker";
-
 const metaSchema = z.object({
   type: z.enum(["expense", "income", "payment_receipt"]),
   date: z.string().nullable().optional(),
@@ -30,6 +28,12 @@ export async function POST(req: Request) {
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
 
   const meta: Meta = metaRaw ? metaSchema.parse(JSON.parse(metaRaw)) : { type: "expense" };
+  if (meta.type === "income") {
+    return NextResponse.json(
+      { error: "העלאת חשבונות עסקה הוסרה מהמערכת" },
+      { status: 410 },
+    );
+  }
 
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
@@ -79,11 +83,8 @@ export async function POST(req: Request) {
     },
   });
 
-  await enqueueOcrJob({ userId: user.id, docId: doc.id });
-
   const listPath =
     meta.type === "expense" ? "/receipts"
-    : meta.type === "income" ? "/invoices"
     : "/payment-receipts";
   revalidatePath(listPath);
   revalidatePath("/dashboard");

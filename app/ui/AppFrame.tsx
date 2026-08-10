@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import OcrWorkerRunner from "@/app/ui/OcrWorkerRunner";
 
 function cx(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -32,8 +31,17 @@ const nav: NavItem[] = [
     ),
   },
   {
+    href: "/chat",
+    label: "Noam Finance",
+    color: "from-teal-500 to-cyan-500",
+    icon: ({ className }) => (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src="/noam-finance-bot.webp" alt="" className={`${className ?? ""} rounded-full object-cover`} />
+    ),
+  },
+  {
     href: "/transactions",
-    label: "תנועות",
+    label: "כל התנועות",
     color: "from-blue-500 to-cyan-500",
     icon: ({ className }) => (
       <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -42,19 +50,19 @@ const nav: NavItem[] = [
     ),
   },
   {
-    href: "/invoices",
-    label: "חשבוניות",
-    color: "from-emerald-500 to-teal-500",
+    href: "/contracts",
+    label: "חוזים",
+    color: "from-violet-500 to-purple-500",
     icon: ({ className }) => (
       <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M7 3h7l3 3v15a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
-        <path d="M14 3v4h4M8 11h8M8 15h6" strokeLinecap="round" />
+        <path d="M14 3v4h4M8 11h6M8 15h4" strokeLinecap="round" />
       </svg>
     ),
   },
   {
     href: "/receipts",
-    label: "קבלות החזר מס",
+    label: "הוצאות מוכרות",
     color: "from-amber-500 to-orange-500",
     icon: ({ className }) => (
       <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -65,23 +73,12 @@ const nav: NavItem[] = [
   },
   {
     href: "/payment-receipts",
-    label: "קבלות על תשלום",
+    label: "קבלות הכנסות",
     color: "from-lime-500 to-green-500",
     icon: ({ className }) => (
       <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/investments",
-    label: "השקעות",
-    color: "from-pink-500 to-rose-500",
-    icon: ({ className }) => (
-      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M3 17l6-6 4 4 7-7" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M21 7v6h-6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -92,18 +89,6 @@ const nav: NavItem[] = [
     icon: ({ className }) => (
       <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-  },
-  {
-    href: "/credentials",
-    label: "סיסמאות",
-    color: "from-slate-500 to-zinc-500",
-    icon: ({ className }) => (
-      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M7 10V7a5 5 0 0 1 10 0v3" strokeLinecap="round" />
-        <rect x="5" y="10" width="14" height="11" rx="1.5" />
-        <circle cx="12" cy="16" r="1.5" fill="currentColor" />
       </svg>
     ),
   },
@@ -171,7 +156,7 @@ function SidebarContent({ active, onClose }: { active: string; onClose?: () => v
       {/* Footer hint */}
       <div className="px-3 pb-4 pt-1">
         <div className="rounded-xl bg-white/5 px-3 py-2.5 text-[0.72rem] leading-relaxed text-white/35">
-          OCR → תיקון ידני → ייצוא לרו״ח
+          העלאה → תיקון ידני → ייצוא לרו״ח
         </div>
       </div>
     </>
@@ -183,9 +168,7 @@ export default function AppFrame(props: { children: React.ReactNode }) {
   const sp = useSearchParams();
   const isPreview = sp?.get("preview") === "1";
   const isAuthPage = pathname === "/login" || pathname === "/setup";
-  const enableBrowserRunner =
-    process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_OCR_BROWSER_RUNNER === "1";
-
+  const isChatPage = pathname === "/chat" || pathname.startsWith("/chat/");
   const [open, setOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const spKey = sp?.toString() ?? "";
@@ -196,7 +179,6 @@ export default function AppFrame(props: { children: React.ReactNode }) {
     if (pathname.startsWith("/documents")) {
       const from = new URLSearchParams(spKey).get("from");
       if (from === "receipts") return "/receipts";
-      if (from === "invoices") return "/invoices";
       if (from === "payment-receipts") return "/payment-receipts";
     }
     return "/dashboard";
@@ -212,11 +194,10 @@ export default function AppFrame(props: { children: React.ReactNode }) {
   const isTermsOrPrivacy = pathname === "/terms" || pathname === "/privacy";
   if (isAuthPage) return <>{props.children}</>;
   if (isTermsOrPrivacy) return <>{props.children}</>;
+  if (isChatPage) return <>{props.children}</>;
 
   return (
     <div className="app-shell">
-      {enableBrowserRunner ? <OcrWorkerRunner intervalMs={2000} /> : null}
-
       {/* Top bar */}
       <div className="app-topbar">
         <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3">

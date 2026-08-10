@@ -1,21 +1,47 @@
 {
-  "name": "Finance OCR",
-  "short_name": "Finance",
-  "description": "כספת דיגיטלית לניהול קבלות וחשבוניות",
-  "start_url": "/dashboard",
+  "name": "Noam Finance",
+  "short_name": "Noam Finance",
+  "description": "צ׳אט מהיר להוספת הוצאות + ניהול מסמכים פיננסיים",
+  "start_url": "/chat",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#000000",
+  "orientation": "portrait",
+  "background_color": "#061018",
+  "theme_color": "#07111f",
+  "lang": "he",
+  "dir": "rtl",
   "icons": [
     {
       "src": "/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
     },
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
       "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Noam Finance Chat",
+      "short_name": "צ׳אט",
+      "description": "הוספת הוצאה מהירה",
+      "url": "/chat",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "דשבורד",
+      "short_name": "דשבורד",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     }
   ]
 }

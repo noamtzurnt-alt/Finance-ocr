@@ -1,25 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-
-type BusinessType = "exempt" | "licensed" | "company";
 
 type SettingsProps = {
-  initial: {
-    businessType: BusinessType;
-    businessName: string;
-    taxId: string;
-    vatPercent: string;
-    phoneNumber: string;
-    whatsappIncomingNumber: string;
-  };
+  email: string;
 };
 
-export default function SettingsClient({ initial }: SettingsProps) {
-  const router = useRouter();
-  const [form, setDraft] = useState(initial);
+export default function SettingsClient({ email }: SettingsProps) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
@@ -30,17 +20,26 @@ export default function SettingsClient({ initial }: SettingsProps) {
     setError(null);
     setOk(false);
 
+    if (newPassword !== confirmPassword) {
+      setError("הסיסמה החדשה ואימות הסיסמה לא תואמים");
+      setSaving(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/settings", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ currentPassword, newPassword }),
       });
 
-      if (!res.ok) throw new Error("שמירה נכשלה");
-      
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) throw new Error(data?.error ?? "שמירה נכשלה");
+
       setOk(true);
-      router.refresh();
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "שגיאה לא צפויה");
     } finally {
@@ -51,94 +50,65 @@ export default function SettingsClient({ initial }: SettingsProps) {
   return (
     <form onSubmit={save} className="max-w-md space-y-5">
       <div>
-        <label className="text-sm font-medium text-zinc-900">סוג עסק</label>
-        <select
-          className="field mt-1 w-full"
-          value={form.businessType}
-          onChange={(e) => setDraft({ ...form, businessType: e.target.value as BusinessType })}
-        >
-          <option value="exempt">עוסק פטור (ללא מע&quot;מ)</option>
-          <option value="licensed">עוסק מורשה</option>
-          <option value="company">חברה בע&quot;מ</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="text-sm font-medium text-zinc-900">שם העסק</label>
+        <label className="text-sm font-medium text-zinc-900">שם משתמש (אימייל)</label>
         <input
-          className="field mt-1 w-full"
-          value={form.businessName}
-          onChange={(e) => setDraft({ ...form, businessName: e.target.value })}
-          placeholder="למשל: נועם פתרונות דיגיטליים"
+          className="field mt-1 w-full bg-zinc-50 text-zinc-700"
+          value={email}
+          readOnly
+          dir="ltr"
         />
       </div>
 
-      <div>
-        <label className="text-sm font-medium text-zinc-900">ח.פ / ת.ז עסק</label>
-        <input
-          className="field mt-1 w-full"
-          value={form.taxId}
-          onChange={(e) => setDraft({ ...form, taxId: e.target.value })}
-          placeholder="מספר עוסק / חברה"
-        />
-      </div>
+      <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 space-y-4">
+        <p className="text-sm font-medium text-zinc-900">שינוי סיסמה</p>
+        <p className="text-xs text-zinc-500">
+          מטעמי אבטחה הסיסמה הנוכחית לא מוצגת. כדי לעדכן — הזן את הסיסמה הנוכחית ואת החדשה.
+        </p>
 
-      {form.businessType !== "exempt" && (
         <div>
-          <label className="text-sm font-medium text-zinc-900">אחוז מע&quot;מ ברירת מחדל (%)</label>
+          <label className="text-sm font-medium text-zinc-700">סיסמה נוכחית</label>
           <input
             className="field mt-1 w-full"
-            type="number"
-            step="0.1"
-            value={form.vatPercent}
-            onChange={(e) => setDraft({ ...form, vatPercent: e.target.value })}
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            required
           />
         </div>
-      )}
 
-      <div>
-        <label className="text-sm font-medium text-zinc-900">מספר WhatsApp לקבלת קבלות (המספר של Twilio)</label>
-        <input
-          className="field mt-1 w-full"
-          type="tel"
-          value={form.whatsappIncomingNumber}
-          onChange={(e) => setDraft({ ...form, whatsappIncomingNumber: e.target.value })}
-          placeholder="למשל: 972501234567"
-        />
-        <p className="mt-1 text-xs text-zinc-500">
-          כשהלקוח שולח תמונת קבלה למספר הזה (ה־WhatsApp העסקי שלך ב־Twilio), הקבלה נשמרת אוטומטית באתר שלך. הלקוח לא נכנס לאתר בכלל.
-        </p>
-        <p className="mt-1 text-xs text-zinc-500">
-          ל-Production (מספר משלך, לקוחות בלי &quot;join&quot;): צריך לחבר Meta Business + WhatsApp Business + Twilio.{" "}
-          <Link href="/settings/whatsapp-setup" className="underline font-medium text-zinc-700 hover:text-zinc-900">
-            מדריך הגדרת WhatsApp ל-Production
-          </Link>
-        </p>
-      </div>
+        <div>
+          <label className="text-sm font-medium text-zinc-700">סיסמה חדשה</label>
+          <input
+            className="field mt-1 w-full"
+            type="password"
+            autoComplete="new-password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            minLength={8}
+            required
+          />
+        </div>
 
-      <div>
-        <label className="text-sm font-medium text-zinc-900">מספר הטלפון שלי (שליחה ממני)</label>
-        <input
-          className="field mt-1 w-full"
-          type="tel"
-          value={form.phoneNumber}
-          onChange={(e) => setDraft({ ...form, phoneNumber: e.target.value })}
-          placeholder="050-1234567"
-        />
-        <p className="mt-1 text-xs text-zinc-500">
-          אם גם אתה שולח קבלות מהטלפון שלך – המספר שתשלח ממנו יזוהה ויישמר בחשבון שלך.
-        </p>
+        <div>
+          <label className="text-sm font-medium text-zinc-700">אימות סיסמה חדשה</label>
+          <input
+            className="field mt-1 w-full"
+            type="password"
+            autoComplete="new-password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            minLength={8}
+            required
+          />
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
-      {ok && <p className="text-sm text-emerald-600 font-medium">ההגדרות נשמרו בהצלחה!</p>}
+      {ok && <p className="text-sm text-emerald-600 font-medium">הסיסמה עודכנה בהצלחה</p>}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="btn btn-primary w-full"
-      >
-        {saving ? "שומר..." : "שמור הגדרות"}
+      <button type="submit" disabled={saving} className="btn btn-primary w-full">
+        {saving ? "שומר..." : "שמור סיסמה"}
       </button>
     </form>
   );

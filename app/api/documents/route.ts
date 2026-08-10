@@ -9,6 +9,7 @@ const querySchema = z.object({
   categoryId: z.string().optional(),
   from: z.string().optional(), // YYYY-MM-DD
   to: z.string().optional(), // YYYY-MM-DD (inclusive)
+  review: z.string().optional(), // "1" = only needsReview
   limit: z.string().optional(),
   cursor: z.string().optional(),
 });
@@ -34,6 +35,7 @@ export async function GET(req: Request) {
     categoryId: url.searchParams.get("categoryId") ?? undefined,
     from: url.searchParams.get("from") ?? undefined,
     to: url.searchParams.get("to") ?? undefined,
+    review: url.searchParams.get("review") ?? undefined,
     limit: url.searchParams.get("limit") ?? undefined,
     cursor: url.searchParams.get("cursor") ?? undefined,
   });
@@ -42,12 +44,19 @@ export async function GET(req: Request) {
   const q = (parsed.data.q ?? "").trim();
   const type = parsed.data.type;
   const categoryId = (parsed.data.categoryId ?? "").trim();
-  const limit = Math.min(100, Math.max(10, Number(parsed.data.limit ?? "50") || 50));
+  const limit = Math.min(200, Math.max(10, Number(parsed.data.limit ?? "50") || 50));
 
-  const where: Record<string, unknown> = { userId: user.id };
+  if (type === "income") {
+    return NextResponse.json({ items: [], nextCursor: null });
+  }
 
-  if (type) where.type = type;
+  const where: Record<string, unknown> = {
+    userId: user.id,
+    type: type ?? { not: "income" },
+  };
+
   if (categoryId) where.categoryId = categoryId;
+  if (parsed.data.review === "1") where.needsReview = true;
 
   if (parsed.data.from) {
     const dt = parseDateOnly(parsed.data.from);
@@ -87,8 +96,10 @@ export async function GET(req: Request) {
       currency: true,
       vendor: true,
       docNumber: true,
+      description: true,
+      sourceUrl: true,
+      needsReview: true,
       category: { select: { id: true, name: true } },
-      ocrStatus: true,
       fileName: true,
     },
   });
@@ -104,9 +115,11 @@ export async function GET(req: Request) {
       currency: d.currency,
       vendor: d.vendor,
       docNumber: d.docNumber,
+      description: d.description,
+      sourceUrl: d.sourceUrl,
+      needsReview: d.needsReview,
       categoryId: d.category?.id ?? null,
       categoryName: d.category?.name ?? null,
-      ocrStatus: d.ocrStatus,
       fileName: d.fileName,
     })),
     nextCursor,

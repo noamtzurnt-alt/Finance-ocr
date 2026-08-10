@@ -63,6 +63,14 @@ model User {
   whatsappIncomingNumber String? // E.164 of WhatsApp number that *receives* receipts (Twilio number) – customer sends here → doc goes to this user
   externalId             String? // e.g. Telegram chat id (optional, for future channels)
 
+  // Morning (חשבונית ירוקה) — webhook token (URL) + secret (header / HMAC)
+  morningWebhookToken  String? @unique
+  morningWebhookSecret String?
+
+  morningWebhookEvents MorningWebhookEvent[]
+  gmailConnections     GmailConnection[]
+  emailReceiptImports  EmailReceiptImport[]
+
   // Business Profile
   businessType    BusinessType @default(exempt)
   businessName    String?
@@ -72,17 +80,86 @@ model User {
   categories Category[]
   documents  Document[]
   transactions Transaction[]
+  expenseFolders ExpenseFolder[]
   investments InvestmentAccount[]
   investmentYears InvestmentYear[]
   investmentEntries InvestmentEntry[]
   budgets    Budget[]
-  credentials Credential[]
+  financialProfile FinancialProfile?
+  contracts  Contract[]
   passkeys   PasskeyCredential[]
   ocrJobs     OcrJob[]
   passwordResets PasswordReset[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+/** Diagnostic log for Morning → payment_receipt webhook imports */
+model MorningWebhookEvent {
+  id             String   @id @default(uuid())
+  userId         String?
+  status         String // unauthorized | invalid_secret | ignored | skipped | imported | error
+  httpStatus     Int
+  summary        String
+  detail         String?  @db.Text
+  morningDocId   String?
+  morningType    Int?
+  morningNumber  String?
+  documentId     String?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+/** Connected Gmail account for automatic expense receipt import */
+model GmailConnection {
+  id                   String    @id @default(uuid())
+  userId               String
+  emailAddress         String
+  refreshTokenEnc      String    @db.Text
+  accessTokenEnc       String?   @db.Text
+  accessTokenExpiresAt DateTime?
+  lastSyncAt           DateTime?
+  lastError            String?   @db.Text
+  syncStatus           String    @default("idle") // idle | syncing | error
+
+  user    User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imports EmailReceiptImport[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, emailAddress])
+  @@index([userId])
+}
+
+/** Per-message log for Gmail → expense imports */
+model EmailReceiptImport {
+  id                String  @id @default(uuid())
+  userId            String
+  gmailConnectionId String
+  gmailMessageId    String
+  gmailAttachmentId String  @default("")
+  status            String // imported | skipped | duplicate | not_receipt | error
+  summary           String
+  detail            String? @db.Text
+  documentId        String?
+  subject           String?
+  sender            String?
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connection GmailConnection @relation(fields: [gmailConnectionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([gmailConnectionId, gmailMessageId, gmailAttachmentId])
+  @@index([userId, createdAt])
+  @@index([gmailConnectionId, createdAt])
 }
 
 model PasswordReset {
@@ -99,14 +176,37 @@ model PasswordReset {
   @@index([userId])
 }
 
+enum BudgetScope {
+  personal
+  business
+}
+
 model Category {
   id     String @id @default(uuid())
   userId String
   name   String
+  budgetScope BudgetScope?
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   documents Document[]
   transactions Transaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model ExpenseFolder {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  icon      String   @default("📁")
+  sortOrder Int      @default(0)
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents Document[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -130,6 +230,7 @@ model Document {
   currency  String       @default("ILS")
   vendor    String
   categoryId String?
+  expenseFolderId String?
   description String?
   docNumber  String?
 
@@ -139,12 +240,17 @@ model Document {
   fileSize  Int
   sha256    String?
 
+  // Email import extras
+  sourceUrl   String?  @db.Text // original receipt link (for link-only receipts)
+  needsReview Boolean  @default(false) // auto-imported, waiting for user approval
+
   ocrStatus     OcrStatus @default(pending)
   ocrConfidence Float?
   ocrText       String?
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  expenseFolder ExpenseFolder? @relation(fields: [expenseFolderId], references: [id], onDelete: SetNull)
   ocrJob   OcrJob?
 
   createdAt DateTime @default(now())
@@ -153,6 +259,8 @@ model Document {
   @@index([userId, date])
   @@index([userId, type])
   @@index([userId, sha256])
+  @@index([userId, expenseFolderId])
+  @@index([userId, type, needsReview])
 }
 
 model Transaction {
@@ -304,16 +412,41 @@ model Budget {
   @@index([userId])
 }
 
-model Credential {
-  id    String @id @default(uuid())
-  userId String
+// Wizard settings persisted per user (not per month)
+model FinancialProfile {
+  id                       String   @id @default(uuid())
+  userId                   String   @unique
+  goal                     String?  // emergency_fund | pay_debt | vacation | financial_independence | business_investment
+  businessRetentionPercent Decimal? @db.Decimal(5, 2)
+  checkingBalance          Decimal? @db.Decimal(14, 2) // עו"ש + פיקדונות נזילים
+  monthlySavings           Decimal? @db.Decimal(12, 2)
+  wizardCompletedAt        DateTime?
+  personalCategories       Json?
+  businessCategories       Json?
+  wizardState              Json?
 
-  name  String
-  email String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  passwordCiphertext String
-  passwordIv         String
-  passwordTag        String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Contract {
+  id                String    @id @default(uuid())
+  userId            String
+  clientName        String
+  clientEmail       String?
+  contractDate      DateTime?
+  details           String?   @db.Text
+  fileKey           String
+  fileName          String
+  fileMime          String
+  fileSize          Int
+  emailHtmlKey      String?
+  emailHtmlFileName String?
+  emailHtmlSize     Int?
+  gmailConnectionId String?
+  gmailMessageId    String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -321,5 +454,6 @@ model Credential {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
-  @@index([userId, name])
+  @@index([userId, contractDate])
+  @@unique([gmailConnectionId, gmailMessageId])
 }

@@ -18,7 +18,7 @@ export async function GET() {
   const daysElapsed = now.getDate();
   const daysRemaining = daysInMonth - daysElapsed + 1; // include today
 
-  const [budget, docSums, fixedTxAgg, variableTxAgg, todayTxSums, todayDocSums] = await Promise.all([
+  const [budget, docSums, fixedTxAgg, variableTxAgg, todayTxSums, todayDocSums, categoryBreakdown] = await Promise.all([
     prisma.budget.findUnique({
       where: { userId_month: { userId: user.id, month } },
       select: { expenseLimit: true, manualIncome: true },
@@ -47,15 +47,21 @@ export async function GET() {
       where: { userId: user.id, type: "expense", date: { gte: todayStart, lt: todayEnd } },
       _sum: { amount: true },
     }),
+    prisma.transaction.groupBy({
+      by: ["categoryId"],
+      where: { userId: user.id, date: { gte: start, lt: end } },
+      _sum: { amount: true },
+      orderBy: { _sum: { amount: "desc" } },
+    }),
   ]);
 
-  const incomeFromDocs = Number(docSums.find((s) => s.type === "income")?._sum.amount ?? 0);
+  const incomeFromDocs = Number(docSums.find((s) => s.type === "payment_receipt")?._sum.amount ?? 0);
   const manualIncome = budget?.manualIncome != null ? Number(budget.manualIncome) : null;
   const effectiveIncome = manualIncome ?? incomeFromDocs;
 
   const expenseFromDocs = Number(docSums.find((s) => s.type === "expense")?._sum.amount ?? 0);
-  const fixedTxExpense = Number(fixedTxAgg._sum.amount ?? 0);
-  const variableTxExpense = Number(variableTxAgg._sum.amount ?? 0);
+  const fixedTxExpense = Number(fixedTxAgg._sum?.amount ?? 0);
+  const variableTxExpense = Number(variableTxAgg._sum?.amount ?? 0);
   const totalExpense = (expenseFromDocs + fixedTxExpense + variableTxExpense).toFixed(2);
 
   const income = effectiveIncome.toFixed(2);
@@ -72,16 +78,21 @@ export async function GET() {
       : 0;
 
   // DFSI Algorithm (Daily Financial Status Indicator)
-  // Safe-to-spend: Daily_Budget = (Total_Income - Total_Fixed_Expenses) / Days_in_Month
-  // DFSI works only on variable expenses (isFixed = false)
+  // If the user saved a budget from the wizard (expenseLimit), use it as source of truth:
+  // variableCap = expenseLimit - fixedTxExpense.
+  // Otherwise fall back to: disposableIncome = income - fixedTxExpense.
+  const budgetFromWizard = !!(budget?.expenseLimit && Number(budget.expenseLimit) > 0);
   const disposableIncome = effectiveIncome - fixedTxExpense;
-  const dailyBudget = disposableIncome > 0 ? disposableIncome / daysInMonth : 0;
+  const variableBudgetCap = budgetFromWizard
+    ? Math.max(0, Number(budget!.expenseLimit) - fixedTxExpense)
+    : disposableIncome;
+  const dailyBudget = variableBudgetCap > 0 ? variableBudgetCap / daysInMonth : 0;
   const expectedVariableSpend = dailyBudget * daysElapsed;
   const spendingVelocity =
     expectedVariableSpend > 0 ? (variableTxExpense / expectedVariableSpend) * 100 : 0;
 
   // How much is safe to spend today (from today onward)
-  const variableBudgetRemaining = disposableIncome - variableTxExpense;
+  const variableBudgetRemaining = variableBudgetCap - variableTxExpense;
   const safeToSpendToday = daysRemaining > 0 ? variableBudgetRemaining / daysRemaining : 0;
 
   // Status based on spending velocity
@@ -94,7 +105,7 @@ export async function GET() {
   // Nudge message
   let nudge = "";
   const velPct = Math.round(spendingVelocity);
-  if (effectiveIncome === 0) {
+  if (effectiveIncome === 0 && !budgetFromWizard) {
     nudge = "הכנס הכנסה חודשית כדי לקבל תמונת מצב מדויקת";
   } else if (dfsiStatus === "excellent") {
     nudge = `מעולה! הוצאת ${velPct}% מהצפוי עד היום — אתה ${100 - velPct}% מתחת לקצב`;
@@ -106,6 +117,20 @@ export async function GET() {
     nudge = `חריגה! הוצאת ${velPct}% מהתקציב היומי הצפוי — בדוק הוצאות לא הכרחיות`;
   }
 
+  // Resolve categoryId → name
+  const catIds = categoryBreakdown.map((c) => c.categoryId).filter(Boolean) as string[];
+  const categories = catIds.length > 0
+    ? await prisma.category.findMany({ where: { id: { in: catIds } }, select: { id: true, name: true } })
+    : [];
+  const catNameMap = Object.fromEntries(categories.map((c) => [c.id, c.name]));
+
+  const categoryBreakdownFormatted = categoryBreakdown
+    .map((c) => ({
+      category: (c.categoryId ? catNameMap[c.categoryId] : null) ?? "ללא קטגוריה",
+      amount: Number(c._sum?.amount ?? 0),
+    }))
+    .filter((c) => c.amount > 0);
+
   return NextResponse.json({
     income,
     manualIncome: manualIncome !== null ? manualIncome.toFixed(2) : null,
@@ -115,6 +140,7 @@ export async function GET() {
     net,
     budgetLimit,
     pct,
+    categoryBreakdown: categoryBreakdownFormatted,
     // DFSI data
     dfsi: {
       status: dfsiStatus,
@@ -124,11 +150,13 @@ export async function GET() {
       variableExpenses: variableTxExpense.toFixed(2),
       fixedExpenses: fixedTxExpense.toFixed(2),
       disposableIncome: disposableIncome.toFixed(2),
+      expectedVariableSpend: Math.round(expectedVariableSpend).toString(),
       daysElapsed,
       daysInMonth,
       daysRemaining,
       nudge,
-      hasIncome: effectiveIncome > 0,
+      hasIncome: effectiveIncome > 0 || budgetFromWizard,
+      budgetFromWizard,
     },
   });
 }

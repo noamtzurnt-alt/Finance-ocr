@@ -58,7 +58,7 @@ export async function GET(req: Request) {
     where,
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     take: limit,
-    include: { category: { select: { name: true } } },
+    include: { category: { select: { name: true, budgetScope: true } } },
   });
 
   return NextResponse.json(
@@ -71,6 +71,7 @@ export async function GET(req: Request) {
       description: t.description,
       categoryId: t.categoryId,
       categoryName: t.category?.name ?? null,
+      categoryScope: t.category?.budgetScope ?? null,
       cardLast4: t.cardLast4,
       isFixed: t.isFixed,
       updatedAt: t.updatedAt.toISOString(),

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/app/lib/prisma";
 import { putObject } from "@/app/lib/r2/objects";
-import { enqueueOcrJob } from "@/app/lib/ocr/worker";
+import { formatQuickReply, parseQuickTransaction } from "@/app/lib/transactions/parse-quick";
 
 export const runtime = "nodejs";
 
@@ -65,50 +65,6 @@ function escapeXml(s: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&apos;");
-}
-
-function normalizeAmount(raw: string): number | null {
-  const s = raw.trim().replace(/\s/g, "").replace(/,/g, "");
-  if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
-  const n = Number(s);
-  if (!Number.isFinite(n) || n <= 0 || n > 1_000_000) return null;
-  return n;
-}
-
-function parseQuickTransaction(text: string): { vendor: string; amount: number; currency: "ILS" | "USD" | "EUR" } | null {
-  const t = text.trim();
-  if (!t) return null;
-
-  // Pattern A: "<vendor> סכום <amount> <currency?>"
-  const m1 = t.match(
-    /^(.+?)\s+(?:סכום|amount)\s*[:\-]?\s*(\d+(?:[.,]\d{1,2})?)\s*(₪|ש["״׳']?ח|שקל(?:ים)?|nis|ils|\$|usd|דולר(?:ים)?|€|eur)?\s*$/i,
-  );
-  // Pattern B: "<vendor> <amount> <currency?>"
-  const m2 = t.match(/^(.+?)\s+(\d+(?:[.,]\d{1,2})?)\s*(₪|ש["״׳']?ח|שקל(?:ים)?|nis|ils|\$|usd|דולר(?:ים)?|€|eur)?\s*$/i);
-  const m = m1 ?? m2;
-  const vendorRaw = (m?.[1] ?? "").trim();
-  const amountRaw = (m?.[2] ?? "").trim().replace(",", ".");
-  const curRaw = (m?.[3] ?? "").trim().toLowerCase();
-  if (!vendorRaw || !amountRaw) return null;
-
-  const amount = normalizeAmount(amountRaw);
-  if (amount === null) return null;
-
-  let currency: "ILS" | "USD" | "EUR" = "ILS";
-  if (curRaw.includes("$") || curRaw.includes("usd") || curRaw.includes("דולר")) currency = "USD";
-  if (curRaw.includes("€") || curRaw.includes("eur")) currency = "EUR";
-  if (curRaw.includes("₪") || curRaw.includes("שח") || curRaw.includes("ש\"ח") || curRaw.includes("שקל") || curRaw.includes("nis") || curRaw.includes("ils"))
-    currency = "ILS";
-
-  // If no explicit currency but message is mostly English, assume USD.
-  if (!curRaw) {
-    const hasHebrew = /[\u0590-\u05FF]/.test(t);
-    const hasLatin = /[a-z]/i.test(t);
-    if (!hasHebrew && hasLatin) currency = "USD";
-  }
-
-  const vendor = vendorRaw.slice(0, 120);
-  return { vendor, amount, currency };
 }
 
 export async function POST(req: Request) {
@@ -174,9 +130,8 @@ export async function POST(req: Request) {
   if (numMedia === 0 || !mediaUrl) {
     const t = messageBody.toLowerCase();
     const wantsPaymentReceipt = t === "1" || /קבלה על תשלום|קבלה.*תשלום|^קבלה$|payment.?receipt/i.test(messageBody);
-    const wantsInvoice = t === "2" || /חשבונית|הכנסה|income|invoice/i.test(messageBody);
 
-    if (wantsPaymentReceipt || wantsInvoice) {
+    if (wantsPaymentReceipt) {
       const since = new Date(Date.now() - 20 * 60 * 1000);
       const latest = await prisma.document.findFirst({
         where: { userId: user.id, createdAt: { gte: since }, fileName: { startsWith: "webhook-" } },
@@ -185,17 +140,16 @@ export async function POST(req: Request) {
       });
 
       if (!latest) {
-        return twimlMessage("לא מצאתי מסמך אחרון שסיכמת. שלח קודם תמונה/קובץ ואז השב: 1=קבלה על תשלום, 2=חשבונית.");
+        return twimlMessage("לא מצאתי מסמך אחרון שסיכמת. שלח קודם תמונה/קובץ ואז השב 1 כדי לסמן אותו כקבלה (הכנסה).");
       }
 
-      const newType = wantsInvoice ? "income" : "payment_receipt";
       await prisma.document.update({
         where: { id: latest.id },
-        data: { type: newType },
+        data: { type: "payment_receipt" },
         select: { id: true },
       });
 
-      return twimlMessage(newType === "income" ? "סבבה—סימנתי כחשבונית." : "סבבה—סימנתי כקבלה על תשלום.");
+      return twimlMessage("סבבה—סימנתי כקבלה (הכנסה).");
     }
 
     // Quick transaction (text-only): "משקה חלבון סכום 12 שקלים"
@@ -227,13 +181,11 @@ export async function POST(req: Request) {
         select: { id: true },
       });
 
-      return twimlMessage(
-        `אין בעיה 🙂 הוספתי לתנועות: ${tx.vendor} — ${tx.amount.toFixed(2)} ${tx.currency === "ILS" ? "₪" : tx.currency === "USD" ? "$" : "€"} (היום).\nמזהה: ${created.id.slice(0, 8)}`,
-      );
+      return twimlMessage(formatQuickReply(tx, created.id));
     }
 
     return twimlMessage(
-      "אפשר:\n1) לשלוח תמונה/קובץ של קבלה על תשלום או חשבונית (ואז לענות 1/2)\n2) להוסיף תנועה מהירה בטקסט:\nלדוגמה: משקה חלבון סכום 12 שקלים\nאו: משקה חלבון 12 ₪",
+      "אפשר:\n1) לשלוח תמונה/קובץ של קבלה (ואז לענות 1)\n2) להוסיף תנועה מהירה בטקסט:\nלדוגמה: משקה חלבון סכום 12 שקלים\nאו: משקה חלבון 12 ₪",
     );
   }
 
@@ -271,11 +223,9 @@ export async function POST(req: Request) {
       },
     });
 
-    await enqueueOcrJob({ userId: user.id, docId: doc.id });
-
     console.log("[webhooks/incoming] Doc created docId=%s userId=%s", doc.id, user.id);
     return twimlMessage(
-      "קיבלתי את המסמך והוא ייסרק ב‑OCR.\nמה זה?\n1 = קבלה על תשלום\n2 = חשבונית\n\n(אפשר גם לשנות אחר כך בתוך האפליקציה)",
+      "קיבלתי את המסמך! היכנס לאפליקציה כדי למלא פרטים (ספק, סכום, תאריך).\nאם זו קבלה על תשלום שנכנס, השב 1.",
     );
   } catch (e) {
     const err = e instanceof Error ? e.message : String(e);

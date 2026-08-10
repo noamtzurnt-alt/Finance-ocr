@@ -13,7 +13,7 @@ async function sleep(ms: number) {
   await new Promise((r) => setTimeout(r, ms));
 }
 
-type Entity = "document" | "category" | "budget" | "credential" | "transaction" | "investment";
+type Entity = "document" | "category" | "budget" | "contract" | "transaction" | "investment";
 
 export async function GET(req: Request) {
   const user = await requireUser();
@@ -58,9 +58,9 @@ export async function GET(req: Request) {
       const doc = await prisma.document.findFirst({
         where: { userId: user.id, updatedAt: { gt: last } },
         orderBy: { updatedAt: "asc" },
-        select: { id: true, updatedAt: true, ocrStatus: true },
+        select: { id: true, updatedAt: true },
       });
-      if (doc) candidates.push({ entity: "document", id: doc.id, at: doc.updatedAt, extra: { ocrStatus: doc.ocrStatus } });
+      if (doc) candidates.push({ entity: "document", id: doc.id, at: doc.updatedAt });
 
       const tx = await prisma.transaction.findFirst({
         where: { userId: user.id, updatedAt: { gt: last } },
@@ -84,12 +84,12 @@ export async function GET(req: Request) {
         });
         if (bud) candidates.push({ entity: "budget", id: bud.id, at: bud.updatedAt });
 
-        const cred = await prisma.credential.findFirst({
+        const contract = await prisma.contract.findFirst({
           where: { userId: user.id, updatedAt: { gt: last } },
           orderBy: { updatedAt: "asc" },
           select: { id: true, updatedAt: true },
         });
-        if (cred) candidates.push({ entity: "credential", id: cred.id, at: cred.updatedAt });
+        if (contract) candidates.push({ entity: "contract", id: contract.id, at: contract.updatedAt });
 
         const invAcc = await prisma.investmentAccount.findFirst({
           where: { userId: user.id, updatedAt: { gt: last } },

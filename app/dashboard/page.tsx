@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/app/lib/auth/server";
 import LogoutButton from "./ui/LogoutButton";
@@ -25,11 +26,20 @@ export default async function DashboardPage() {
           <h1 className="section-title">{todayLabel}</h1>
           <p className="section-sub">{user.email}</p>
         </div>
-        <LogoutButton />
+        <div className="flex items-center gap-2">
+          <Link
+            href="/chat"
+            prefetch
+            className="btn inline-flex items-center gap-2 bg-zinc-900 text-white hover:bg-zinc-800"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/noam-finance-bot.webp" alt="" className="h-6 w-6 rounded-full object-cover" />
+            Noam Finance
+          </Link>
+          <LogoutButton />
+        </div>
       </div>
       <DashboardContent />
     </div>
   );
 }
-
-

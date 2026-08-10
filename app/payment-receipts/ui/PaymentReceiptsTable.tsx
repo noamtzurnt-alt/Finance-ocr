@@ -1,5 +1,4 @@
 import { prisma } from "@/app/lib/prisma";
-import OcrStatusCell from "@/app/ui/OcrStatusCell";
 import Link from "next/link";
 
 function monthLabel(d: Date) {
@@ -28,7 +27,6 @@ export default async function PaymentReceiptsTable(props: { userId: string; show
         currency: true,
         description: true,
         docNumber: true,
-        ocrStatus: true,
       },
     }),
     prisma.document.aggregate({
@@ -63,15 +61,14 @@ export default async function PaymentReceiptsTable(props: { userId: string; show
               <th>תיאור</th>
               <th>מס׳ קבלה</th>
               <th>סכום</th>
-              <th>OCR</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {docs.length === 0 ? (
               <tr>
-                <td className="py-14 text-center text-zinc-400" colSpan={7}>
-                  אין קבלות על תשלום עדיין.{" "}
+                <td className="py-14 text-center text-zinc-400" colSpan={6}>
+                  אין קבלות (הכנסות) עדיין.{" "}
                   <Link className="font-semibold text-indigo-600 underline" href="/payment-receipts/upload">העלה קבלה</Link>
                 </td>
               </tr>
@@ -84,7 +81,7 @@ export default async function PaymentReceiptsTable(props: { userId: string; show
                   if (m !== lastMonth) {
                     lastMonth = m;
                     const dt = new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)) - 1, 1);
-                    out.push(<tr key={`m-${m}`} className="month-divider"><td colSpan={7}>{monthLabel(dt)}</td></tr>);
+                    out.push(<tr key={`m-${m}`} className="month-divider"><td colSpan={6}>{monthLabel(dt)}</td></tr>);
                   }
                   out.push(
                     <tr key={d.id}>
@@ -93,13 +90,12 @@ export default async function PaymentReceiptsTable(props: { userId: string; show
                         <Link className="font-semibold text-indigo-600 hover:text-indigo-800"
                           href={`/documents/${d.id}?from=payment-receipts`}>{d.vendor}</Link>
                       </td>
-                      <td className="text-zinc-500">{d.description ?? "—"}</td>
-                      <td>{d.docNumber ? <span className="cat-badge bg-zinc-100 text-zinc-600">{d.docNumber}</span> : <span className="text-zinc-400">—</span>}</td>
+                      <td className="text-zinc-500">{d.description ?? ""}</td>
+                      <td>{d.docNumber ? <span className="cat-badge bg-zinc-100 text-zinc-600">{d.docNumber}</span> : null}</td>
                       <td>
                         <span className="font-semibold text-emerald-700">{d.amount.toString()}</span>
                         <span className="mr-1 text-xs text-zinc-400">{d.currency}</span>
                       </td>
-                      <td><OcrStatusCell docId={d.id} status={d.ocrStatus} /></td>
                       <td><Link className="btn text-xs" href={`/documents/${d.id}?from=payment-receipts`}>ערוך</Link></td>
                     </tr>,
                   );

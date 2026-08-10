@@ -18,6 +18,8 @@ const updateSchema = z.object({
   categoryId: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   docNumber: z.string().nullable().optional(),
+  fileName: z.string().min(1).max(255).optional(),
+  needsReview: z.boolean().optional(),
 });
 
 function parseDateOnly(s: string) {
@@ -56,7 +58,6 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     fileName: doc.fileName,
     fileMime: doc.fileMime,
     fileUrl: url,
-    ocrStatus: doc.ocrStatus,
   });
 }
 
@@ -84,6 +85,8 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (parsed.data.categoryId !== undefined) data.categoryId = parsed.data.categoryId?.trim() || null;
   if (parsed.data.description !== undefined) data.description = parsed.data.description;
   if (parsed.data.docNumber !== undefined) data.docNumber = parsed.data.docNumber;
+  if (parsed.data.fileName !== undefined) data.fileName = parsed.data.fileName.trim();
+  if (parsed.data.needsReview !== undefined) data.needsReview = parsed.data.needsReview;
 
   const updated = await prisma.document.updateMany({
     where: { id, userId: user.id },
@@ -91,7 +94,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   });
   if (updated.count === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  const doc = await prisma.document.findFirst({
+    where: { id, userId: user.id },
+    select: { expenseFolderId: true },
+  });
+
   revalidatePath("/receipts");
+  if (doc?.expenseFolderId) revalidatePath(`/receipts/folder/${doc.expenseFolderId}`);
   revalidatePath("/invoices");
   revalidatePath("/payment-receipts");
   revalidatePath("/dashboard");
@@ -111,6 +120,7 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   await prisma.document.delete({ where: { id: doc.id } });
 
   revalidatePath("/receipts");
+  if (doc.expenseFolderId) revalidatePath(`/receipts/folder/${doc.expenseFolderId}`);
   revalidatePath("/invoices");
   revalidatePath("/payment-receipts");
   revalidatePath("/dashboard");

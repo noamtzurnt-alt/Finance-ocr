@@ -229,7 +229,7 @@ export default function InvestmentsClient(props: { years: number[]; initial: Acc
                 <div className="flex h-28 w-28 flex-col items-center justify-center rounded-full border border-zinc-200 bg-white shadow-sm">
                   <div className="text-[11px] font-medium text-zinc-600">יתרה נוכחית</div>
                   <div className="mt-1 text-lg font-semibold tracking-tight text-zinc-900">
-                    {bal == null ? "—" : formatILS(bal)}
+                    {bal == null ? "לא עודכן" : formatILS(bal)}
                   </div>
                   <div className="mt-1 text-[10px] text-zinc-500">
                     {balUpdated ? `עודכן: ${balUpdated.toLocaleDateString("he-IL")}` : "לא עודכן"}
@@ -407,7 +407,7 @@ export default function InvestmentsClient(props: { years: number[]; initial: Acc
                               <td className="px-3 py-2 text-zinc-900">{e.date}</td>
                               <td className="px-3 py-2 text-zinc-700">{labelType(e.type)}</td>
                               <td className="px-3 py-2 font-medium text-zinc-900">{formatILS(moneyNum(e.amount))}</td>
-                              <td className="px-3 py-2 text-zinc-700">{e.note || "—"}</td>
+                              <td className="px-3 py-2 text-zinc-700">{e.note || ""}</td>
                               <td className="px-3 py-2">
                                 <button
                                   type="button"

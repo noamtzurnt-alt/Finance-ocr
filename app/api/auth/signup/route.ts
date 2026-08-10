@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/prisma";
 import { hashPassword } from "@/app/lib/auth/password";
+import { DEFAULT_CATEGORIES } from "@/app/lib/categories/defaults";
 
 function normalizePhoneE164(raw: string): string | null {
   const digits = raw.replace(/\D/g, "");
@@ -10,17 +11,6 @@ function normalizePhoneE164(raw: string): string | null {
   if (digits.startsWith("0")) return "972" + digits.slice(1);
   return "972" + digits.slice(-9);
 }
-
-const DEFAULT_CATEGORIES = [
-  "ציוד/אלקטרוניקה",
-  "תוכנות/מנויים",
-  "פרסום/שיווק",
-  "דלק/רכב",
-  "תקשורת/אינטרנט",
-  "משרד/ציוד משרדי",
-  "עמלות/בנק/סליקה",
-  "אחר",
-];
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -70,7 +60,7 @@ export async function POST(req: Request) {
   });
 
   await prisma.category.createMany({
-    data: DEFAULT_CATEGORIES.map((name) => ({ userId: user.id, name })),
+    data: [...DEFAULT_CATEGORIES].map((name) => ({ userId: user.id, name })),
   });
 
   // לא מכניסים להתחברות – רק אחרי אישור מנהל

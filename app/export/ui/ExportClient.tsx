@@ -24,7 +24,6 @@ export default function ExportClient(props: { defaultYear: number }) {
   async function exportXlsx() {
     setDownloading("xlsx");
     download(`/api/export/${yearNum}/xlsx`);
-    // We can't know when the browser finishes the download, so we show a short confirmation state.
     window.setTimeout(() => setDownloading(null), 1200);
   }
 
@@ -65,6 +64,18 @@ export default function ExportClient(props: { defaultYear: number }) {
         </div>
       </div>
 
+      <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm text-indigo-950">
+        <p className="font-semibold">מה יוצא לרו״ח לשנה שנבחרה</p>
+        <ul className="mt-2 list-disc space-y-1 pr-5 text-indigo-800">
+          <li>
+            <strong>מסמך 1 — הוצאות מוכרות:</strong> כל ההוצאות של השנה
+          </li>
+          <li>
+            <strong>מסמך 2 — קבלות הכנסות:</strong> כל הקבלות של השנה
+          </li>
+        </ul>
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -72,7 +83,7 @@ export default function ExportClient(props: { defaultYear: number }) {
           disabled={downloading != null || !Number.isFinite(yearNum)}
           className="btn btn-primary disabled:opacity-60"
         >
-          {downloading === "xlsx" ? "מכין…" : "הורד XLSX (ריכוז)"}
+          {downloading === "xlsx" ? "מכין…" : "הורד XLSX (2 גיליונות)"}
         </button>
         <button
           type="button"
@@ -80,15 +91,14 @@ export default function ExportClient(props: { defaultYear: number }) {
           disabled={downloading != null || !Number.isFinite(yearNum)}
           className="btn disabled:opacity-60"
         >
-          {downloading === "zip" ? "מכין…" : "הורד ZIP (קבצים + XLSX)"}
+          {downloading === "zip" ? "מכין…" : "הורד ZIP (2 קבצי Excel + קבצים)"}
         </button>
       </div>
 
       <p className="text-sm text-zinc-600">
-        ה-XLSX הוא טבלה (בלי תמונות). ה-ZIP כולל גם את ה-XLSX וגם את הקבצים המקוריים (PDF/תמונה) מסודרים לפי חודשים.
+        ה־XLSX כולל שני גיליונות: הוצאות מוכרות וקבלות הכנסות. ה־ZIP כולל שני קבצי Excel נפרדים
+        (אחד להוצאות ואחד לקבלות) ואת כל קבצי ה־PDF/תמונה המקוריים, מסודרים לפי חודש.
       </p>
     </div>
   );
 }
-
-

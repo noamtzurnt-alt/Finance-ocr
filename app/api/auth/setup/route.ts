@@ -4,6 +4,7 @@ import { prisma } from "@/app/lib/prisma";
 import { hashPassword } from "@/app/lib/auth/password";
 import { signSessionToken } from "@/app/lib/auth/session";
 import { setSessionCookie } from "@/app/lib/auth/cookies";
+import { DEFAULT_CATEGORIES } from "@/app/lib/categories/defaults";
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -34,18 +35,8 @@ export async function POST(req: Request) {
   });
 
   // seed default categories
-  const defaults = [
-    "ציוד/אלקטרוניקה",
-    "תוכנות/מנויים",
-    "פרסום/שיווק",
-    "דלק/רכב",
-    "תקשורת/אינטרנט",
-    "משרד/ציוד משרדי",
-    "עמלות/בנק/סליקה",
-    "אחר",
-  ];
   await prisma.category.createMany({
-    data: defaults.map((name) => ({ userId: user.id, name })),
+    data: [...DEFAULT_CATEGORIES].map((name) => ({ userId: user.id, name })),
   });
 
   const token = await signSessionToken({ sub: user.id, email: user.email }, secret);

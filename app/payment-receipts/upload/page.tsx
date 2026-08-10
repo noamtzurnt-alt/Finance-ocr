@@ -17,12 +17,12 @@ export default async function PaymentReceiptUploadPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">קבלה על תשלום חדשה</h1>
-          <p className="mt-1 text-sm text-zinc-600">העלה עותק של קבלה שהוצאת ללקוח (תמונה/‏PDF) לאחר ששילם.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">קבלה חדשה (הכנסה)</h1>
+          <p className="mt-1 text-sm text-zinc-600">העלה קבלה שהוצאת ללקוח לאחר ששילם (תמונה/‏PDF).</p>
         </div>
         <div className="flex items-center gap-2">
           <a className="btn" href="/payment-receipts">
-            חזרה לקבלות על תשלום
+            חזרה לקבלות (הכנסות)
           </a>
           <a className="btn" href="/dashboard">
             דשבורד

@@ -57,7 +57,7 @@ export async function GET(req: Request) {
       const changed = await prisma.document.findFirst({
         where,
         orderBy: { updatedAt: "asc" },
-        select: { id: true, updatedAt: true, ocrStatus: true },
+        select: { id: true, updatedAt: true },
       });
 
       if (changed) {
@@ -67,7 +67,6 @@ export async function GET(req: Request) {
             {
               id: changed.id,
               updatedAt: changed.updatedAt.toISOString(),
-              ocrStatus: changed.ocrStatus,
             },
             "changed",
           ),

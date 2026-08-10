@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 type Category = { id: string; name: string };
 type Item = {
   id: string;
-  type: "expense" | "income" | "payment_receipt";
+  type: "expense" | "payment_receipt";
   date: string; // YYYY-MM-DD
   amount: string;
   currency: string;
@@ -13,7 +13,6 @@ type Item = {
   docNumber: string | null;
   categoryId: string | null;
   categoryName: string | null;
-  ocrStatus: "pending" | "success" | "failed";
   fileName: string;
 };
 
@@ -29,7 +28,7 @@ function qs(params: Record<string, string | undefined>) {
 
 export default function DocumentsClient(props: { categories: Category[]; initial: Page }) {
   const [q, setQ] = useState("");
-  const [type, setType] = useState<"" | "expense" | "income" | "payment_receipt">("");
+  const [type, setType] = useState<"" | "expense" | "payment_receipt">("");
   const [categoryId, setCategoryId] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -37,7 +36,6 @@ export default function DocumentsClient(props: { categories: Category[]; initial
   const [page, setPage] = useState<Page>(props.initial);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [retrying, setRetrying] = useState<string | null>(null);
 
   const hasFilters = useMemo(() => {
     return Boolean(q.trim() || type || categoryId || from || to);
@@ -73,20 +71,6 @@ export default function DocumentsClient(props: { categories: Category[]; initial
         : body,
     );
   }, [q, type, categoryId, from, to, page.nextCursor]);
-
-  async function retryOcr(docId: string) {
-    setRetrying(docId);
-    setError(null);
-    const res = await fetch(`/api/documents/${docId}/retry-ocr`, { method: "POST" });
-    setRetrying(null);
-    if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as { error?: string } | null;
-      setError(body?.error ?? "לא הצלחתי להפעיל OCR מחדש");
-      return;
-    }
-    // Refresh list (SSE should also pick it up; this makes it immediate)
-    void load(false);
-  }
 
   function reset() {
     setQ("");
@@ -142,13 +126,12 @@ export default function DocumentsClient(props: { categories: Category[]; initial
             value={type}
             onChange={(e) => {
               const v = e.target.value;
-              setType(v === "expense" || v === "income" || v === "payment_receipt" ? v : "");
+              setType(v === "expense" || v === "payment_receipt" ? v : "");
             }}
           >
             <option value="">הכל</option>
-            <option value="expense">קבלות החזר מס</option>
-            <option value="income">חשבוניות</option>
-            <option value="payment_receipt">קבלות על תשלום</option>
+            <option value="expense">הוצאות מוכרות (הוצאות)</option>
+            <option value="payment_receipt">קבלות (הכנסות)</option>
           </select>
         </div>
         <div>
@@ -203,13 +186,12 @@ export default function DocumentsClient(props: { categories: Category[]; initial
               <th className="px-3 py-2 text-right font-medium">סוג</th>
               <th className="px-3 py-2 text-right font-medium">קטגוריה</th>
               <th className="px-3 py-2 text-right font-medium">סכום</th>
-              <th className="px-3 py-2 text-right font-medium">OCR</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-12 text-center text-zinc-600" colSpan={6}>
+                <td className="px-3 py-12 text-center text-zinc-600" colSpan={5}>
                   אין מסמכים לתצוגה. <a className="underline" href="/upload">העלה מסמך ראשון</a>
                 </td>
               </tr>
@@ -220,38 +202,21 @@ export default function DocumentsClient(props: { categories: Category[]; initial
                   <td className="px-3 py-2">
                     <a
                       className="font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2"
-                      href={`/documents/${d.id}?from=${d.type === "expense" ? "receipts" : d.type === "payment_receipt" ? "payment-receipts" : "invoices"}`}
+                      href={
+                        d.type === "expense"
+                          ? "/receipts"
+                          : `/documents/${d.id}?from=payment-receipts`
+                      }
                       title={d.fileName}
                     >
                       {d.vendor}
                     </a>
                     {d.docNumber ? <div className="mt-0.5 text-xs text-zinc-600">#{d.docNumber}</div> : null}
                   </td>
-                  <td className="px-3 py-2">{d.type === "expense" ? "הוצאה" : d.type === "payment_receipt" ? "קבלה על תשלום" : "הכנסה"}</td>
-                  <td className="px-3 py-2">{d.categoryName ?? "—"}</td>
+                  <td className="px-3 py-2">{d.type === "expense" ? "הוצאה" : "קבלה (הכנסה)"}</td>
+                  <td className="px-3 py-2">{d.categoryName ?? ""}</td>
                   <td className="px-3 py-2">
                     {d.amount} <span className="text-xs text-zinc-600">{d.currency}</span>
-                  </td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <span>{d.ocrStatus}</span>
-                      {d.ocrStatus === "pending" ? (
-                        <div className="h-2 w-20 overflow-hidden rounded-full bg-zinc-200/70">
-                          <div className="h-full w-1/2 animate-pulse rounded-full bg-zinc-500/60" />
-                        </div>
-                      ) : null}
-                      {d.ocrStatus === "failed" ? (
-                        <button
-                          type="button"
-                          className="btn"
-                          title="נסה שוב OCR"
-                          disabled={retrying === d.id}
-                          onClick={() => void retryOcr(d.id)}
-                        >
-                          {retrying === d.id ? "…" : "↻"}
-                        </button>
-                      ) : null}
-                    </div>
                   </td>
                 </tr>
               ))

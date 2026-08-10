@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function ReceiptUploadForm() {
@@ -19,6 +19,10 @@ export default function ReceiptUploadForm() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const phoneFileInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleFileChange = useCallback((selectedFile: File | null) => {
+    setFile(selectedFile);
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -59,9 +63,9 @@ export default function ReceiptUploadForm() {
     const res = await fetch("/api/documents/upload", { method: "POST", body: form });
     setLoading(false);
     if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as { error?: string; existingId?: string } | null;
-      if (res.status === 409 && body?.existingId) {
-        router.replace(`/documents/${body.existingId}?from=receipts`);
+      const body = (await res.json().catch(() => null)) as { error?: string; docId?: string } | null;
+      if (res.status === 409 && body?.docId) {
+        router.replace(`/documents/${body.docId}?from=receipts`);
         return;
       }
       setError(body?.error ?? "שגיאת העלאה");
@@ -86,21 +90,23 @@ export default function ReceiptUploadForm() {
             העלאה מהטלפון (מצלמה)
           </button>
         </div>
-        <div className="mt-2 text-xs text-zinc-600">{file ? `נבחר: ${file.name}` : "לא נבחר קובץ"}</div>
+        <div className="mt-2 text-xs text-zinc-600">
+          {file ? `נבחר: ${file.name}` : "לא נבחר קובץ"}
+        </div>
 
         <input
           ref={fileInputRef}
           className="hidden"
           type="file"
           accept={acceptFile}
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
         />
         <input
           ref={phoneFileInputRef}
           className="hidden"
           type="file"
           accept={acceptFile}
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
         />
         <input
           ref={cameraInputRef}
@@ -108,7 +114,7 @@ export default function ReceiptUploadForm() {
           type="file"
           accept={acceptCamera}
           capture="environment"
-          onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
         />
       </div>
 
@@ -149,4 +155,3 @@ export default function ReceiptUploadForm() {
     </form>
   );
 }
-

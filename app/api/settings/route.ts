@@ -2,22 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/prisma";
 import { requireUser } from "@/app/lib/auth/server";
-
-function normalizePhoneE164(raw: string): string | null {
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length < 9) return null;
-  if (digits.startsWith("972")) return digits;
-  if (digits.startsWith("0")) return "972" + digits.slice(1);
-  return "972" + digits.slice(-9);
-}
+import { hashPassword, verifyPassword } from "@/app/lib/auth/password";
 
 const patchSchema = z.object({
-  businessType: z.enum(["exempt", "licensed", "company"]),
-  businessName: z.string().max(100).optional(),
-  taxId: z.string().max(20).optional(),
-  vatPercent: z.string().optional(),
-  phoneNumber: z.string().max(20).optional(),
-  whatsappIncomingNumber: z.string().max(25).optional(),
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
 });
 
 export async function PATCH(req: Request) {
@@ -28,20 +17,21 @@ export async function PATCH(req: Request) {
   const parsed = patchSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  const { businessType, businessName, taxId, vatPercent, phoneNumber, whatsappIncomingNumber } = parsed.data;
-  const phoneE164 = phoneNumber?.trim() ? normalizePhoneE164(phoneNumber.trim()) : null;
-  const incomingE164 = whatsappIncomingNumber?.trim() ? normalizePhoneE164(whatsappIncomingNumber.trim()) : null;
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { passwordHash: true },
+  });
+  if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { currentPassword, newPassword } = parsed.data;
+  const valid = await verifyPassword(currentPassword, dbUser.passwordHash);
+  if (!valid) {
+    return NextResponse.json({ error: "הסיסמה הנוכחית שגויה" }, { status: 400 });
+  }
 
   await prisma.user.update({
     where: { id: user.id },
-    data: {
-      businessType,
-      businessName: businessName || null,
-      taxId: taxId || null,
-      vatPercent: vatPercent ? parseFloat(vatPercent) : undefined,
-      phoneNumber: phoneE164,
-      whatsappIncomingNumber: incomingE164,
-    },
+    data: { passwordHash: await hashPassword(newPassword) },
   });
 
   return NextResponse.json({ ok: true });

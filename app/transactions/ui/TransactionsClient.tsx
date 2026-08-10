@@ -1,16 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import ImportStatementCard from "./ImportStatementCard";
 
 function monthLabelFromKey(key: string) {
-  // key: YYYY-MM
   const y = Number(key.slice(0, 4));
   const m = Number(key.slice(5, 7));
   const dt = new Date(y, Math.max(0, m - 1), 1);
   return new Intl.DateTimeFormat("he-IL", { month: "long", year: "numeric" }).format(dt);
 }
 
-type Category = { id: string; name: string };
+type BudgetScope = "personal" | "business";
+
+type Category = { id: string; name: string; budgetScope: BudgetScope };
 type Row = {
   id: string;
   date: string;
@@ -20,6 +23,7 @@ type Row = {
   description: string | null;
   categoryId: string | null;
   categoryName: string | null;
+  categoryScope: BudgetScope | null;
   cardLast4: string | null;
   isFixed: boolean;
   updatedAt: string;
@@ -34,9 +38,51 @@ type EditState = {
   categoryId: string;
   cardLast4: string;
   isFixed: boolean;
+  scope: BudgetScope;
 };
 
+const SECTION_META: Record<BudgetScope, { title: string; emoji: string; headerClass: string; badgeClass: string }> = {
+  personal: {
+    title: "חיים אישיים",
+    emoji: "🏠",
+    headerClass: "border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50",
+    badgeClass: "bg-emerald-100 text-emerald-800",
+  },
+  business: {
+    title: "עסק",
+    emoji: "🏢",
+    headerClass: "border-violet-200 bg-gradient-to-l from-violet-50 to-fuchsia-50",
+    badgeClass: "bg-violet-100 text-violet-800",
+  },
+};
+
+const CAT_COLORS: Record<string, string> = {
+  "אוכל": "bg-orange-100 text-orange-700",
+  "דלק/רכב": "bg-blue-100 text-blue-700",
+  "תוכנות ומנויים": "bg-violet-100 text-violet-700",
+  "תוכנות/מנויים": "bg-violet-100 text-violet-700",
+  "בגדים": "bg-pink-100 text-pink-700",
+  "שכירות": "bg-emerald-100 text-emerald-700",
+  "יום הולדת/אירוע מיוחד": "bg-yellow-100 text-yellow-700",
+  "בזבוזים": "bg-rose-100 text-rose-700",
+  "ספר": "bg-sky-100 text-sky-700",
+  "רכבת": "bg-cyan-100 text-cyan-700",
+  "מספרי טלפון": "bg-indigo-100 text-indigo-700",
+  "דומיין": "bg-fuchsia-100 text-fuchsia-700",
+  "עלות הודעות ווצאפ": "bg-green-100 text-green-700",
+  "עלות רואה חשבון": "bg-amber-100 text-amber-700",
+};
+
+function catColor(name: string | null) {
+  return name ? (CAT_COLORS[name] ?? "bg-teal-100 text-teal-700") : "bg-zinc-100 text-zinc-400";
+}
+
+function sumAmount(rows: Row[]) {
+  return rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
+}
+
 export default function TransactionsClient(props: { categories: Category[] }) {
+  const router = useRouter();
   const [items, setItems] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,37 +90,70 @@ export default function TransactionsClient(props: { categories: Category[] }) {
   const [saving, setSaving] = useState(false);
   const editRef = useRef<HTMLTableRowElement | null>(null);
 
-  const sortedCategories = useMemo(() => {
-    const sorted = [...props.categories];
-    sorted.sort((a, b) => {
-      if (a.name === "כללי") return -1;
-      if (b.name === "כללי") return 1;
-      return a.name.localeCompare(b.name, "he");
-    });
-    return sorted;
-  }, [props.categories]);
-
-  const defaultCategoryId = useMemo(
-    () => props.categories.find((c) => c.name === "כללי")?.id ?? props.categories[0]?.id ?? "",
+  const personalCategories = useMemo(
+    () => props.categories.filter((c) => c.budgetScope === "personal"),
+    [props.categories],
+  );
+  const businessCategories = useMemo(
+    () => props.categories.filter((c) => c.budgetScope === "business"),
     [props.categories],
   );
 
+  const categoriesByScope = useMemo(
+    () => ({ personal: personalCategories, business: businessCategories }),
+    [personalCategories, businessCategories],
+  );
+
   const today = useMemo(() => new Date(), []);
+  const [scope, setScope] = useState<BudgetScope>("personal");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [amount, setAmount] = useState("");
   const [vendor, setVendor] = useState("");
   const [description, setDescription] = useState("");
-  const [categoryId, setCategoryId] = useState(defaultCategoryId);
+  const [categoryId, setCategoryId] = useState("");
   const [cardLast4, setCardLast4] = useState("7374");
   const [isFixed, setIsFixed] = useState(false);
 
-  // Keep categoryId in sync when categories load, and fetch initial data
   useEffect(() => {
-    if (!categoryId && defaultCategoryId) setCategoryId(defaultCategoryId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultCategoryId]);
+    try {
+      for (const key of ["budget_wizard_v4", "budget_wizard_v3", "budget_wizard_v2", "budget_wizard_v1"]) {
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const parsed = JSON.parse(raw) as {
+          answers?: {
+            expenseRows?: { label: string }[];
+            businessExpenseRows?: { label: string }[];
+          };
+        };
+        const personal = parsed.answers?.expenseRows?.map((r) => r.label.trim()).filter(Boolean) ?? [];
+        const business = parsed.answers?.businessExpenseRows?.map((r) => r.label.trim()).filter(Boolean) ?? [];
+        if (personal.length === 0 && business.length === 0) continue;
+        void fetch("/api/budget/profile", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ personalCategories: personal, businessCategories: business }),
+        }).then((res) => {
+          if (res.ok) router.refresh();
+        });
+        break;
+      }
+    } catch {
+      // ignore localStorage parse errors
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Fetch current month's transactions on mount
+  useEffect(() => {
+    const list = categoriesByScope[scope];
+    if (list.length === 0) {
+      setCategoryId("");
+      return;
+    }
+    if (!list.some((c) => c.id === categoryId)) {
+      setCategoryId(list[0]!.id);
+    }
+  }, [scope, categoriesByScope, categoryId]);
+
   useEffect(() => {
     const now = new Date();
     const qs = new URLSearchParams({
@@ -86,18 +165,26 @@ export default function TransactionsClient(props: { categories: Category[] }) {
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data: Row[]) => { setItems(data); setLoading(false); })
       .catch(() => { setError("שגיאה בטעינת תנועות"); setLoading(false); });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [filterYear, setFilterYear] = useState(String(new Date().getFullYear()));
   const [filterMonth, setFilterMonth] = useState(String(new Date().getMonth() + 1));
-
   const [query, setQuery] = useState("");
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return items;
     return items.filter((x) => (x.vendor + " " + (x.description ?? "")).toLowerCase().includes(q));
   }, [items, query]);
+
+  const personalRows = useMemo(
+    () => filtered.filter((t) => t.categoryScope !== "business"),
+    [filtered],
+  );
+  const businessRows = useMemo(
+    () => filtered.filter((t) => t.categoryScope === "business"),
+    [filtered],
+  );
 
   const selectedMonthLabel = useMemo(() => {
     const mm = String(filterMonth).padStart(2, "0");
@@ -148,7 +235,6 @@ export default function TransactionsClient(props: { categories: Category[] }) {
     setAmount("");
     setVendor("");
     setDescription("");
-    // keep category + card as convenience
     await reload();
   }
 
@@ -159,6 +245,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
   }
 
   function startEdit(t: Row) {
+    const rowScope: BudgetScope = t.categoryScope === "business" ? "business" : "personal";
     setEditState({
       id: t.id,
       date: t.date,
@@ -168,6 +255,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
       categoryId: t.categoryId ?? "",
       cardLast4: t.cardLast4 ?? "",
       isFixed: t.isFixed,
+      scope: rowScope,
     });
     setTimeout(() => editRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
   }
@@ -211,6 +299,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
               description: editState.description || null,
               categoryId: editState.categoryId || null,
               categoryName: updatedCategory?.name ?? null,
+              categoryScope: updatedCategory?.budgetScope ?? null,
               cardLast4: editState.cardLast4 || null,
               isFixed: editState.isFixed,
             }
@@ -220,83 +309,254 @@ export default function TransactionsClient(props: { categories: Category[] }) {
     setEditState(null);
   }
 
-  // Category color map
-  const CAT_COLORS: Record<string, string> = {
-    "כללי":             "bg-zinc-100 text-zinc-600",
-    "אוכל":             "bg-orange-100 text-orange-700",
-    "דלק/רכב":          "bg-blue-100 text-blue-700",
-    "תוכנות ומנויים":   "bg-violet-100 text-violet-700",
-    "בגדים":            "bg-pink-100 text-pink-700",
-  };
-  function catColor(name: string | null) {
-    return name ? (CAT_COLORS[name] ?? "bg-teal-100 text-teal-700") : "bg-zinc-100 text-zinc-400";
+  function renderSection(scopeKey: BudgetScope, rows: Row[]) {
+    const meta = SECTION_META[scopeKey];
+    const total = sumAmount(rows);
+
+    return (
+      <div key={scopeKey} className="card overflow-hidden">
+        <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 ${meta.headerClass}`}>
+          <div className="flex items-center gap-2">
+            <span className="text-xl">{meta.emoji}</span>
+            <div>
+              <h3 className="font-bold text-zinc-900">{meta.title}</h3>
+              <p className="text-xs text-zinc-600">{rows.length} תנועות · סה״כ {total.toLocaleString()} ₪</p>
+            </div>
+          </div>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${meta.badgeClass}`}>
+            {categoriesByScope[scopeKey].length} קטגוריות מתקציב
+          </span>
+        </div>
+
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>תאריך</th>
+              <th>בית עסק</th>
+              <th>קטגוריה</th>
+              <th>סכום</th>
+              <th>כרטיס</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 ? (
+              <tr>
+                <td className="py-10 text-center text-zinc-400" colSpan={6}>
+                  אין תנועות {scopeKey === "personal" ? "אישיות" : "עסקיות"} לחודש הזה
+                </td>
+              </tr>
+            ) : (
+              (() => {
+                const out: React.ReactNode[] = [];
+                let lastMonth = "";
+                for (const t of rows) {
+                  const m = t.date.slice(0, 7);
+                  if (m !== lastMonth) {
+                    lastMonth = m;
+                    out.push(
+                      <tr key={`${scopeKey}-m-${m}`} className="month-divider">
+                        <td colSpan={6}>{monthLabelFromKey(m)}</td>
+                      </tr>,
+                    );
+                  }
+                  const isEditing = editState?.id === t.id;
+
+                  if (isEditing && editState) {
+                    const editCats = categoriesByScope[editState.scope];
+                    out.push(
+                      <tr key={`edit-${t.id}`} ref={editRef} className="border-t-2 border-indigo-200 bg-indigo-50/40">
+                        <td className="px-2 py-2">
+                          <input className="field w-28" type="date" value={editState.date}
+                            onChange={(e) => setEditState({ ...editState, date: e.target.value })} />
+                        </td>
+                        <td className="px-2 py-2 space-y-1.5">
+                          <input className="field w-full" value={editState.vendor}
+                            onChange={(e) => setEditState({ ...editState, vendor: e.target.value })} placeholder="בית עסק" />
+                          <input className="field w-full" value={editState.description}
+                            onChange={(e) => setEditState({ ...editState, description: e.target.value })} placeholder="הערה" />
+                        </td>
+                        <td className="px-2 py-2 space-y-1.5">
+                          <select className="field text-xs" value={editState.scope}
+                            onChange={(e) => {
+                              const nextScope = e.target.value as BudgetScope;
+                              const first = categoriesByScope[nextScope][0]?.id ?? "";
+                              setEditState({ ...editState, scope: nextScope, categoryId: first });
+                            }}>
+                            <option value="personal">אישי</option>
+                            <option value="business">עסק</option>
+                          </select>
+                          <select className="field" value={editState.categoryId}
+                            onChange={(e) => setEditState({ ...editState, categoryId: e.target.value })}>
+                            <option value="">בחר קטגוריה</option>
+                            {editCats.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
+                        </td>
+                        <td className="px-2 py-2">
+                          <input className="field w-24" value={editState.amount}
+                            onChange={(e) => { const v = e.target.value.replace(/[^0-9.]/g, ""); if ((v.match(/\./g) ?? []).length <= 1) setEditState({ ...editState, amount: v }); }}
+                            inputMode="decimal" placeholder="סכום" />
+                        </td>
+                        <td className="px-2 py-2">
+                          <input className="field w-20" value={editState.cardLast4}
+                            onChange={(e) => setEditState({ ...editState, cardLast4: e.target.value })}
+                            placeholder="4 ספרות" maxLength={4} />
+                        </td>
+                        <td className="px-2 py-2">
+                          <div className="flex gap-1.5">
+                            <button className="btn btn-primary text-xs" type="button" onClick={() => void saveEdit()} disabled={saving}>
+                              {saving ? "…" : "שמור"}
+                            </button>
+                            <button className="btn text-xs" type="button" onClick={cancelEdit}>ביטול</button>
+                          </div>
+                        </td>
+                      </tr>,
+                    );
+                  } else {
+                    out.push(
+                      <tr key={t.id}>
+                        <td className="text-zinc-500 text-xs">{t.date}</td>
+                        <td>
+                          <div className="font-medium text-zinc-900">{t.vendor}</div>
+                          {t.description && <div className="mt-0.5 text-xs text-zinc-400">{t.description}</div>}
+                        </td>
+                        <td>
+                          <span className={`cat-badge ${catColor(t.categoryName)}`}>
+                            {t.categoryName ?? "ללא קטגוריה"}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="font-semibold text-zinc-900">{t.amount}</span>
+                          <span className="mr-1 text-xs text-zinc-400">{t.currency}</span>
+                        </td>
+                        <td className="text-xs text-zinc-400">{t.cardLast4 ? `•••• ${t.cardLast4}` : ""}</td>
+                        <td>
+                          <div className="flex gap-1">
+                            <button
+                              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-indigo-50 hover:text-indigo-600"
+                              type="button" onClick={() => startEdit(t)} title="ערוך">
+                              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.5 12.974l-3 .527.527-3 7.986-7.988Z" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </button>
+                            <button
+                              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-50 hover:text-red-600"
+                              type="button" onClick={() => void remove(t.id)} title="מחק">
+                              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>,
+                    );
+                  }
+                }
+                return out;
+              })()
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
   }
+
+  const activeCategories = categoriesByScope[scope];
 
   return (
     <div className="space-y-5">
-      {/* Add form */}
       <div className="card p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-            <svg viewBox="0 0 20 20" className="h-4 w-4 text-white" fill="currentColor">
-              <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-            </svg>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
+              <svg viewBox="0 0 20 20" className="h-4 w-4 text-white" fill="currentColor">
+                <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
+              </svg>
+            </div>
+            <span className="font-semibold text-zinc-900">הוספת תנועה חדשה</span>
           </div>
-          <span className="font-semibold text-zinc-900">הוספת תנועה חדשה</span>
+          <ImportStatementCard
+            categories={props.categories}
+            defaultCardLast4={cardLast4}
+            onImported={() => void reload()}
+          />
         </div>
-        <form onSubmit={create} className="grid gap-3 lg:grid-cols-6">
-          <div className="lg:col-span-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">תאריך</label>
-            <input className="field mt-1.5" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+        <form onSubmit={create} className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {(["personal", "business"] as const).map((s) => {
+              const m = SECTION_META[s];
+              const active = scope === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setScope(s)}
+                  className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                    active
+                      ? `${m.badgeClass} border-current shadow-sm`
+                      : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
+                  }`}
+                >
+                  {m.emoji} {m.title}
+                </button>
+              );
+            })}
           </div>
-          <div className="lg:col-span-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">סכום ₪</label>
-            <input className="field mt-1.5" value={amount}
-              onChange={(e) => { const v = e.target.value.replace(/[^0-9.]/g, ""); if ((v.match(/\./g) ?? []).length <= 1) setAmount(v); }}
-              inputMode="decimal" placeholder="89.90" required />
-          </div>
-          <div className="lg:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">בית עסק</label>
-            <input className="field mt-1.5" value={vendor} onChange={(e) => setVendor(e.target.value)} required />
-          </div>
-          <div className="lg:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">הערה</label>
-            <input className="field mt-1.5" value={description} onChange={(e) => setDescription(e.target.value)} />
-          </div>
-          <div className="lg:col-span-3">
-            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">קטגוריה</label>
-            <select className="field mt-1.5" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
-              {props.categories.length === 0 && <option value="">הוסף קטגוריות תחילה</option>}
-              {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div className="lg:col-span-1">
-            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">כרטיס</label>
-            <select className="field mt-1.5" value={cardLast4} onChange={(e) => setCardLast4(e.target.value)}>
-              <option value="7374">•••• 7374</option>
-              <option value="5622">•••• 5622</option>
-              <option value="9537">•••• 9537</option>
-              <option value="7539">•••• 7539</option>
-            </select>
-          </div>
-          <div className="lg:col-span-2 flex items-end gap-3">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={isFixed}
-                onChange={(e) => setIsFixed(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-300 accent-indigo-600"
-              />
-              <span className="text-xs font-medium text-zinc-600">הוצאה קבועה</span>
-            </label>
-            <button className="btn btn-primary disabled:opacity-60 mr-auto" type="submit" disabled={loading}>
-              + הוסף תנועה
-            </button>
+          <div className="grid gap-3 lg:grid-cols-6">
+            <div className="lg:col-span-1">
+              <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">תאריך</label>
+              <input className="field mt-1.5" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
+            </div>
+            <div className="lg:col-span-1">
+              <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">סכום ₪</label>
+              <input className="field mt-1.5" value={amount}
+                onChange={(e) => { const v = e.target.value.replace(/[^0-9.]/g, ""); if ((v.match(/\./g) ?? []).length <= 1) setAmount(v); }}
+                inputMode="decimal" placeholder="89.90" required />
+            </div>
+            <div className="lg:col-span-2">
+              <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">בית עסק</label>
+              <input className="field mt-1.5" value={vendor} onChange={(e) => setVendor(e.target.value)} required />
+            </div>
+            <div className="lg:col-span-2">
+              <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">הערה</label>
+              <input className="field mt-1.5" value={description} onChange={(e) => setDescription(e.target.value)} />
+            </div>
+            <div className="lg:col-span-3">
+              <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">קטגוריה (מתקציב)</label>
+              <select className="field mt-1.5" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} required>
+                {activeCategories.length === 0 && (
+                  <option value="">הגדר תקציב תחילה בדף התקציב</option>
+                )}
+                {activeCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+            <div className="lg:col-span-1">
+              <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">כרטיס</label>
+              <select className="field mt-1.5" value={cardLast4} onChange={(e) => setCardLast4(e.target.value)}>
+                <option value="7374">•••• 7374</option>
+                <option value="5622">•••• 5622</option>
+                <option value="9537">•••• 9537</option>
+                <option value="7539">•••• 7539</option>
+              </select>
+            </div>
+            <div className="lg:col-span-2 flex items-end gap-3">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={isFixed}
+                  onChange={(e) => setIsFixed(e.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-300 accent-indigo-600"
+                />
+                <span className="text-xs font-medium text-zinc-600">הוצאה קבועה</span>
+              </label>
+              <button className="btn btn-primary disabled:opacity-60 mr-auto" type="submit" disabled={loading || !categoryId}>
+                + הוסף תנועה
+              </button>
+            </div>
           </div>
         </form>
       </div>
 
-      {/* Filters */}
       <div className="card p-4">
         <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto_auto_auto] lg:items-end">
           <div>
@@ -343,145 +603,8 @@ export default function TransactionsClient(props: { categories: Category[] }) {
         </div>
       ) : null}
 
-      {/* Table */}
-      <div className="card overflow-hidden">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>תאריך</th>
-              <th>בית עסק</th>
-              <th>קטגוריה</th>
-              <th>סכום</th>
-              <th>כרטיס</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td className="py-14 text-center text-zinc-400" colSpan={6}>
-                  אין תנועות לחודש זה. הוסף תנועה למעלה.
-                </td>
-              </tr>
-            ) : (
-              (() => {
-                const out: React.ReactNode[] = [];
-                let lastMonth = "";
-                for (const t of filtered) {
-                  const m = t.date.slice(0, 7);
-                  if (m !== lastMonth) {
-                    lastMonth = m;
-                    out.push(
-                      <tr key={`m-${m}`} className="month-divider">
-                        <td colSpan={6}>{monthLabelFromKey(m)}</td>
-                      </tr>,
-                    );
-                  }
-                  const isEditing = editState?.id === t.id;
-
-                  if (isEditing) {
-                    out.push(
-                      <tr key={`edit-${t.id}`} ref={editRef} className="border-t-2 border-indigo-200 bg-indigo-50/40">
-                        <td className="px-2 py-2">
-                          <input className="field w-28" type="date" value={editState.date}
-                            onChange={(e) => setEditState({ ...editState, date: e.target.value })} />
-                        </td>
-                        <td className="px-2 py-2 space-y-1.5">
-                          <input className="field w-full" value={editState.vendor}
-                            onChange={(e) => setEditState({ ...editState, vendor: e.target.value })} placeholder="בית עסק" />
-                          <input className="field w-full" value={editState.description}
-                            onChange={(e) => setEditState({ ...editState, description: e.target.value })} placeholder="הערה" />
-                        </td>
-                        <td className="px-2 py-2">
-                          <select className="field" value={editState.categoryId}
-                            onChange={(e) => setEditState({ ...editState, categoryId: e.target.value })}>
-                            <option value="">—</option>
-                            {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                          </select>
-                        </td>
-                        <td className="px-2 py-2">
-                          <input className="field w-24" value={editState.amount}
-                            onChange={(e) => { const v = e.target.value.replace(/[^0-9.]/g, ""); if ((v.match(/\./g) ?? []).length <= 1) setEditState({ ...editState, amount: v }); }}
-                            inputMode="decimal" placeholder="סכום" />
-                        </td>
-                        <td className="px-2 py-2">
-                          <input className="field w-20" value={editState.cardLast4}
-                            onChange={(e) => setEditState({ ...editState, cardLast4: e.target.value })}
-                            placeholder="4 ספרות" maxLength={4} />
-                        </td>
-                        <td className="px-2 py-2">
-                          <div className="space-y-2">
-                            <label className="flex items-center gap-2 cursor-pointer select-none">
-                              <input
-                                type="checkbox"
-                                checked={editState.isFixed}
-                                onChange={(e) => setEditState({ ...editState, isFixed: e.target.checked })}
-                                className="h-4 w-4 rounded border-zinc-300 accent-indigo-600"
-                              />
-                              <span className="text-xs font-medium text-zinc-600">קבועה</span>
-                            </label>
-                            <div className="flex gap-1.5">
-                              <button className="btn btn-primary text-xs" type="button" onClick={() => void saveEdit()} disabled={saving}>
-                                {saving ? "…" : "שמור"}
-                              </button>
-                              <button className="btn text-xs" type="button" onClick={cancelEdit}>ביטול</button>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>,
-                    );
-                  } else {
-                    out.push(
-                      <tr key={t.id}>
-                        <td className="text-zinc-500 text-xs">{t.date}</td>
-                        <td>
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-zinc-900">{t.vendor}</span>
-                            {t.isFixed && (
-                              <span className="rounded-full bg-indigo-100 px-1.5 py-0.5 text-[0.6rem] font-bold text-indigo-600 leading-none">קבועה</span>
-                            )}
-                          </div>
-                          {t.description && <div className="mt-0.5 text-xs text-zinc-400">{t.description}</div>}
-                        </td>
-                        <td>
-                          <span className={`cat-badge ${catColor(t.categoryName)}`}>
-                            {t.categoryName ?? "—"}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="font-semibold text-zinc-900">{t.amount}</span>
-                          <span className="mr-1 text-xs text-zinc-400">{t.currency}</span>
-                        </td>
-                        <td className="text-xs text-zinc-400">{t.cardLast4 ? `•••• ${t.cardLast4}` : "—"}</td>
-                        <td>
-                          <div className="flex gap-1">
-                            <button
-                              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-indigo-50 hover:text-indigo-600"
-                              type="button" onClick={() => startEdit(t)} title="ערוך">
-                              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.5 12.974l-3 .527.527-3 7.986-7.988Z" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            </button>
-                            <button
-                              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-50 hover:text-red-600"
-                              type="button" onClick={() => void remove(t.id)} title="מחק">
-                              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9" strokeLinecap="round" strokeLinejoin="round" />
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>,
-                    );
-                  }
-                }
-                return out;
-              })()
-            )}
-          </tbody>
-        </table>
-      </div>
+      {renderSection("personal", personalRows)}
+      {renderSection("business", businessRows)}
     </div>
   );
 }
-

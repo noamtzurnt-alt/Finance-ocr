@@ -1,12 +1,19 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/app/lib/auth/server";
 import { prisma } from "@/app/lib/prisma";
-
-const DEFAULT_CATEGORIES = ["כללי", "אוכל", "בגדים", "דלק/רכב", "תוכנות ומנויים"];
+import { DEFAULT_CATEGORIES, LEGACY_CATEGORY_ALIASES } from "@/app/lib/categories/defaults";
+import { syncBudgetCategoriesForUser } from "@/app/lib/categories/budget";
 
 export async function POST() {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  for (const [legacyName, canonicalName] of Object.entries(LEGACY_CATEGORY_ALIASES)) {
+    await prisma.category.updateMany({
+      where: { userId: user.id, name: legacyName },
+      data: { name: canonicalName },
+    });
+  }
 
   // Get כללי category (or create it)
   let fallback = await prisma.category.findFirst({
@@ -22,7 +29,7 @@ export async function POST() {
 
   // Reassign transactions from non-default categories to כללי
   const nonDefault = await prisma.category.findMany({
-    where: { userId: user.id, name: { notIn: DEFAULT_CATEGORIES } },
+    where: { userId: user.id, name: { notIn: [...DEFAULT_CATEGORIES] } },
     select: { id: true },
   });
   if (nonDefault.length > 0) {
@@ -36,18 +43,20 @@ export async function POST() {
       data: { categoryId: fallback.id },
     });
     await prisma.category.deleteMany({
-      where: { userId: user.id, name: { notIn: DEFAULT_CATEGORIES } },
+      where: { userId: user.id, name: { notIn: [...DEFAULT_CATEGORIES] } },
     });
   }
 
   // Create any missing default categories
   await prisma.category.createMany({
-    data: DEFAULT_CATEGORIES.map((name) => ({ userId: user.id, name })),
+    data: [...DEFAULT_CATEGORIES].map((name) => ({ userId: user.id, name })),
     skipDuplicates: true,
   });
 
+  await syncBudgetCategoriesForUser(user.id);
+
   const result = await prisma.category.findMany({
-    where: { userId: user.id },
+    where: { userId: user.id, budgetScope: { not: null } },
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });

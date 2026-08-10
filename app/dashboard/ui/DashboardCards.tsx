@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { parseWizardState } from "@/app/lib/budget/wizard-state";
 
 type DfsiData = {
   status: "excellent" | "on_track" | "warning" | "over";
@@ -11,12 +12,16 @@ type DfsiData = {
   variableExpenses: string;
   fixedExpenses: string;
   disposableIncome: string;
+  expectedVariableSpend: string;
   daysElapsed: number;
   daysInMonth: number;
   daysRemaining: number;
   nudge: string;
   hasIncome: boolean;
+  budgetFromWizard: boolean;
 };
+
+type CategoryBreakdownItem = { category: string; amount: number };
 
 type Summary = {
   income: string;
@@ -27,6 +32,7 @@ type Summary = {
   net: string;
   budgetLimit: string;
   pct: number;
+  categoryBreakdown: CategoryBreakdownItem[];
   dfsi: DfsiData;
 };
 
@@ -36,12 +42,29 @@ function Skeleton({ className }: { className?: string }) {
 
 type EditField = "income" | "expense" | null;
 
-const DFSI_CONFIG = {
-  excellent: { label: "מעולה", color: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200", bar: "bg-gradient-to-r from-emerald-400 to-teal-500", icon: "✓" },
-  on_track:  { label: "במסלול", color: "text-blue-700", bg: "bg-blue-50", border: "border-blue-200", bar: "bg-gradient-to-r from-blue-400 to-indigo-500", icon: "→" },
-  warning:   { label: "שים לב", color: "text-amber-700", bg: "bg-amber-50", border: "border-amber-200", bar: "bg-gradient-to-r from-amber-400 to-orange-500", icon: "!" },
-  over:      { label: "חריגה", color: "text-red-700", bg: "bg-red-50", border: "border-red-200", bar: "bg-gradient-to-r from-red-500 to-rose-600", icon: "✗" },
+const CATEGORY_ICONS: Record<string, string> = {
+  "אוכל": "🍽", "בגדים": "👕", "דלק/רכב": "🚗", "תוכנות/מנויים": "💻",
+  "שכירות": "🏠", "בזבוזים": "🎉", "ספר": "📚", "יום הולדת/אירוע מיוחד": "🎂",
 };
+
+const DFSI_CONFIG = {
+  excellent: { label: "מעולה",  color: "text-emerald-700", bg: "bg-gradient-to-br from-emerald-50 to-teal-50",   border: "border-emerald-200", bar: "bg-gradient-to-r from-emerald-400 to-teal-500",   actionBg: "bg-gradient-to-br from-emerald-500 to-teal-600",   icon: "✓" },
+  on_track:  { label: "במסלול", color: "text-blue-700",    bg: "bg-gradient-to-br from-blue-50 to-indigo-50",    border: "border-blue-200",    bar: "bg-gradient-to-r from-blue-400 to-indigo-500",    actionBg: "bg-gradient-to-br from-blue-500 to-indigo-600",    icon: "→" },
+  warning:   { label: "שים לב", color: "text-amber-700",   bg: "bg-gradient-to-br from-amber-50 to-orange-50",   border: "border-amber-200",   bar: "bg-gradient-to-r from-amber-400 to-orange-500",   actionBg: "bg-gradient-to-br from-amber-500 to-orange-500",   icon: "!" },
+  over:      { label: "חריגה",  color: "text-red-700",     bg: "bg-gradient-to-br from-red-50 to-rose-50",       border: "border-red-200",     bar: "bg-gradient-to-r from-red-500 to-rose-600",       actionBg: "bg-gradient-to-br from-red-500 to-rose-600",       icon: "✗" },
+};
+
+// Read category budgets from saved wizard state (server)
+function categoryBudgetsFromWizardState(wizardState: unknown): Record<string, number> {
+  const state = parseWizardState(wizardState);
+  if (!state) return {};
+  const map: Record<string, number> = {};
+  for (const row of state.answers.expenseRows) {
+    const amt = Number(row.amount);
+    if (row.label && amt > 0) map[row.label] = amt;
+  }
+  return map;
+}
 
 export default function DashboardCards() {
   const [data, setData] = useState<Summary | null>(null);
@@ -49,6 +72,26 @@ export default function DashboardCards() {
   const [editing, setEditing] = useState<EditField>(null);
   const [incomeInput, setIncomeInput] = useState("");
   const [savingIncome, setSavingIncome] = useState(false);
+  const [showCategoryBreakdown, setShowCategoryBreakdown] = useState(false);
+  const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    fetch("/api/budget/profile")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((body: { profile: { wizardState?: unknown } | null }) => {
+        setCategoryBudgets(categoryBudgetsFromWizardState(body.profile?.wizardState));
+      })
+      .catch(() => {
+        // fallback: local cache on same device
+        try {
+          const raw = localStorage.getItem("budget_wizard_v4");
+          if (raw) {
+            const parsed = JSON.parse(raw) as { answers?: unknown };
+            setCategoryBudgets(categoryBudgetsFromWizardState({ answers: parsed.answers, step: 3, done: true }));
+          }
+        } catch { /* ignore */ }
+      });
+  }, []);
 
   function loadData() {
     fetch("/api/dashboard/summary")
@@ -91,12 +134,11 @@ export default function DashboardCards() {
 
   const dfsi = data?.dfsi;
   const dfsiCfg = dfsi ? DFSI_CONFIG[dfsi.status] : DFSI_CONFIG.on_track;
-  const velCapped = Math.min(dfsi?.spendingVelocity ?? 0, 150);
 
   return (
     <div className="space-y-5">
       {/* ── Stat cards ── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
 
         {/* הכנסות */}
         <div className="card p-5 relative overflow-hidden">
@@ -143,7 +185,7 @@ export default function DashboardCards() {
                 )}
               </div>
               {data.incomeFromDocs !== "0.00" && (
-                <p className="text-xs text-zinc-400">מחשבוניות: {data.incomeFromDocs} ₪</p>
+                <p className="text-xs text-zinc-400">מקבלות הכנסה: {data.incomeFromDocs} ₪</p>
               )}
             </div>
           )}
@@ -156,11 +198,13 @@ export default function DashboardCards() {
             <span className="stat-label">הוצאות החודש</span>
             <button
               type="button"
+              title="פירוט לפי קטגוריה"
               className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
-              onClick={() => setEditing(editing === "expense" ? null : "expense")}
+              onClick={() => setShowCategoryBreakdown((v) => !v)}
             >
+              {/* bar-chart icon */}
               <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <circle cx="10" cy="10" r="8" /><path d="M10 6v4l2.5 2.5" strokeLinecap="round" />
+                <path d="M3 15V8M8 15V4M13 15v-5M18 15V9" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
           </div>
@@ -169,13 +213,65 @@ export default function DashboardCards() {
           ) : (
             <Skeleton className="mt-2.5 h-9 w-28" />
           )}
-          {editing === "expense" && data && (
-            <div className="mt-3 rounded-xl bg-zinc-50 p-3 text-xs text-zinc-600 space-y-1">
-              <p>קבלות החזר מס + תנועות החודש</p>
-              <div className="flex gap-3">
-                <Link className="font-semibold text-indigo-600 underline" href="/transactions">תנועות →</Link>
-                <Link className="font-semibold text-indigo-600 underline" href="/receipts">קבלות →</Link>
+
+          {/* Category breakdown popover */}
+          {showCategoryBreakdown && data && (
+            <div className="mt-3 rounded-xl border border-zinc-200 bg-white shadow-lg p-4 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-zinc-700">הוצאות לפי קטגוריה</span>
+                <button onClick={() => setShowCategoryBreakdown(false)} className="text-zinc-400 hover:text-zinc-600">✕</button>
               </div>
+              {data.categoryBreakdown.length === 0 ? (
+                <p className="text-zinc-400 text-center py-2">אין תנועות החודש עדיין</p>
+              ) : (
+                <div className="space-y-2.5">
+                  {data.categoryBreakdown.map((item) => {
+                    const budget = categoryBudgets[item.category] ?? 0;
+                    const pct = budget > 0 ? Math.min((item.amount / budget) * 100, 100) : 0;
+                    const isOver = budget > 0 && item.amount > budget;
+                    return (
+                      <div key={item.category}>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="flex items-center gap-1.5 text-zinc-700">
+                            <span>{CATEGORY_ICONS[item.category] ?? "📌"}</span>
+                            <span>{item.category}</span>
+                          </span>
+                          <span className={`font-semibold tabular-nums ${isOver ? "text-red-600" : "text-zinc-700"}`}>
+                            {item.amount.toLocaleString()}
+                            {budget > 0 && (
+                              <span className="font-normal text-zinc-400"> / {budget.toLocaleString()} ₪</span>
+                            )}
+                            {budget === 0 && " ₪"}
+                          </span>
+                        </div>
+                        {budget > 0 && (
+                          <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                isOver
+                                  ? "bg-gradient-to-r from-red-400 to-rose-500"
+                                  : pct >= 80
+                                    ? "bg-gradient-to-r from-amber-400 to-orange-400"
+                                    : "bg-gradient-to-r from-emerald-400 to-teal-500"
+                              }`}
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="pt-2 border-t border-zinc-100 flex justify-between font-semibold text-zinc-700">
+                <span>סה״כ</span>
+                <span className="text-red-600">{data.expense} ₪</span>
+              </div>
+              {Object.keys(categoryBudgets).length === 0 && (
+                <p className="text-zinc-400 text-center text-[0.65rem] pb-0.5">
+                  הגדר תקציב ב<Link href="/budget" className="text-indigo-500 underline">צ׳ק-אפ פיננסי</Link> לראות התקדמות
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -221,7 +317,7 @@ export default function DashboardCards() {
           {data ? (
             <>
               <div className="stat-value text-zinc-900">
-                {data.budgetLimit ? `${data.budgetLimit} ₪` : "—"}
+                {data.budgetLimit ? `${data.budgetLimit} ₪` : "לא הוגדר"}
               </div>
               {data.budgetLimit ? (
                 <div className="mt-3">
@@ -263,10 +359,12 @@ export default function DashboardCards() {
               )}
             </div>
             <div className="mt-0.5 text-xs text-zinc-500">
-              מחשב על בסיס הוצאות משתנות בלבד — הוצאות קבועות (שכירות, אשראי) לא פוגעות בציון
+              {dfsi?.budgetFromWizard
+                ? "מחשב לפי תקציב שהגדרת בצ׳ק-אפ הפיננסי"
+                : "מחשב על בסיס הוצאות משתנות בלבד. הוצאות קבועות לא פוגעות בציון"}
             </div>
           </div>
-          <Link className="btn text-sm" href="/transactions">תנועות</Link>
+          <Link className="btn text-sm" href="/transactions">כל התנועות</Link>
         </div>
 
         <div className="p-5">
@@ -285,85 +383,88 @@ export default function DashboardCards() {
                 <div className="mt-1 text-sm text-zinc-500">לחץ על ✏️ ליד "הכנסות החודש" כדי להזין הכנסה</div>
               </div>
             </div>
-          ) : (
-            <div className="space-y-5">
-              {/* Velocity bar */}
-              <div>
-                <div className="mb-2 flex items-center justify-between text-sm">
-                  <span className="font-medium text-zinc-700">קצב הוצאות משתנות</span>
-                  <span className={`font-bold text-lg ${dfsiCfg.color}`}>{dfsi.spendingVelocity}%</span>
-                </div>
-                <div className="relative h-4 overflow-hidden rounded-full bg-zinc-100">
-                  <div
-                    className={`h-full rounded-full transition-all duration-700 ${dfsiCfg.bar}`}
-                    style={{ width: `${Math.min(velCapped / 1.5, 100)}%` }}
-                  />
-                  {/* 100% marker */}
-                  <div className="absolute top-0 bottom-0 w-px bg-zinc-400 opacity-40" style={{ left: "66.67%" }} />
-                </div>
-                <div className="mt-1.5 flex justify-between text-xs text-zinc-400">
-                  <span>0%</span>
-                  <span>100% (יעד יומי)</span>
-                  <span>150%</span>
-                </div>
-              </div>
+          ) : (() => {
+            const actual    = Number(dfsi.variableExpenses);
+            const expected  = Number(dfsi.expectedVariableSpend);
+            const diff      = actual - expected; // positive = overspent
+            const isOver    = diff > 0;
+            const maxVal    = Math.max(actual, expected, 1);
+            const actualW   = Math.min((actual / maxVal) * 100, 100);
+            const expectedW = Math.min((expected / maxVal) * 100, 100);
 
-              {/* Nudge message */}
-              <div className={`rounded-xl border px-4 py-3 text-sm font-medium ${dfsiCfg.bg} ${dfsiCfg.border} ${dfsiCfg.color}`}>
-                {dfsi.nudge}
-              </div>
+            return (
+              <div className="space-y-4">
 
-              {/* Key stats grid */}
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                <div className="rounded-xl bg-zinc-50 p-3 text-center">
-                  <div className="text-xs text-zinc-400 mb-1">מותר להוציא היום</div>
-                  <div className={`text-xl font-bold ${Number(dfsi.safeToSpendToday) > 0 ? "text-emerald-600" : "text-red-600"}`}>
-                    {Number(dfsi.safeToSpendToday) > 0 ? dfsi.safeToSpendToday : "0"} ₪
+                {/* ── Hero: what happened ── */}
+                <div className={`rounded-2xl border p-5 ${dfsiCfg.bg} ${dfsiCfg.border}`}>
+                  <div className={`text-2xl font-bold leading-snug ${dfsiCfg.color}`}>
+                    {diff === 0
+                      ? "בדיוק בתוכנית 🎯"
+                      : isOver
+                        ? `הוצאת ${Math.round(diff).toLocaleString()} ₪ יותר מהתוכנית`
+                        : `חסכת ${Math.abs(Math.round(diff)).toLocaleString()} ₪ עד כה`}
                   </div>
-                </div>
-                <div className="rounded-xl bg-zinc-50 p-3 text-center">
-                  <div className="text-xs text-zinc-400 mb-1">תקציב יומי</div>
-                  <div className="text-xl font-bold text-zinc-700">{Number(dfsi.dailyBudget).toFixed(0)} ₪</div>
-                </div>
-                <div className="rounded-xl bg-zinc-50 p-3 text-center">
-                  <div className="text-xs text-zinc-400 mb-1">הוצ׳ משתנות</div>
-                  <div className="text-xl font-bold text-zinc-700">{dfsi.variableExpenses} ₪</div>
-                </div>
-                <div className="rounded-xl bg-zinc-50 p-3 text-center">
-                  <div className="text-xs text-zinc-400 mb-1">ימים נותרים</div>
-                  <div className="text-xl font-bold text-zinc-700">{dfsi.daysRemaining}</div>
-                </div>
-              </div>
+                  <div className="mt-1 text-sm text-zinc-500">
+                    {expected > 0
+                      ? `עד יום ${dfsi.daysElapsed} בחודש תכננת ${Math.round(expected).toLocaleString()} ₪, הוצאת ${Math.round(actual).toLocaleString()} ₪`
+                      : `הוצאת ${Math.round(actual).toLocaleString()} ₪ עד כה`}
+                  </div>
 
-              {/* Days progress bar */}
-              <div>
-                <div className="mb-1.5 flex items-center justify-between text-xs text-zinc-500">
-                  <span>יום {dfsi.daysElapsed} מתוך {dfsi.daysInMonth}</span>
-                  {Number(dfsi.fixedExpenses) > 0 && (
-                    <span className="text-zinc-400">קבועות החודש: {dfsi.fixedExpenses} ₪</span>
+                  {/* Visual comparison bars */}
+                  {expected > 0 && (
+                    <div className="mt-4 space-y-2.5">
+                      <div>
+                        <div className="mb-1 flex justify-between text-xs text-zinc-400">
+                          <span>תוכנית עד היום</span>
+                          <span>{Math.round(expected).toLocaleString()} ₪</span>
+                        </div>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-black/10">
+                          <div className="h-full rounded-full bg-zinc-400/50 transition-all duration-700"
+                            style={{ width: `${expectedW}%` }} />
+                        </div>
+                      </div>
+                      <div>
+                        <div className="mb-1 flex justify-between text-xs">
+                          <span className="text-zinc-400">בפועל</span>
+                          <span className={`font-semibold ${isOver ? dfsiCfg.color : "text-emerald-700"}`}>
+                            {Math.round(actual).toLocaleString()} ₪
+                          </span>
+                        </div>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-black/10">
+                          <div className={`h-full rounded-full transition-all duration-700 ${isOver ? dfsiCfg.bar : "bg-gradient-to-r from-emerald-400 to-teal-500"}`}
+                            style={{ width: `${actualW}%` }} />
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
-                <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-zinc-300 to-zinc-400 transition-all"
-                    style={{ width: `${(dfsi.daysElapsed / dfsi.daysInMonth) * 100}%` }}
-                  />
-                </div>
-              </div>
 
-              {/* Fixed expenses tip if none set */}
-              {Number(dfsi.fixedExpenses) === 0 && (
-                <div className="flex items-start gap-3 rounded-xl border border-dashed border-zinc-200 bg-zinc-50/50 p-3 text-xs text-zinc-500">
-                  <span className="mt-0.5 shrink-0 text-base">💡</span>
-                  <span>
-                    סמן תנועות קבועות (שכירות, ביטוח, אשראי חודשי) כ"קבועה" בעמוד{" "}
-                    <Link href="/transactions" className="font-semibold text-indigo-600 underline">תנועות</Link>{" "}
-                    כדי שהמדד יחשב נכון יותר.
-                  </span>
+                {/* ── Days progress ── */}
+                <div>
+                  <div className="mb-1.5 flex items-center justify-between text-xs text-zinc-400">
+                    <span>יום {dfsi.daysElapsed} מתוך {dfsi.daysInMonth}</span>
+                    <span>נותרו {dfsi.daysRemaining} ימים</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
+                    <div className="h-full rounded-full bg-zinc-300 transition-all"
+                      style={{ width: `${(dfsi.daysElapsed / dfsi.daysInMonth) * 100}%` }} />
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
+
+                {/* Wizard tip */}
+                {!dfsi.budgetFromWizard && (
+                  <div className="flex items-start gap-3 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 p-3 text-xs text-indigo-600">
+                    <span className="mt-0.5 shrink-0 text-base">🎯</span>
+                    <span>
+                      עשה{" "}
+                      <Link href="/budget" className="font-semibold underline">צ׳ק-אפ פיננסי</Link>
+                      {" "}כדי לקבוע תקציב יומי מחושב לפי ההכנסות וההוצאות שלך.
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

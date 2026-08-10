@@ -51,7 +51,7 @@ export async function GET(req: Request) {
   const key = `backups/db-snapshot-${dateStr}.json`;
 
   try {
-    const [users, categories, documents, transactions, investmentAccounts, investmentYears, investmentEntries, budgets, credentialsMeta] =
+    const [users, categories, documents, transactions, investmentAccounts, investmentYears, investmentEntries, budgets, contracts] =
       await Promise.all([
         prisma.user.findMany({
           select: {
@@ -76,8 +76,19 @@ export async function GET(req: Request) {
         prisma.investmentYear.findMany(),
         prisma.investmentEntry.findMany(),
         prisma.budget.findMany(),
-        prisma.credential.findMany({
-          select: { id: true, userId: true, name: true, email: true, createdAt: true, updatedAt: true },
+        prisma.contract.findMany({
+          select: {
+            id: true,
+            userId: true,
+            clientName: true,
+            contractDate: true,
+            details: true,
+            fileName: true,
+            fileMime: true,
+            fileSize: true,
+            createdAt: true,
+            updatedAt: true,
+          },
         }),
       ]);
 
@@ -92,7 +103,7 @@ export async function GET(req: Request) {
       investmentYears,
       investmentEntries,
       budgets,
-      credentialsMeta,
+      contracts,
     };
 
     const json = JSON.stringify(serializeForBackup(snapshot), null, 0);

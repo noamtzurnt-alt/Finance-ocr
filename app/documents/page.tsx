@@ -19,7 +19,11 @@ export default async function DocumentsPage() {
   from.setDate(from.getDate() - 90);
 
   const docs = await prisma.document.findMany({
-    where: { userId: user.id, date: { gte: from, lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) } },
+    where: {
+      userId: user.id,
+      type: { in: ["expense", "payment_receipt"] },
+      date: { gte: from, lt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1) },
+    },
     orderBy: [{ date: "desc" }, { createdAt: "desc" }],
     take: 50,
     select: {
@@ -31,7 +35,6 @@ export default async function DocumentsPage() {
       vendor: true,
       docNumber: true,
       category: { select: { id: true, name: true } },
-      ocrStatus: true,
       fileName: true,
     },
   });
@@ -59,7 +62,7 @@ export default async function DocumentsPage() {
           initial={{
             items: docs.map((d) => ({
               id: d.id,
-              type: d.type,
+              type: d.type === "expense" ? "expense" as const : "payment_receipt" as const,
               date: d.date.toISOString().slice(0, 10),
               amount: d.amount.toString(),
               currency: d.currency,
@@ -67,7 +70,6 @@ export default async function DocumentsPage() {
               docNumber: d.docNumber,
               categoryId: d.category?.id ?? null,
               categoryName: d.category?.name ?? null,
-              ocrStatus: d.ocrStatus,
               fileName: d.fileName,
             })),
             nextCursor: docs.length === 50 ? docs[docs.length - 1]?.id ?? null : null,

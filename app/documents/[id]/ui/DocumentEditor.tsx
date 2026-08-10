@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import LiveRefresh from "@/app/ui/LiveRefresh";
-import { parseReceiptText } from "@/app/lib/ocr/parse";
 
 type Category = { id: string; name: string };
 
@@ -21,8 +20,6 @@ type DocData = {
   docNumber: string | null;
   fileName: string;
   fileKey: string;
-  ocrStatus: string;
-  ocrText: string | null;
   fileMime: string;
 };
 
@@ -39,19 +36,8 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [savedSuccess, setSavedSuccess] = useState(false);
   const [previewFailed, setPreviewFailed] = useState(false);
 
-  const ocrParsed = useMemo(() => {
-    if (!doc.ocrText) return null;
-    try {
-      return parseReceiptText(doc.ocrText);
-    } catch {
-      return null;
-    }
-  }, [doc.ocrText]);
-
-  // Auto-calculate VAT logic
   const updateAmounts = (total: string) => {
     const t = parseFloat(total) || 0;
     const v = (t * (vatPercent / (100 + vatPercent))).toFixed(2);
@@ -100,8 +86,7 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_400px]">
       <LiveRefresh />
-      
-      {/* Sidebar Editor */}
+
       <div className="space-y-6 order-2 lg:order-1">
         <div className="card p-6 space-y-4">
           <div className="flex items-center justify-between">
@@ -133,7 +118,6 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
                 onChange={(e) => setForm({ ...form, docNumber: e.target.value })}
                 placeholder="למשל: INV-0001 או 10234"
               />
-              <p className="text-xs text-zinc-500 mt-1">מספר מסמך (חשבון עסקה / קבלה) – ימולא אוטומטית אחרי סריקת OCR</p>
             </div>
           </div>
 
@@ -155,11 +139,6 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
               value={form.amount}
               onChange={(e) => updateAmounts(e.target.value)}
             />
-            {ocrParsed?.currency === "USD" && ocrParsed.amount ? (
-              <p className="text-xs text-zinc-500 mt-1">
-                {Number.isFinite(Number(form.amount)) ? `${Number(form.amount).toFixed(2)} ₪` : `${form.amount} ₪`} ({ocrParsed.amount}$)
-              </p>
-            ) : null}
             <p className="text-xs text-zinc-500 mt-1">לפני מע״מ = סה״כ ÷ (1 + אחוז מע״מ/100). אחוז המע״מ בהגדרות (למשל 17% או 18%).</p>
           </div>
 
@@ -172,16 +151,7 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
             />
           </div>
 
-          {savedSuccess && <p className="text-sm text-emerald-600 font-medium">נשמר בהצלחה</p>}
           {error && <p className="text-sm text-red-600 font-medium">{error}</p>}
-
-          {doc.ocrStatus === "failed" && doc.ocrText ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-              <strong>OCR נכשל:</strong>{" "}
-              {doc.ocrText.startsWith("OCR job failed:") ? doc.ocrText.slice("OCR job failed:".length).trim().slice(0, 400) : doc.ocrText.slice(0, 400)}
-              {doc.ocrText.length > 400 ? "…" : ""}
-            </div>
-          ) : null}
 
           <button
             onClick={save}
@@ -198,18 +168,8 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
             )}
           </button>
         </div>
-
-        {doc.ocrText && (
-          <div className="card p-4 bg-zinc-50/50">
-            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-2">טקסט שחולץ (OCR)</h3>
-            <pre className="text-[10px] text-zinc-600 whitespace-pre-wrap font-mono leading-relaxed max-h-40 overflow-y-auto">
-              {doc.ocrText}
-            </pre>
-          </div>
-        )}
       </div>
 
-      {/* Preview Section */}
       <div className="order-1 lg:order-2">
         <div className="sticky top-6 rounded-2xl border border-zinc-200 overflow-hidden bg-zinc-100 shadow-inner min-h-[600px] flex items-center justify-center">
           {previewFailed ? (

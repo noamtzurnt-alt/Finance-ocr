@@ -36,20 +36,6 @@ export default async function AdminUsersPage() {
         <h2 className="text-lg font-medium text-zinc-900 mb-3">צור משתמש ידנית</h2>
         <CreateUserForm />
       </div>
-            <div className="flex flex-wrap gap-3 text-sm text-zinc-600">
-        <Link href="/settings" className="font-medium text-zinc-900 underline">
-          חזרה להגדרות
-        </Link>
-        <span>·</span>
-        <a
-          href="/api/admin/ocr-status"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-zinc-900 underline"
-        >
-          סטטוס OCR (כמה ממתינים, שגיאות)
-        </a>
-      </div>
     </div>
   );
 }

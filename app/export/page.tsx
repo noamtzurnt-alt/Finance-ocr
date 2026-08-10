@@ -16,7 +16,7 @@ export default async function ExportPage() {
       <div className="section-header">
         <div>
           <h1 className="section-title">ייצוא לרו״ח</h1>
-          <p className="section-sub">הורד XLSX או ZIP לפי חודשים לשליחה לרואה חשבון</p>
+          <p className="section-sub">לכל שנה: מסמך הוצאות מוכרות + מסמך קבלות הכנסות</p>
         </div>
       </div>
 
