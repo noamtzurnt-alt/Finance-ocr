@@ -16,9 +16,9 @@ function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function scrollMessagesToEnd(el: HTMLDivElement | null, smooth = true) {
+function scrollMessagesToEnd(el: HTMLDivElement | null) {
   if (!el) return;
-  el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+  el.scrollTop = el.scrollHeight;
 }
 
 export default function ChatClient() {
@@ -39,68 +39,99 @@ export default function ChatClient() {
   const [, startTransition] = useTransition();
   const busy = messages.some((m) => m.status === "sending");
 
-  // Lock page scroll + paint dark chrome so iOS keyboard can't shove the whole document.
+  // Dark chrome + freeze document scroll (no jump when keyboard opens).
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
     html.classList.add("nf-chat-active");
     body.classList.add("nf-chat-active");
-    const prevHtmlOverflow = html.style.overflow;
-    const prevBodyOverflow = body.style.overflow;
-    const prevBodyPosition = body.style.position;
-    const prevBodyWidth = body.style.width;
-    const prevBodyTop = body.style.top;
+
+    const theme = document.createElement("meta");
+    theme.setAttribute("name", "theme-color");
+    theme.setAttribute("content", "#061018");
+    theme.setAttribute("data-nf-chat-theme", "1");
+    document.head.appendChild(theme);
+
     const scrollY = window.scrollY;
+    html.style.setProperty("color-scheme", "dark");
+    body.style.setProperty("color-scheme", "dark");
     html.style.overflow = "hidden";
     body.style.overflow = "hidden";
     body.style.position = "fixed";
+    body.style.inset = "0";
     body.style.width = "100%";
-    body.style.top = `-${scrollY}px`;
+    body.style.height = "100%";
+
+    const keepTop = () => {
+      window.scrollTo(0, 0);
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+    };
+    keepTop();
 
     return () => {
       html.classList.remove("nf-chat-active");
       body.classList.remove("nf-chat-active");
-      html.style.overflow = prevHtmlOverflow;
-      body.style.overflow = prevBodyOverflow;
-      body.style.position = prevBodyPosition;
-      body.style.width = prevBodyWidth;
-      body.style.top = prevBodyTop;
+      html.style.removeProperty("color-scheme");
+      body.style.removeProperty("color-scheme");
+      html.style.overflow = "";
+      body.style.overflow = "";
+      body.style.position = "";
+      body.style.inset = "";
+      body.style.width = "";
+      body.style.height = "";
+      document.querySelectorAll('meta[data-nf-chat-theme="1"]').forEach((n) => n.remove());
       window.scrollTo(0, scrollY);
     };
   }, []);
 
-  // Keep the chat shell glued to the *visible* viewport (above the iPhone keyboard).
+  /**
+   * Keyboard handling for iPhone:
+   * - Do NOT move/resize the shell with visualViewport.offsetTop (that causes the jump).
+   * - Keep shell pinned to the screen; only add bottom padding for the keyboard overlay.
+   */
   useEffect(() => {
     const shell = shellRef.current;
     if (!shell) return;
 
-    const sync = () => {
-      const vv = window.visualViewport;
-      const height = vv?.height ?? window.innerHeight;
-      const offsetTop = vv?.offsetTop ?? 0;
-      shell.style.height = `${Math.round(height)}px`;
-      shell.style.top = `${Math.round(offsetTop)}px`;
-      shell.style.bottom = "auto";
-      // When keyboard opens, keep latest messages above the composer.
-      scrollMessagesToEnd(listRef.current, false);
+    let raf = 0;
+    let lastInset = -1;
+
+    const syncKeyboardInset = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+        const vv = window.visualViewport;
+        if (!vv) {
+          shell.style.setProperty("--kb-inset", "0px");
+          return;
+        }
+        // How much of the layout viewport is covered from the bottom (keyboard / browser chrome).
+        const covered = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+        // Ignore tiny jitter from Safari URL bar show/hide.
+        const inset = covered >= 90 ? covered : 0;
+        if (inset === lastInset) return;
+        lastInset = inset;
+        shell.style.setProperty("--kb-inset", `${inset}px`);
+        scrollMessagesToEnd(listRef.current);
+      });
     };
 
-    sync();
+    syncKeyboardInset();
     const vv = window.visualViewport;
-    vv?.addEventListener("resize", sync);
-    vv?.addEventListener("scroll", sync);
-    window.addEventListener("resize", sync);
-    window.addEventListener("orientationchange", sync);
+    vv?.addEventListener("resize", syncKeyboardInset);
+    vv?.addEventListener("scroll", syncKeyboardInset);
+    window.addEventListener("resize", syncKeyboardInset);
     return () => {
-      vv?.removeEventListener("resize", sync);
-      vv?.removeEventListener("scroll", sync);
-      window.removeEventListener("resize", sync);
-      window.removeEventListener("orientationchange", sync);
+      cancelAnimationFrame(raf);
+      vv?.removeEventListener("resize", syncKeyboardInset);
+      vv?.removeEventListener("scroll", syncKeyboardInset);
+      window.removeEventListener("resize", syncKeyboardInset);
     };
   }, []);
 
   useEffect(() => {
-    scrollMessagesToEnd(listRef.current, true);
+    scrollMessagesToEnd(listRef.current);
   }, [messages]);
 
   async function send(raw: string) {
@@ -158,133 +189,140 @@ export default function ChatClient() {
         );
       });
     } finally {
-      // Keep keyboard open after send (WhatsApp-like).
       inputRef.current?.focus({ preventScroll: true });
-      requestAnimationFrame(() => scrollMessagesToEnd(listRef.current, false));
+      window.scrollTo(0, 0);
+      requestAnimationFrame(() => scrollMessagesToEnd(listRef.current));
     }
   }
 
   return (
-    <div ref={shellRef} className="nf-chat">
-      <header className="nf-chat-header">
-        <div className="nf-chat-identity">
-          <Image
-            src="/noam-finance-bot.webp"
-            alt="Noam Finance"
-            width={44}
-            height={44}
-            className="nf-chat-avatar"
-            priority
-          />
-          <div className="min-w-0">
-            <div className="nf-chat-name">Noam Finance</div>
-            <div className="nf-chat-status">מחובר · תשובה מיידית</div>
-          </div>
-        </div>
-        <Link href="/dashboard" className="nf-chat-dash" prefetch>
-          לאפליקציה
-        </Link>
-        <button
-          type="button"
-          className="nf-chat-install-btn"
-          onClick={() => setShowInstall((v) => !v)}
-          aria-expanded={showInstall}
-        >
-          למסך הבית
-        </button>
-      </header>
-
-      {showInstall && (
-        <div className="nf-chat-install">
-          <p className="font-semibold text-white">חשוב: שמור את הקישור של הצ׳אט</p>
-          <ol>
-            <li>
-              פתח בדיוק: <strong>/chat</strong> (לא את המסך הראשי).
-            </li>
-            <li>
-              Safari → שיתוף → <strong>הוסף למסך הבית</strong>.
-            </li>
-            <li>
-              לווידג׳ט: אפליקציית <strong>קיצורים</strong> → Open URL → אותה כתובת `/chat`.
-            </li>
-          </ol>
-          <p className="nf-chat-install-note">
-            אם האייקון הישן פותח את הדשבורד — מחק אותו והוסף מחדש מתוך מסך הצ׳אט הזה.
-          </p>
-          <button
-            type="button"
-            className="nf-chat-copy"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(`${window.location.origin}/chat`);
-              } catch {
-                /* ignore */
-              }
-            }}
-          >
-            העתק קישור לצ׳אט
-          </button>
-        </div>
-      )}
-
-      <div ref={listRef} className="nf-chat-messages" role="log" aria-live="polite">
-        {messages.map((m) => (
-          <div key={m.id} className={`nf-bubble-row ${m.role === "user" ? "is-user" : "is-bot"}`}>
-            {m.role === "bot" && (
-              <Image
-                src="/noam-finance-bot.webp"
-                alt=""
-                width={28}
-                height={28}
-                className="nf-bubble-avatar"
-              />
-            )}
-            <div
-              className={`nf-bubble ${m.role === "user" ? "nf-bubble-user" : "nf-bubble-bot"} ${
-                m.status === "sending" ? "is-sending" : ""
-              } ${m.status === "error" ? "is-error" : ""}`}
-            >
-              {m.text}
+    <>
+      <div className="nf-chat-underlay" aria-hidden />
+      <div ref={shellRef} className="nf-chat">
+        <header className="nf-chat-header">
+          <div className="nf-chat-identity">
+            <Image
+              src="/noam-finance-bot.webp"
+              alt="Noam Finance"
+              width={44}
+              height={44}
+              className="nf-chat-avatar"
+              priority
+            />
+            <div className="min-w-0">
+              <div className="nf-chat-name">Noam Finance</div>
+              <div className="nf-chat-status">מחובר · תשובה מיידית</div>
             </div>
           </div>
-        ))}
-      </div>
+          <Link href="/dashboard" className="nf-chat-dash" prefetch>
+            לאפליקציה
+          </Link>
+          <button
+            type="button"
+            className="nf-chat-install-btn"
+            onClick={() => setShowInstall((v) => !v)}
+            aria-expanded={showInstall}
+          >
+            למסך הבית
+          </button>
+        </header>
 
-      <form
-        className="nf-chat-composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          void send(text);
-        }}
-      >
-        <label htmlFor={inputId} className="sr-only">
-          הודעה
-        </label>
-        <input
-          id={inputId}
-          ref={inputRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onFocus={() => {
-            // After iOS finishes opening the keyboard, re-sync + scroll.
-            window.setTimeout(() => scrollMessagesToEnd(listRef.current, false), 50);
-            window.setTimeout(() => scrollMessagesToEnd(listRef.current, false), 300);
+        {showInstall && (
+          <div className="nf-chat-install">
+            <p className="font-semibold text-white">חשוב: שמור את הקישור של הצ׳אט</p>
+            <ol>
+              <li>
+                פתח בדיוק: <strong>/chat</strong> (לא את המסך הראשי).
+              </li>
+              <li>
+                Safari → שיתוף → <strong>הוסף למסך הבית</strong>.
+              </li>
+              <li>
+                לווידג׳ט: אפליקציית <strong>קיצורים</strong> → Open URL → אותה כתובת `/chat`.
+              </li>
+            </ol>
+            <p className="nf-chat-install-note">
+              רק מ־“הוסף למסך הבית” נעלם סרגל Safari הלבן למטה. בטאב רגיל הסרגל שייך לדפדפן.
+            </p>
+            <button
+              type="button"
+              className="nf-chat-copy"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(`${window.location.origin}/chat`);
+                } catch {
+                  /* ignore */
+                }
+              }}
+            >
+              העתק קישור לצ׳אט
+            </button>
+          </div>
+        )}
+
+        <div ref={listRef} className="nf-chat-messages" role="log" aria-live="polite">
+          {messages.map((m) => (
+            <div key={m.id} className={`nf-bubble-row ${m.role === "user" ? "is-user" : "is-bot"}`}>
+              {m.role === "bot" && (
+                <Image
+                  src="/noam-finance-bot.webp"
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="nf-bubble-avatar"
+                />
+              )}
+              <div
+                className={`nf-bubble ${m.role === "user" ? "nf-bubble-user" : "nf-bubble-bot"} ${
+                  m.status === "sending" ? "is-sending" : ""
+                } ${m.status === "error" ? "is-error" : ""}`}
+              >
+                {m.text}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <form
+          className="nf-chat-composer"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void send(text);
           }}
-          placeholder="קוטג 10 שקלים…"
-          autoComplete="off"
-          autoCorrect="on"
-          autoCapitalize="sentences"
-          spellCheck
-          enterKeyHint="send"
-          inputMode="text"
-          className="nf-chat-input"
-        />
-        <button type="submit" className="nf-chat-send" disabled={!text.trim() || busy} aria-label="שלח">
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-            <path d="M3.4 20.6 21 12 3.4 3.4l.1 6.8L15 12 3.5 13.8z" />
-          </svg>
-        </button>
-      </form>
-    </div>
+        >
+          <label htmlFor={inputId} className="sr-only">
+            הודעה
+          </label>
+          <input
+            id={inputId}
+            ref={inputRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onFocus={(e) => {
+              // Prevent iOS from scrolling the whole page (the jump).
+              e.target.focus({ preventScroll: true });
+              window.scrollTo(0, 0);
+              requestAnimationFrame(() => {
+                window.scrollTo(0, 0);
+                scrollMessagesToEnd(listRef.current);
+              });
+            }}
+            placeholder="קוטג 10 שקלים…"
+            autoComplete="off"
+            autoCorrect="on"
+            autoCapitalize="sentences"
+            spellCheck
+            enterKeyHint="send"
+            inputMode="text"
+            className="nf-chat-input"
+          />
+          <button type="submit" className="nf-chat-send" disabled={!text.trim() || busy} aria-label="שלח">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+              <path d="M3.4 20.6 21 12 3.4 3.4l.1 6.8L15 12 3.5 13.8z" />
+            </svg>
+          </button>
+        </form>
+      </div>
+    </>
   );
 }

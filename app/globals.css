@@ -22,6 +22,7 @@
   --cyan: #06b6d4;
   --ring: rgba(99,102,241,0.3);
 
+  /* Default light; /chat forces dark via .nf-chat-active + layout style. */
   color-scheme: light;
 }
 
@@ -48,11 +49,20 @@ html.nf-chat-active body,
 body.nf-chat-active {
   background: #061018 !important;
   color: #e8f4ff;
+  color-scheme: dark !important;
   overflow: hidden !important;
   overscroll-behavior: none;
   touch-action: manipulation;
   height: 100% !important;
   max-height: 100% !important;
+}
+
+.nf-chat-underlay {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: #061018;
+  pointer-events: none;
 }
 
 @layer base {
@@ -386,13 +396,15 @@ body.nf-chat-active {
     --nf-bg1: #0b1c2a;
     --nf-accent: #2dd4bf;
     --nf-accent-2: #38bdf8;
+    --kb-inset: 0px;
     position: fixed;
+    z-index: 1;
     left: 0;
     right: 0;
     top: 0;
+    bottom: 0;
     width: 100%;
-    height: 100dvh;
-    max-height: 100dvh;
+    height: 100%;
     display: flex;
     flex-direction: column;
     background:
@@ -400,16 +412,15 @@ body.nf-chat-active {
       radial-gradient(900px 500px at -10% 110%, rgba(56, 189, 248, 0.14), transparent 50%),
       linear-gradient(180deg, var(--nf-bg0), var(--nf-bg1));
     color: #e8f4ff;
-    padding:
-      max(0.75rem, env(safe-area-inset-top, 0px))
-      max(0.75rem, env(safe-area-inset-right, 0px))
-      max(0.55rem, env(safe-area-inset-bottom, 0px))
-      max(0.75rem, env(safe-area-inset-left, 0px));
+    padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+    /* Keyboard overlay inset — shell stays pinned, only bottom grows. */
+    padding-bottom: max(0.55rem, env(safe-area-inset-bottom, 0px), var(--kb-inset));
     overflow: hidden;
     box-sizing: border-box;
-    /* Avoid iOS rubber-band scrolling the page behind the chat. */
     overscroll-behavior: none;
-    touch-action: pan-y;
+    touch-action: manipulation;
   }
   .nf-chat-header {
     display: flex;

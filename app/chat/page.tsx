@@ -12,13 +12,14 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07111f",
+  themeColor: "#061018",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  interactiveWidget: "resizes-content",
+  // Keyboard overlays instead of resizing — we pad the composer ourselves (no jump).
+  interactiveWidget: "overlays-content",
 };
 
 export default function ChatPage() {
