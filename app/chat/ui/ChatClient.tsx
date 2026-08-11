@@ -16,8 +16,14 @@ function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function scrollMessagesToEnd(el: HTMLDivElement | null, smooth = true) {
+  if (!el) return;
+  el.scrollTo({ top: el.scrollHeight, behavior: smooth ? "smooth" : "auto" });
+}
+
 export default function ChatClient() {
   const inputId = useId();
+  const shellRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
@@ -33,23 +39,69 @@ export default function ChatClient() {
   const [, startTransition] = useTransition();
   const busy = messages.some((m) => m.status === "sending");
 
+  // Lock page scroll + paint dark chrome so iOS keyboard can't shove the whole document.
   useEffect(() => {
-    document.documentElement.classList.add("nf-chat-active");
-    document.body.classList.add("nf-chat-active");
+    const html = document.documentElement;
+    const body = document.body;
+    html.classList.add("nf-chat-active");
+    body.classList.add("nf-chat-active");
+    const prevHtmlOverflow = html.style.overflow;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyPosition = body.style.position;
+    const prevBodyWidth = body.style.width;
+    const prevBodyTop = body.style.top;
+    const scrollY = window.scrollY;
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.width = "100%";
+    body.style.top = `-${scrollY}px`;
+
     return () => {
-      document.documentElement.classList.remove("nf-chat-active");
-      document.body.classList.remove("nf-chat-active");
+      html.classList.remove("nf-chat-active");
+      body.classList.remove("nf-chat-active");
+      html.style.overflow = prevHtmlOverflow;
+      body.style.overflow = prevBodyOverflow;
+      body.style.position = prevBodyPosition;
+      body.style.width = prevBodyWidth;
+      body.style.top = prevBodyTop;
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  // Keep the chat shell glued to the *visible* viewport (above the iPhone keyboard).
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+
+    const sync = () => {
+      const vv = window.visualViewport;
+      const height = vv?.height ?? window.innerHeight;
+      const offsetTop = vv?.offsetTop ?? 0;
+      shell.style.height = `${Math.round(height)}px`;
+      shell.style.top = `${Math.round(offsetTop)}px`;
+      shell.style.bottom = "auto";
+      // When keyboard opens, keep latest messages above the composer.
+      scrollMessagesToEnd(listRef.current, false);
+    };
+
+    sync();
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", sync);
+    vv?.addEventListener("scroll", sync);
+    window.addEventListener("resize", sync);
+    window.addEventListener("orientationchange", sync);
+    return () => {
+      vv?.removeEventListener("resize", sync);
+      vv?.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+      window.removeEventListener("orientationchange", sync);
     };
   }, []);
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
+    scrollMessagesToEnd(listRef.current, true);
   }, [messages]);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => inputRef.current?.focus(), 50);
-    return () => window.clearTimeout(t);
-  }, []);
 
   async function send(raw: string) {
     const value = raw.trim();
@@ -106,12 +158,14 @@ export default function ChatClient() {
         );
       });
     } finally {
-      inputRef.current?.focus();
+      // Keep keyboard open after send (WhatsApp-like).
+      inputRef.current?.focus({ preventScroll: true });
+      requestAnimationFrame(() => scrollMessagesToEnd(listRef.current, false));
     }
   }
 
   return (
-    <div className="nf-chat">
+    <div ref={shellRef} className="nf-chat">
       <header className="nf-chat-header">
         <div className="nf-chat-identity">
           <Image
@@ -211,9 +265,18 @@ export default function ChatClient() {
           ref={inputRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onFocus={() => {
+            // After iOS finishes opening the keyboard, re-sync + scroll.
+            window.setTimeout(() => scrollMessagesToEnd(listRef.current, false), 50);
+            window.setTimeout(() => scrollMessagesToEnd(listRef.current, false), 300);
+          }}
           placeholder="קוטג 10 שקלים…"
           autoComplete="off"
+          autoCorrect="on"
+          autoCapitalize="sentences"
+          spellCheck
           enterKeyHint="send"
+          inputMode="text"
           className="nf-chat-input"
         />
         <button type="submit" className="nf-chat-send" disabled={!text.trim() || busy} aria-label="שלח">

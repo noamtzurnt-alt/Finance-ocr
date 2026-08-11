@@ -48,6 +48,11 @@ html.nf-chat-active body,
 body.nf-chat-active {
   background: #061018 !important;
   color: #e8f4ff;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  height: 100% !important;
+  max-height: 100% !important;
 }
 
 @layer base {
@@ -382,10 +387,12 @@ body.nf-chat-active {
     --nf-accent: #2dd4bf;
     --nf-accent-2: #38bdf8;
     position: fixed;
-    inset: 0;
+    left: 0;
+    right: 0;
+    top: 0;
     width: 100%;
-    height: 100%;
     height: 100dvh;
+    max-height: 100dvh;
     display: flex;
     flex-direction: column;
     background:
@@ -396,9 +403,13 @@ body.nf-chat-active {
     padding:
       max(0.75rem, env(safe-area-inset-top, 0px))
       max(0.75rem, env(safe-area-inset-right, 0px))
-      max(0.85rem, env(safe-area-inset-bottom, 0px))
+      max(0.55rem, env(safe-area-inset-bottom, 0px))
       max(0.75rem, env(safe-area-inset-left, 0px));
     overflow: hidden;
+    box-sizing: border-box;
+    /* Avoid iOS rubber-band scrolling the page behind the chat. */
+    overscroll-behavior: none;
+    touch-action: pan-y;
   }
   .nf-chat-header {
     display: flex;
@@ -481,14 +492,17 @@ body.nf-chat-active {
     padding: 0.55rem 0.75rem;
   }
   .nf-chat-messages {
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
+    overflow-x: hidden;
     overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
     padding: 0.25rem 0.1rem 0.85rem;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
   .nf-bubble-row {
     display: flex;
@@ -545,6 +559,9 @@ body.nf-chat-active {
     background: rgba(255, 255, 255, 0.07);
     border: 1px solid rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
+    flex-shrink: 0;
+    /* Keep composer above home indicator / keyboard edge. */
+    margin-bottom: 0.15rem;
   }
   .nf-chat-input {
     flex: 1;
@@ -553,8 +570,13 @@ body.nf-chat-active {
     border: 0;
     outline: none;
     color: #f8fbff;
-    font-size: 1rem;
-    padding: 0.55rem 0.5rem;
+    /* 16px+ prevents iOS Safari zoom-on-focus jump. */
+    font-size: 16px;
+    line-height: 1.35;
+    padding: 0.6rem 0.5rem;
+    border-radius: 0;
+    -webkit-appearance: none;
+    appearance: none;
   }
   .nf-chat-input::placeholder {
     color: rgba(232, 244, 255, 0.35);
