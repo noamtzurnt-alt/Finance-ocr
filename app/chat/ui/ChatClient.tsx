@@ -16,8 +16,17 @@ function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function lockPageScroll() {
+  if (window.scrollY !== 0 || window.scrollX !== 0) {
+    window.scrollTo(0, 0);
+  }
+  if (document.documentElement.scrollTop) document.documentElement.scrollTop = 0;
+  if (document.body.scrollTop) document.body.scrollTop = 0;
+}
+
 export default function ChatClient() {
   const inputId = useId();
+  const shellRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
@@ -55,6 +64,52 @@ export default function ChatClient() {
       html.style.removeProperty("color-scheme");
       body.style.removeProperty("color-scheme");
       document.querySelectorAll('meta[data-nf-chat-theme="1"]').forEach((n) => n.remove());
+    };
+  }, []);
+
+  // Pin shell height to the visible viewport above the keyboard.
+  // Keep top at 0 and force page scroll to 0 so iOS can't push the UI upward.
+  useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+
+    let raf = 0;
+    let lastH = -1;
+
+    const sync = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        lockPageScroll();
+        const vv = window.visualViewport;
+        const h = Math.round(vv?.height ?? window.innerHeight);
+        if (h === lastH) return;
+        lastH = h;
+        // Only shrink/grow height — never move top. That was the jump.
+        shell.style.top = "0px";
+        shell.style.height = `${h}px`;
+        shell.style.bottom = "auto";
+      });
+    };
+
+    const onVvScroll = () => {
+      lockPageScroll();
+      sync();
+    };
+
+    sync();
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", sync);
+    // When iOS tries to scroll the visual viewport under the keyboard, snap back.
+    vv?.addEventListener("scroll", onVvScroll);
+    window.addEventListener("resize", sync);
+    window.addEventListener("scroll", lockPageScroll, { passive: true });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      vv?.removeEventListener("resize", sync);
+      vv?.removeEventListener("scroll", onVvScroll);
+      window.removeEventListener("resize", sync);
+      window.removeEventListener("scroll", lockPageScroll);
     };
   }, []);
 
@@ -116,11 +171,12 @@ export default function ChatClient() {
       });
     } finally {
       inputRef.current?.focus({ preventScroll: true });
+      lockPageScroll();
     }
   }
 
   return (
-    <div className="nf-chat">
+    <div ref={shellRef} className="nf-chat">
       <header className="nf-chat-header">
         <div className="nf-chat-identity">
           <Image
@@ -164,7 +220,11 @@ export default function ChatClient() {
             type="button"
             className="nf-chat-copy"
             onClick={async () => {
-              try { await navigator.clipboard.writeText(`${window.location.origin}/chat`); } catch { /* */ }
+              try {
+                await navigator.clipboard.writeText(`${window.location.origin}/chat`);
+              } catch {
+                /* */
+              }
             }}
           >
             העתק קישור לצ׳אט
@@ -176,7 +236,13 @@ export default function ChatClient() {
         {messages.map((m) => (
           <div key={m.id} className={`nf-bubble-row ${m.role === "user" ? "is-user" : "is-bot"}`}>
             {m.role === "bot" && (
-              <Image src="/noam-finance-bot.webp" alt="" width={28} height={28} className="nf-bubble-avatar" />
+              <Image
+                src="/noam-finance-bot.webp"
+                alt=""
+                width={28}
+                height={28}
+                className="nf-bubble-avatar"
+              />
             )}
             <div
               className={`nf-bubble ${m.role === "user" ? "nf-bubble-user" : "nf-bubble-bot"} ${
@@ -196,12 +262,25 @@ export default function ChatClient() {
           void send(text);
         }}
       >
-        <label htmlFor={inputId} className="sr-only">הודעה</label>
+        <label htmlFor={inputId} className="sr-only">
+          הודעה
+        </label>
         <input
           id={inputId}
           ref={inputRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onFocus={(e) => {
+            // Stop iOS from scrolling the page to the input (that was the "everything flies up").
+            e.target.focus({ preventScroll: true });
+            lockPageScroll();
+            const shell = shellRef.current;
+            const vv = window.visualViewport;
+            if (shell && vv) {
+              shell.style.top = "0px";
+              shell.style.height = `${Math.round(vv.height)}px`;
+            }
+          }}
           placeholder="קוטג 10 / תמחק סרט 100…"
           autoComplete="off"
           autoCorrect="on"
@@ -211,7 +290,12 @@ export default function ChatClient() {
           inputMode="text"
           className="nf-chat-input"
         />
-        <button type="submit" className="nf-chat-send" disabled={!text.trim() || busy} aria-label="שלח">
+        <button
+          type="submit"
+          className="nf-chat-send"
+          disabled={!text.trim() || busy}
+          aria-label="שלח"
+        >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
             <path d="M3.4 20.6 21 12 3.4 3.4l.1 6.8L15 12 3.5 13.8z" />
           </svg>

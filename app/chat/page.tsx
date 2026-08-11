@@ -18,7 +18,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  interactiveWidget: "resizes-content",
+  // Keyboard overlays; we shrink the chat shell via visualViewport.height only.
+  interactiveWidget: "overlays-content",
 };
 
 export default function ChatPage() {
