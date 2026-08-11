@@ -12,13 +12,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#061018",
+  themeColor: "#0b1c2a",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  // Keyboard overlays instead of resizing — we pad the composer ourselves (no jump).
   interactiveWidget: "overlays-content",
 };
 

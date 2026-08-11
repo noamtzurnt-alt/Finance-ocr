@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 
 /**
- * Paint dark chrome before hydration so iOS Safari never flashes white
- * status/safe areas on /chat.
+ * Paint the same chat blue before hydration so iOS Safari gaps
+ * (status bar / home indicator) match the main surface.
  */
 export default function ChatLayout({ children }: { children: ReactNode }) {
   return (
@@ -11,7 +11,7 @@ export default function ChatLayout({ children }: { children: ReactNode }) {
         dangerouslySetInnerHTML={{
           __html: `
             html, body {
-              background: #061018 !important;
+              background: #0b1c2a !important;
               color-scheme: dark !important;
             }
           `,

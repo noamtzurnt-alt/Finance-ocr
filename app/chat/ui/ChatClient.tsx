@@ -12,6 +12,9 @@ type Msg = {
   status?: "sending" | "ok" | "error";
 };
 
+/** Same blue as the chat main surface — used for status bar / gaps too. */
+export const NF_CHAT_BLUE = "#0b1c2a";
+
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -47,13 +50,15 @@ export default function ChatClient() {
 
     const theme = document.createElement("meta");
     theme.setAttribute("name", "theme-color");
-    theme.setAttribute("content", "#061018");
+    theme.setAttribute("content", NF_CHAT_BLUE);
     theme.setAttribute("data-nf-chat-theme", "1");
     document.head.appendChild(theme);
 
     const scrollY = window.scrollY;
     html.style.setProperty("color-scheme", "dark");
     body.style.setProperty("color-scheme", "dark");
+    html.style.background = NF_CHAT_BLUE;
+    body.style.background = NF_CHAT_BLUE;
     html.style.overflow = "hidden";
     body.style.overflow = "hidden";
     body.style.position = "fixed";
@@ -67,6 +72,8 @@ export default function ChatClient() {
       body.classList.remove("nf-chat-active");
       html.style.removeProperty("color-scheme");
       body.style.removeProperty("color-scheme");
+      html.style.background = "";
+      body.style.background = "";
       html.style.overflow = "";
       body.style.overflow = "";
       body.style.position = "";
@@ -79,29 +86,40 @@ export default function ChatClient() {
   }, []);
 
   /**
-   * Only lift the composer above the keyboard.
-   * Header + message list stay put — no full-page resize/jump.
+   * Pin the chat shell to the *visible* viewport above the keyboard.
+   * Header + welcome stay on screen; only the available height shrinks.
    */
   useEffect(() => {
     const shell = shellRef.current;
     if (!shell) return;
 
     let raf = 0;
-    let lastInset = -1;
+    let lastKey = "";
 
     const sync = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        const vv = window.visualViewport;
-        if (!vv) {
-          shell.style.setProperty("--kb-inset", "0px");
-          return;
+        // Stop iOS from leaving the page scrolled upward under the keyboard.
+        if (window.scrollY !== 0 || window.scrollX !== 0) {
+          window.scrollTo(0, 0);
         }
-        const covered = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-        const inset = covered >= 120 ? covered : 0;
-        if (inset === lastInset) return;
-        lastInset = inset;
-        shell.style.setProperty("--kb-inset", `${inset}px`);
+
+        const vv = window.visualViewport;
+        const top = Math.round(vv?.offsetTop ?? 0);
+        const height = Math.round(vv?.height ?? window.innerHeight);
+        const key = `${top}:${height}`;
+        if (key === lastKey) return;
+        lastKey = key;
+
+        shell.style.top = `${top}px`;
+        shell.style.height = `${height}px`;
+        shell.style.bottom = "auto";
+
+        // Keep the welcome / top of the thread visible when the keyboard opens.
+        const list = listRef.current;
+        if (list && height < window.innerHeight - 100) {
+          list.scrollTop = 0;
+        }
       });
     };
 
@@ -110,16 +128,28 @@ export default function ChatClient() {
     vv?.addEventListener("resize", sync);
     vv?.addEventListener("scroll", sync);
     window.addEventListener("resize", sync);
+    window.addEventListener("orientationchange", sync);
     return () => {
       cancelAnimationFrame(raf);
       vv?.removeEventListener("resize", sync);
       vv?.removeEventListener("scroll", sync);
       window.removeEventListener("resize", sync);
+      window.removeEventListener("orientationchange", sync);
     };
   }, []);
 
   useEffect(() => {
-    scrollMessagesToEnd(listRef.current);
+    // After a new reply, scroll down — but if keyboard is open keep top visible
+    // when the thread is still short (welcome + a couple bubbles).
+    const list = listRef.current;
+    if (!list) return;
+    const vv = window.visualViewport;
+    const keyboardOpen = vv ? vv.height < window.innerHeight - 100 : false;
+    if (keyboardOpen && messages.length <= 4) {
+      list.scrollTop = 0;
+    } else {
+      scrollMessagesToEnd(list);
+    }
   }, [messages]);
 
   async function send(raw: string) {
@@ -178,7 +208,7 @@ export default function ChatClient() {
       });
     } finally {
       inputRef.current?.focus({ preventScroll: true });
-      requestAnimationFrame(() => scrollMessagesToEnd(listRef.current));
+      window.scrollTo(0, 0);
     }
   }
 
@@ -288,6 +318,11 @@ export default function ChatClient() {
             onFocus={(e) => {
               e.target.focus({ preventScroll: true });
               window.scrollTo(0, 0);
+              // Keep header + welcome in view when keyboard opens.
+              requestAnimationFrame(() => {
+                window.scrollTo(0, 0);
+                if (listRef.current) listRef.current.scrollTop = 0;
+              });
             }}
             placeholder="קוטג 10 / תמחק סרט 100…"
             autoComplete="off"
