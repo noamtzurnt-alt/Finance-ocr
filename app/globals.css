@@ -284,8 +284,17 @@ body.nf-chat-active {
   /* ─── Table ───────────────────────────────── */
   .data-table {
     width: 100%;
+    min-width: 640px;
     font-size: 0.875rem;
     border-collapse: collapse;
+  }
+  .data-table-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x pan-y;
   }
   .data-table thead tr {
     background: var(--surface2);
@@ -397,6 +406,7 @@ body.nf-chat-active {
     --nf-accent: #2dd4bf;
     --nf-accent-2: #38bdf8;
     --kb-inset: 0px;
+    --composer-h: 3.6rem;
     position: fixed;
     z-index: 1;
     left: 0;
@@ -415,8 +425,8 @@ body.nf-chat-active {
     padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
-    /* Keyboard overlay inset — shell stays pinned, only bottom grows. */
-    padding-bottom: max(0.55rem, env(safe-area-inset-bottom, 0px), var(--kb-inset));
+    /* Space for absolute composer + keyboard; header never moves. */
+    padding-bottom: 0;
     overflow: hidden;
     box-sizing: border-box;
     overscroll-behavior: none;
@@ -511,7 +521,9 @@ body.nf-chat-active {
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
-    padding: 0.25rem 0.1rem 0.85rem;
+    padding: 0.25rem 0.1rem;
+    /* Keep last bubbles above the floating composer (+ keyboard). */
+    padding-bottom: calc(var(--composer-h) + 1.1rem + max(0.55rem, env(safe-area-inset-bottom, 0px), var(--kb-inset)));
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
   }
@@ -562,17 +574,21 @@ body.nf-chat-active {
     color: #fecaca;
   }
   .nf-chat-composer {
+    position: absolute;
+    z-index: 5;
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+    bottom: max(0.55rem, env(safe-area-inset-bottom, 0px), var(--kb-inset));
     display: flex;
     align-items: center;
     gap: 0.55rem;
+    min-height: var(--composer-h);
     padding: 0.45rem;
     border-radius: 1.25rem;
-    background: rgba(255, 255, 255, 0.07);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    flex-shrink: 0;
-    /* Keep composer above home indicator / keyboard edge. */
-    margin-bottom: 0.15rem;
+    background: rgba(8, 20, 32, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   }
   .nf-chat-input {
     flex: 1;

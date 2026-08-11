@@ -39,7 +39,6 @@ export default function ChatClient() {
   const [, startTransition] = useTransition();
   const busy = messages.some((m) => m.status === "sending");
 
-  // Dark chrome + freeze document scroll (no jump when keyboard opens).
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -61,13 +60,7 @@ export default function ChatClient() {
     body.style.inset = "0";
     body.style.width = "100%";
     body.style.height = "100%";
-
-    const keepTop = () => {
-      window.scrollTo(0, 0);
-      if (document.documentElement) document.documentElement.scrollTop = 0;
-      if (document.body) document.body.scrollTop = 0;
-    };
-    keepTop();
+    window.scrollTo(0, 0);
 
     return () => {
       html.classList.remove("nf-chat-active");
@@ -86,9 +79,8 @@ export default function ChatClient() {
   }, []);
 
   /**
-   * Keyboard handling for iPhone:
-   * - Do NOT move/resize the shell with visualViewport.offsetTop (that causes the jump).
-   * - Keep shell pinned to the screen; only add bottom padding for the keyboard overlay.
+   * Only lift the composer above the keyboard.
+   * Header + message list stay put — no full-page resize/jump.
    */
   useEffect(() => {
     const shell = shellRef.current;
@@ -97,36 +89,32 @@ export default function ChatClient() {
     let raf = 0;
     let lastInset = -1;
 
-    const syncKeyboardInset = () => {
+    const sync = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        window.scrollTo(0, 0);
         const vv = window.visualViewport;
         if (!vv) {
           shell.style.setProperty("--kb-inset", "0px");
           return;
         }
-        // How much of the layout viewport is covered from the bottom (keyboard / browser chrome).
         const covered = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-        // Ignore tiny jitter from Safari URL bar show/hide.
-        const inset = covered >= 90 ? covered : 0;
+        const inset = covered >= 120 ? covered : 0;
         if (inset === lastInset) return;
         lastInset = inset;
         shell.style.setProperty("--kb-inset", `${inset}px`);
-        scrollMessagesToEnd(listRef.current);
       });
     };
 
-    syncKeyboardInset();
+    sync();
     const vv = window.visualViewport;
-    vv?.addEventListener("resize", syncKeyboardInset);
-    vv?.addEventListener("scroll", syncKeyboardInset);
-    window.addEventListener("resize", syncKeyboardInset);
+    vv?.addEventListener("resize", sync);
+    vv?.addEventListener("scroll", sync);
+    window.addEventListener("resize", sync);
     return () => {
       cancelAnimationFrame(raf);
-      vv?.removeEventListener("resize", syncKeyboardInset);
-      vv?.removeEventListener("scroll", syncKeyboardInset);
-      window.removeEventListener("resize", syncKeyboardInset);
+      vv?.removeEventListener("resize", sync);
+      vv?.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
     };
   }, []);
 
@@ -190,7 +178,6 @@ export default function ChatClient() {
       });
     } finally {
       inputRef.current?.focus({ preventScroll: true });
-      window.scrollTo(0, 0);
       requestAnimationFrame(() => scrollMessagesToEnd(listRef.current));
     }
   }
@@ -299,15 +286,10 @@ export default function ChatClient() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onFocus={(e) => {
-              // Prevent iOS from scrolling the whole page (the jump).
               e.target.focus({ preventScroll: true });
               window.scrollTo(0, 0);
-              requestAnimationFrame(() => {
-                window.scrollTo(0, 0);
-                scrollMessagesToEnd(listRef.current);
-              });
             }}
-            placeholder="קוטג 10 שקלים…"
+            placeholder="קוטג 10 / תמחק סרט 100…"
             autoComplete="off"
             autoCorrect="on"
             autoCapitalize="sentences"

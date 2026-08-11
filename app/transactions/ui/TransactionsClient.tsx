@@ -222,7 +222,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
         description: description || null,
         categoryId,
         currency: "ILS",
-        cardLast4: cardLast4 || null,
+        cardLast4: null,
         isFixed,
       }),
     });
@@ -328,6 +328,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
           </span>
         </div>
 
+        <div className="data-table-scroll">
         <table className="data-table">
           <thead>
             <tr>
@@ -335,7 +336,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
               <th>בית עסק</th>
               <th>קטגוריה</th>
               <th>סכום</th>
-              <th>כרטיס</th>
+              <th>תיאור</th>
               <th></th>
             </tr>
           </thead>
@@ -370,11 +371,9 @@ export default function TransactionsClient(props: { categories: Category[] }) {
                           <input className="field w-28" type="date" value={editState.date}
                             onChange={(e) => setEditState({ ...editState, date: e.target.value })} />
                         </td>
-                        <td className="px-2 py-2 space-y-1.5">
+                        <td className="px-2 py-2">
                           <input className="field w-full" value={editState.vendor}
                             onChange={(e) => setEditState({ ...editState, vendor: e.target.value })} placeholder="בית עסק" />
-                          <input className="field w-full" value={editState.description}
-                            onChange={(e) => setEditState({ ...editState, description: e.target.value })} placeholder="הערה" />
                         </td>
                         <td className="px-2 py-2 space-y-1.5">
                           <select className="field text-xs" value={editState.scope}
@@ -398,9 +397,8 @@ export default function TransactionsClient(props: { categories: Category[] }) {
                             inputMode="decimal" placeholder="סכום" />
                         </td>
                         <td className="px-2 py-2">
-                          <input className="field w-20" value={editState.cardLast4}
-                            onChange={(e) => setEditState({ ...editState, cardLast4: e.target.value })}
-                            placeholder="4 ספרות" maxLength={4} />
+                          <input className="field w-full min-w-[10rem]" value={editState.description}
+                            onChange={(e) => setEditState({ ...editState, description: e.target.value })} placeholder="תיאור" />
                         </td>
                         <td className="px-2 py-2">
                           <div className="flex gap-1.5">
@@ -415,21 +413,22 @@ export default function TransactionsClient(props: { categories: Category[] }) {
                   } else {
                     out.push(
                       <tr key={t.id}>
-                        <td className="text-zinc-500 text-xs">{t.date}</td>
+                        <td className="text-zinc-500 text-xs whitespace-nowrap">{t.date}</td>
                         <td>
                           <div className="font-medium text-zinc-900">{t.vendor}</div>
-                          {t.description && <div className="mt-0.5 text-xs text-zinc-400">{t.description}</div>}
                         </td>
                         <td>
                           <span className={`cat-badge ${catColor(t.categoryName)}`}>
                             {t.categoryName ?? "ללא קטגוריה"}
                           </span>
                         </td>
-                        <td>
+                        <td className="whitespace-nowrap">
                           <span className="font-semibold text-zinc-900">{t.amount}</span>
                           <span className="mr-1 text-xs text-zinc-400">{t.currency}</span>
                         </td>
-                        <td className="text-xs text-zinc-400">{t.cardLast4 ? `•••• ${t.cardLast4}` : ""}</td>
+                        <td className="text-xs text-zinc-500 max-w-[14rem]">
+                          {t.description || <span className="text-zinc-300">—</span>}
+                        </td>
                         <td>
                           <div className="flex gap-1">
                             <button
@@ -457,6 +456,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     );
   }
@@ -518,8 +518,8 @@ export default function TransactionsClient(props: { categories: Category[] }) {
               <input className="field mt-1.5" value={vendor} onChange={(e) => setVendor(e.target.value)} required />
             </div>
             <div className="lg:col-span-2">
-              <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">הערה</label>
-              <input className="field mt-1.5" value={description} onChange={(e) => setDescription(e.target.value)} />
+              <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">תיאור</label>
+              <input className="field mt-1.5" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="למשל: אורכידיה אילת" />
             </div>
             <div className="lg:col-span-3">
               <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">קטגוריה (מתקציב)</label>
@@ -530,16 +530,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
                 {activeCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
-            <div className="lg:col-span-1">
-              <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">כרטיס</label>
-              <select className="field mt-1.5" value={cardLast4} onChange={(e) => setCardLast4(e.target.value)}>
-                <option value="7374">•••• 7374</option>
-                <option value="5622">•••• 5622</option>
-                <option value="9537">•••• 9537</option>
-                <option value="7539">•••• 7539</option>
-              </select>
-            </div>
-            <div className="lg:col-span-2 flex items-end gap-3">
+            <div className="lg:col-span-3 flex items-end gap-3">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
