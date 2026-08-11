@@ -65,6 +65,8 @@ body.nf-chat-active {
   pointer-events: none;
 }
 
+/* Hide underlay — no longer needed but keep the class so no React error. */
+
 @layer base {
   html, body { height: 100%; }
 }
@@ -402,17 +404,13 @@ body.nf-chat-active {
   /* ─── Noam Finance chat ───────────────────── */
   .nf-chat {
     --nf-blue: #0b1c2a;
-    --nf-bg0: #0b1c2a;
-    --nf-bg1: #0b1c2a;
     --nf-accent: #2dd4bf;
     --nf-accent-2: #38bdf8;
-    --composer-h: 3.6rem;
     position: fixed;
     z-index: 1;
-    left: 0;
-    right: 0;
-    top: 0;
+    inset: 0;
     width: 100%;
+    height: 100dvh;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -421,11 +419,10 @@ body.nf-chat-active {
     padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
-    padding-bottom: 0;
+    padding-bottom: max(0.55rem, env(safe-area-inset-bottom, 0px));
     overflow: hidden;
     box-sizing: border-box;
     overscroll-behavior: none;
-    touch-action: manipulation;
   }
   .nf-chat-header {
     display: flex;
@@ -512,15 +509,12 @@ body.nf-chat-active {
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    overscroll-behavior: contain;
+    overscroll-behavior-y: contain;
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
-    padding: 0.25rem 0.1rem;
-    /* Keep last bubbles above the floating composer (shell already sits above keyboard). */
-    padding-bottom: calc(var(--composer-h) + 1.1rem + env(safe-area-inset-bottom, 0px));
+    padding: 0.25rem 0.1rem 0.85rem;
     -webkit-overflow-scrolling: touch;
-    touch-action: pan-y;
   }
   .nf-bubble-row {
     display: flex;
@@ -568,22 +562,17 @@ body.nf-chat-active {
     border-color: rgba(248, 113, 113, 0.45);
     color: #fecaca;
   }
+  /* Composer: normal flex child (not absolute) so it naturally sits above keyboard. */
   .nf-chat-composer {
-    position: absolute;
-    z-index: 5;
-    left: max(0.75rem, env(safe-area-inset-left, 0px));
-    right: max(0.75rem, env(safe-area-inset-right, 0px));
-    bottom: max(0.55rem, env(safe-area-inset-bottom, 0px));
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 0.55rem;
-    min-height: var(--composer-h);
     padding: 0.45rem;
     border-radius: 1.25rem;
     background: rgba(11, 28, 42, 0.96);
     border: 1px solid rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(12px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   }
   .nf-chat-input {
     flex: 1;
@@ -592,7 +581,6 @@ body.nf-chat-active {
     border: 0;
     outline: none;
     color: #f8fbff;
-    /* 16px+ prevents iOS Safari zoom-on-focus jump. */
     font-size: 16px;
     line-height: 1.35;
     padding: 0.6rem 0.5rem;
