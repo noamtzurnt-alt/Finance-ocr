@@ -43,6 +43,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+html.nf-chat-active,
+html.nf-chat-active body,
+body.nf-chat-active {
+  background: #061018 !important;
+  color: #e8f4ff;
+}
+
 @layer base {
   html, body { height: 100%; }
 }
@@ -374,8 +381,11 @@ body {
     --nf-bg1: #0b1c2a;
     --nf-accent: #2dd4bf;
     --nf-accent-2: #38bdf8;
-    min-height: 100dvh;
-    min-height: 100svh;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
     display: flex;
     flex-direction: column;
     background:
@@ -384,25 +394,28 @@ body {
       linear-gradient(180deg, var(--nf-bg0), var(--nf-bg1));
     color: #e8f4ff;
     padding:
-      max(0.5rem, env(safe-area-inset-top))
-      max(0.75rem, env(safe-area-inset-right))
-      max(0.75rem, env(safe-area-inset-bottom))
-      max(0.75rem, env(safe-area-inset-left));
+      max(0.75rem, env(safe-area-inset-top, 0px))
+      max(0.75rem, env(safe-area-inset-right, 0px))
+      max(0.85rem, env(safe-area-inset-bottom, 0px))
+      max(0.75rem, env(safe-area-inset-left, 0px));
+    overflow: hidden;
   }
   .nf-chat-header {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    padding: 0.35rem 0.15rem 0.75rem;
+    gap: 0.5rem;
+    padding: 0.25rem 0.1rem 0.75rem;
+    flex-shrink: 0;
   }
-  .nf-chat-back {
-    display: grid;
-    place-items: center;
-    width: 2.25rem;
-    height: 2.25rem;
+  .nf-chat-dash {
     border-radius: 9999px;
-    color: rgba(232, 244, 255, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.06);
+    color: rgba(232, 244, 255, 0.9);
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.45rem 0.7rem;
+    white-space: nowrap;
   }
   .nf-chat-identity {
     display: flex;
@@ -446,6 +459,7 @@ body {
     font-size: 0.78rem;
     line-height: 1.55;
     color: rgba(232, 244, 255, 0.82);
+    flex-shrink: 0;
   }
   .nf-chat-install ol {
     margin: 0.55rem 0 0.65rem;

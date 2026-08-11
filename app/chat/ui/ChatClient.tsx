@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { parseQuickTransaction, QUICK_HELP } from "@/app/lib/transactions/parse-quick";
+import { CHAT_WELCOME, formatChatFailure } from "@/app/lib/transactions/parse-quick";
 
 type Msg = {
   id: string;
@@ -25,7 +25,7 @@ export default function ChatClient() {
     {
       id: "welcome",
       role: "bot",
-      text: "היי, אני Noam Finance.\nכתוב הוצאה ואני אוסיף אותה לתנועות מיד.\nלדוגמה: קוטג 10 שקלים",
+      text: CHAT_WELCOME,
       status: "ok",
     },
   ]);
@@ -34,11 +34,19 @@ export default function ChatClient() {
   const busy = messages.some((m) => m.status === "sending");
 
   useEffect(() => {
+    document.documentElement.classList.add("nf-chat-active");
+    document.body.classList.add("nf-chat-active");
+    return () => {
+      document.documentElement.classList.remove("nf-chat-active");
+      document.body.classList.remove("nf-chat-active");
+    };
+  }, []);
+
+  useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
   useEffect(() => {
-    // Focus instantly so typing feels like WhatsApp.
     const t = window.setTimeout(() => inputRef.current?.focus(), 50);
     return () => window.clearTimeout(t);
   }, []);
@@ -49,24 +57,12 @@ export default function ChatClient() {
 
     const userMsg: Msg = { id: uid(), role: "user", text: value, status: "ok" };
     const pendingId = uid();
-    const local = parseQuickTransaction(value);
 
-    // Optimistic bot reply for instant feel when parse succeeds.
-    const optimistic: Msg = local
-      ? {
-          id: pendingId,
-          role: "bot",
-          text: `רגע… מוסיף: ${local.vendor} — ${local.amount.toFixed(2)} ${local.currency === "ILS" ? "₪" : local.currency === "USD" ? "$" : "€"}`,
-          status: "sending",
-        }
-      : {
-          id: pendingId,
-          role: "bot",
-          text: "…",
-          status: "sending",
-        };
-
-    setMessages((prev) => [...prev, userMsg, optimistic]);
+    setMessages((prev) => [
+      ...prev,
+      userMsg,
+      { id: pendingId, role: "bot", text: "…", status: "sending" },
+    ]);
     setText("");
 
     try {
@@ -79,9 +75,11 @@ export default function ChatClient() {
         | { ok?: boolean; reply?: string; error?: string }
         | null;
 
-      if (!res.ok) {
-        throw new Error(data?.error || "שגיאה");
-      }
+      const reply =
+        data?.reply ||
+        (res.status === 401
+          ? formatChatFailure("צריך להתחבר מחדש כדי להוסיף תנועה.")
+          : formatChatFailure(data?.error || `שגיאת שרת (${res.status})`));
 
       startTransition(() => {
         setMessages((prev) =>
@@ -89,19 +87,20 @@ export default function ChatClient() {
             m.id === pendingId
               ? {
                   ...m,
-                  text: data?.reply || QUICK_HELP,
-                  status: data?.ok === false ? "error" : "ok",
+                  text: reply,
+                  status: data?.ok ? "ok" : "error",
                 }
               : m,
           ),
         );
       });
-    } catch {
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
       startTransition(() => {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === pendingId
-              ? { ...m, text: "אופס, לא הצלחתי לשמור. נסה שוב.", status: "error" }
+              ? { ...m, text: formatChatFailure(msg), status: "error" }
               : m,
           ),
         );
@@ -114,17 +113,12 @@ export default function ChatClient() {
   return (
     <div className="nf-chat">
       <header className="nf-chat-header">
-        <Link href="/dashboard" className="nf-chat-back" aria-label="חזרה לדשבורד">
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Link>
         <div className="nf-chat-identity">
           <Image
             src="/noam-finance-bot.webp"
             alt="Noam Finance"
-            width={40}
-            height={40}
+            width={44}
+            height={44}
             className="nf-chat-avatar"
             priority
           />
@@ -133,6 +127,9 @@ export default function ChatClient() {
             <div className="nf-chat-status">מחובר · תשובה מיידית</div>
           </div>
         </div>
+        <Link href="/dashboard" className="nf-chat-dash" prefetch>
+          לאפליקציה
+        </Link>
         <button
           type="button"
           className="nf-chat-install-btn"
@@ -145,18 +142,20 @@ export default function ChatClient() {
 
       {showInstall && (
         <div className="nf-chat-install">
-          <p className="font-semibold text-white">הוספה למסך הבית / Widget</p>
+          <p className="font-semibold text-white">חשוב: שמור את הקישור של הצ׳אט</p>
           <ol>
             <li>
-              Safari → כפתור שיתוף → <strong>הוסף למסך הבית</strong> (ייפתח ישר ל־Noam Finance).
+              פתח בדיוק: <strong>/chat</strong> (לא את המסך הראשי).
             </li>
             <li>
-              ל־Widget במסך נעילה: אפליקציית <strong>קיצורים</strong> → קיצור חדש → פעולת{" "}
-              <strong>Open URLs</strong> עם הקישור הזה → הוסף ל־Home Screen / Lock Screen Widget.
+              Safari → שיתוף → <strong>הוסף למסך הבית</strong>.
+            </li>
+            <li>
+              לווידג׳ט: אפליקציית <strong>קיצורים</strong> → Open URL → אותה כתובת `/chat`.
             </li>
           </ol>
           <p className="nf-chat-install-note">
-            iOS לא מאפשר וידג׳ט אמיתי מאפליקציית ווב — קיצור דרך שפותח את הצ׳אט הוא הפתרון המהיר ביותר.
+            אם האייקון הישן פותח את הדשבורד — מחק אותו והוסף מחדש מתוך מסך הצ׳אט הזה.
           </p>
           <button
             type="button"

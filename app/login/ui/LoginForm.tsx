@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 function getBiometricLabel() {
@@ -12,13 +12,12 @@ function getBiometricLabel() {
 }
 
 function safeNextPath(raw: string | null | undefined): string {
-  if (!raw) return "/dashboard";
-  if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("://")) return "/dashboard";
+  if (!raw) return "/chat";
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.includes("://")) return "/chat";
   return raw;
 }
 
 const LAST_EMAIL_KEY = "nf_last_email";
-const PREFER_PASSKEY_KEY = "nf_prefer_passkey";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -30,8 +29,6 @@ export default function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [passkeyBusy, setPasskeyBusy] = useState(false);
-  const [autoTried, setAutoTried] = useState(false);
-  const autoStarted = useRef(false);
 
   useEffect(() => {
     try {
@@ -42,22 +39,19 @@ export default function LoginForm() {
     }
   }, []);
 
-  async function loginWithPasskey(opts?: { silent?: boolean; emailOverride?: string }) {
-    const silent = opts?.silent === true;
+  async function loginWithPasskey() {
     setError(null);
     setPasskeyBusy(true);
     try {
       const { startAuthentication } = await import("@simplewebauthn/browser");
-      const emailForAuth = (opts?.emailOverride ?? email).trim();
       const optRes = await fetch("/api/auth/passkey/authentication/options", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        // Empty email → discoverable passkeys (one-tap / Face ID).
-        body: JSON.stringify({ email: emailForAuth || null }),
+        body: JSON.stringify({ email: email.trim() || null }),
       });
       if (!optRes.ok) {
         const body = (await optRes.json().catch(() => null)) as { error?: string } | null;
-        if (!silent) setError(body?.error ?? "לא הצלחתי להתחיל התחברות");
+        setError(body?.error ?? "לא הצלחתי להתחיל התחברות");
         return;
       }
       const optionsJSON = (await optRes.json()) as unknown;
@@ -71,60 +65,28 @@ export default function LoginForm() {
         const body = (await verifyRes.json().catch(() => null)) as { error?: string; message?: string } | null;
         if (verifyRes.status === 403 && body?.error === "pending_approval") {
           setError(body?.message ?? "ממתין לאישור מנהל המערכת.");
-        } else if (!silent) {
+        } else {
           setError(body?.error ?? "התחברות עם Passkey נכשלה");
         }
         return;
       }
       try {
-        localStorage.setItem(PREFER_PASSKEY_KEY, "1");
-        if (emailForAuth) localStorage.setItem(LAST_EMAIL_KEY, emailForAuth.toLowerCase());
+        if (email.trim()) localStorage.setItem(LAST_EMAIL_KEY, email.trim().toLowerCase());
       } catch {
         /* ignore */
       }
       router.replace(nextPath);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "";
-      const cancelled =
-        /NotAllowedError|timed out|not allowed|AbortError|cancelled|canceled|The operation either timed out or was not allowed/i.test(
-          msg,
-        );
-      // Auto Face ID often gets cancelled/blocked without a tap — stay quiet.
-      if (silent && cancelled) return;
       if (msg.includes("timed out") || msg.includes("not allowed") || msg.includes("NotAllowedError")) {
-        setError("Passkey: הפעולה נחסמה/פגה. נסה שוב עם הכפתור, או התחבר עם סיסמה.");
-      } else if (!silent) {
+        setError("Passkey: הפעולה נחסמה/פגה. נסה שוב, או התחבר עם סיסמה.");
+      } else {
         setError(msg ? `Passkey: ${msg}` : "התחברות עם Face ID/Touch ID בוטלה או נכשלה");
       }
     } finally {
       setPasskeyBusy(false);
-      if (silent) setAutoTried(true);
     }
   }
-
-  // Auto-trigger Face ID as soon as login opens (home screen / widget / redirect).
-  useEffect(() => {
-    if (autoStarted.current) return;
-    autoStarted.current = true;
-    let prefer = true;
-    let savedEmail = "";
-    try {
-      prefer = localStorage.getItem(PREFER_PASSKEY_KEY) !== "0";
-      savedEmail = localStorage.getItem(LAST_EMAIL_KEY) ?? "";
-    } catch {
-      /* ignore */
-    }
-    if (!prefer) {
-      setAutoTried(true);
-      return;
-    }
-    // Tiny delay lets the page paint, then Face ID sheet appears.
-    const t = window.setTimeout(() => {
-      void loginWithPasskey({ silent: true, emailOverride: savedEmail });
-    }, 120);
-    return () => window.clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -167,9 +129,7 @@ export default function LoginForm() {
           ? `פותח ${label}…`
           : label === "ביומטרי"
             ? "התחבר עם ביומטרי"
-            : autoTried
-              ? `נסה שוב עם ${label}`
-              : `התחבר עם ${label}`}
+            : `התחבר עם ${label}`}
       </button>
 
       <div className="flex items-center gap-3">

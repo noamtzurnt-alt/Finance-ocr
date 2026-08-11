@@ -3,6 +3,7 @@ import { getSession } from "@/app/lib/auth/server";
 
 export default async function Home() {
   const session = await getSession();
-  if (session?.sub) redirect("/dashboard");
-  redirect("/login");
+  // Phone / home-screen entry goes straight to Noam Finance chat.
+  if (session?.sub) redirect("/chat");
+  redirect("/login?next=/chat");
 }
