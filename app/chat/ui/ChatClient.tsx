@@ -16,33 +16,18 @@ function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function lockPageScroll() {
-  if (window.scrollY !== 0 || window.scrollX !== 0) {
-    window.scrollTo(0, 0);
-  }
-  if (document.documentElement.scrollTop) document.documentElement.scrollTop = 0;
-  if (document.body.scrollTop) document.body.scrollTop = 0;
-}
-
 export default function ChatClient() {
   const inputId = useId();
-  const shellRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<Msg[]>([
-    {
-      id: "welcome",
-      role: "bot",
-      text: CHAT_WELCOME,
-      status: "ok",
-    },
+    { id: "welcome", role: "bot", text: CHAT_WELCOME, status: "ok" },
   ]);
   const [showInstall, setShowInstall] = useState(false);
   const [, startTransition] = useTransition();
   const busy = messages.some((m) => m.status === "sending");
 
-  // Paint dark background + lock body scroll.
   useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -55,65 +40,40 @@ export default function ChatClient() {
     theme.setAttribute("data-nf-chat-theme", "1");
     document.head.appendChild(theme);
 
-    html.style.setProperty("color-scheme", "dark");
-    body.style.setProperty("color-scheme", "dark");
-
     return () => {
       html.classList.remove("nf-chat-active");
       body.classList.remove("nf-chat-active");
-      html.style.removeProperty("color-scheme");
-      body.style.removeProperty("color-scheme");
       document.querySelectorAll('meta[data-nf-chat-theme="1"]').forEach((n) => n.remove());
+      html.style.removeProperty("--kb-inset");
     };
   }, []);
 
-  // Pin shell height to the visible viewport above the keyboard.
-  // Keep top at 0 and force page scroll to 0 so iOS can't push the UI upward.
+  // Only lift the composer above the keyboard — header & messages never move.
   useEffect(() => {
-    const shell = shellRef.current;
-    if (!shell) return;
-
+    const root = document.documentElement;
     let raf = 0;
-    let lastH = -1;
+    let lastKb = -1;
 
     const sync = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        lockPageScroll();
         const vv = window.visualViewport;
-        const h = Math.round(vv?.height ?? window.innerHeight);
-        if (h === lastH) return;
-        lastH = h;
-        // Only shrink/grow height — never move top. That was the jump.
-        shell.style.top = "0px";
-        shell.style.height = `${h}px`;
-        shell.style.bottom = "auto";
+        if (!vv) return;
+        const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+        if (kb === lastKb) return;
+        lastKb = kb;
+        root.style.setProperty("--kb-inset", `${kb}px`);
       });
     };
 
-    const onVvScroll = () => {
-      lockPageScroll();
-      sync();
-    };
-
     sync();
-    const vv = window.visualViewport;
-    vv?.addEventListener("resize", sync);
-    // When iOS tries to scroll the visual viewport under the keyboard, snap back.
-    vv?.addEventListener("scroll", onVvScroll);
-    window.addEventListener("resize", sync);
-    window.addEventListener("scroll", lockPageScroll, { passive: true });
-
+    window.visualViewport?.addEventListener("resize", sync);
     return () => {
       cancelAnimationFrame(raf);
-      vv?.removeEventListener("resize", sync);
-      vv?.removeEventListener("scroll", onVvScroll);
-      window.removeEventListener("resize", sync);
-      window.removeEventListener("scroll", lockPageScroll);
+      window.visualViewport?.removeEventListener("resize", sync);
     };
   }, []);
 
-  // Scroll to bottom on new messages.
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -171,12 +131,11 @@ export default function ChatClient() {
       });
     } finally {
       inputRef.current?.focus({ preventScroll: true });
-      lockPageScroll();
     }
   }
 
   return (
-    <div ref={shellRef} className="nf-chat">
+    <div className="nf-chat">
       <header className="nf-chat-header">
         <div className="nf-chat-identity">
           <Image
@@ -209,9 +168,15 @@ export default function ChatClient() {
         <div className="nf-chat-install">
           <p className="font-semibold text-white">חשוב: שמור את הקישור של הצ׳אט</p>
           <ol>
-            <li>פתח בדיוק: <strong>/chat</strong> (לא את המסך הראשי).</li>
-            <li>Safari → שיתוף → <strong>הוסף למסך הבית</strong>.</li>
-            <li>לווידג׳ט: אפליקציית <strong>קיצורים</strong> → Open URL → אותה כתובת `/chat`.</li>
+            <li>
+              פתח בדיוק: <strong>/chat</strong> (לא את המסך הראשי).
+            </li>
+            <li>
+              Safari → שיתוף → <strong>הוסף למסך הבית</strong>.
+            </li>
+            <li>
+              לווידג׳ט: אפליקציית <strong>קיצורים</strong> → Open URL → אותה כתובת `/chat`.
+            </li>
           </ol>
           <p className="nf-chat-install-note">
             רק מ־"הוסף למסך הבית" נעלם סרגל Safari הלבן למטה. בטאב רגיל הסרגל שייך לדפדפן.
@@ -270,18 +235,8 @@ export default function ChatClient() {
           ref={inputRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onFocus={(e) => {
-            // Stop iOS from scrolling the page to the input (that was the "everything flies up").
-            e.target.focus({ preventScroll: true });
-            lockPageScroll();
-            const shell = shellRef.current;
-            const vv = window.visualViewport;
-            if (shell && vv) {
-              shell.style.top = "0px";
-              shell.style.height = `${Math.round(vv.height)}px`;
-            }
-          }}
-          placeholder="קוטג 10 / תמחק סרט 100…"
+          onFocus={(e) => e.target.focus({ preventScroll: true })}
+          placeholder="ASK NOAM FINANCE"
           autoComplete="off"
           autoCorrect="on"
           autoCapitalize="sentences"
