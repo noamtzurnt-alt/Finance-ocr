@@ -45,32 +45,49 @@ export default function ChatClient() {
       body.classList.remove("nf-chat-active");
       document.querySelectorAll('meta[data-nf-chat-theme="1"]').forEach((n) => n.remove());
       html.style.removeProperty("--kb-inset");
+      html.style.removeProperty("--vv-offset");
     };
   }, []);
 
-  // Only lift the composer above the keyboard — header & messages never move.
+  // iOS scrolls the page upward when the keyboard opens (visualViewport.offsetTop > 0).
+  // Counter with translateY so header & messages stay visually put — same as manual scroll-down.
   useEffect(() => {
     const root = document.documentElement;
     let raf = 0;
-    let lastKb = -1;
+    let lastKey = "";
 
     const sync = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const vv = window.visualViewport;
         if (!vv) return;
-        const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-        if (kb === lastKb) return;
-        lastKb = kb;
+        const offset = Math.round(vv.offsetTop);
+        const kb = Math.max(0, Math.round(window.innerHeight - vv.height - offset));
+        const key = `${offset}:${kb}`;
+        if (key === lastKey) return;
+        lastKey = key;
+        root.style.setProperty("--vv-offset", `${offset}px`);
         root.style.setProperty("--kb-inset", `${kb}px`);
       });
     };
 
+    const scheduleSync = () => {
+      sync();
+      // iOS keyboard animates — re-sync while it settles.
+      [50, 150, 300].forEach((ms) => window.setTimeout(sync, ms));
+    };
+
     sync();
-    window.visualViewport?.addEventListener("resize", sync);
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", scheduleSync);
+    vv?.addEventListener("scroll", sync);
+    window.addEventListener("resize", sync);
+
     return () => {
       cancelAnimationFrame(raf);
-      window.visualViewport?.removeEventListener("resize", sync);
+      vv?.removeEventListener("resize", scheduleSync);
+      vv?.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
     };
   }, []);
 

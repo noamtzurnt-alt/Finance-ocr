@@ -418,8 +418,13 @@ body.nf-chat-active {
     padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+    padding-bottom: calc(
+      max(0.55rem, env(safe-area-inset-bottom, 0px)) + var(--kb-inset, 0px)
+    );
     overflow: hidden;
     box-sizing: border-box;
+    /* Cancel iOS upward viewport scroll when keyboard opens. */
+    transform: translateY(var(--vv-offset, 0px));
   }
   .nf-chat-header {
     display: flex;
@@ -510,10 +515,7 @@ body.nf-chat-active {
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
-    padding: 0.25rem 0.1rem;
-    padding-bottom: calc(
-      var(--composer-h) + 1rem + var(--kb-inset, 0px) + env(safe-area-inset-bottom, 0px)
-    );
+    padding: 0.25rem 0.1rem 0.85rem;
     -webkit-overflow-scrolling: touch;
   }
   .nf-bubble-row {
@@ -562,13 +564,8 @@ body.nf-chat-active {
     border-color: rgba(248, 113, 113, 0.45);
     color: #fecaca;
   }
-  /* Only the composer moves with the keyboard — header & messages stay put. */
   .nf-chat-composer {
-    position: fixed;
-    z-index: 10;
-    left: max(0.75rem, env(safe-area-inset-left, 0px));
-    right: max(0.75rem, env(safe-area-inset-right, 0px));
-    bottom: calc(max(0.55rem, env(safe-area-inset-bottom, 0px)) + var(--kb-inset, 0px));
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     gap: 0.55rem;
