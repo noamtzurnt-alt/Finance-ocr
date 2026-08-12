@@ -427,6 +427,8 @@ body.nf-chat-active {
     padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+    transform: none;
+    will-change: auto;
   }
   .nf-chat-topbar-inner {
     display: flex;
@@ -452,7 +454,6 @@ body.nf-chat-active {
     z-index: 10;
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
-    transform: translateY(var(--vv-offset, 0px));
     overflow: hidden;
   }
   .nf-chat-dash {
@@ -588,9 +589,12 @@ body.nf-chat-active {
   .nf-chat-composer {
     position: fixed;
     z-index: 30;
+    top: var(
+      --composer-top,
+      calc(100dvh - var(--composer-h) - max(0.55rem, env(safe-area-inset-bottom, 0px)) - 8px)
+    );
     left: max(0.75rem, env(safe-area-inset-left, 0px));
     right: max(0.75rem, env(safe-area-inset-right, 0px));
-    bottom: calc(max(0.55rem, env(safe-area-inset-bottom, 0px)) + var(--kb-inset, 0px));
     display: flex;
     align-items: center;
     gap: 0.55rem;
@@ -601,7 +605,6 @@ body.nf-chat-active {
     border: 1px solid rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(12px);
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.25);
-    transform: translateY(var(--vv-offset, 0px));
   }
   .nf-chat-input {
     flex: 1;

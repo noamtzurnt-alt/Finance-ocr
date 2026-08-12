@@ -19,6 +19,7 @@ function uid() {
 export default function ChatClient() {
   const inputId = useId();
   const listRef = useRef<HTMLDivElement>(null);
+  const composerRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<Msg[]>([
@@ -43,13 +44,14 @@ export default function ChatClient() {
       html.classList.remove("nf-chat-active");
       body.classList.remove("nf-chat-active");
       document.querySelectorAll('meta[data-nf-chat-theme="1"]').forEach((n) => n.remove());
+      html.style.removeProperty("--composer-top");
       html.style.removeProperty("--kb-inset");
-      html.style.removeProperty("--vv-offset");
       html.style.removeProperty("--nf-topbar-h");
     };
   }, []);
 
-  // Lift composer above keyboard; counter iOS viewport scroll for chat area only.
+  // Pin composer to the bottom of the visible viewport (above keyboard).
+  // Top bar is never touched — no transforms, no scroll offsets.
   useEffect(() => {
     const root = document.documentElement;
     let raf = 0;
@@ -60,30 +62,34 @@ export default function ChatClient() {
       raf = requestAnimationFrame(() => {
         const vv = window.visualViewport;
         if (!vv) return;
-        const offset = Math.round(vv.offsetTop);
-        const kb = Math.max(0, Math.round(window.innerHeight - vv.height - offset));
-        const key = `${offset}:${kb}`;
+
+        // Stop iOS from scrolling the page upward (that was moving the top bar).
+        if (vv.offsetTop > 0) {
+          window.scrollTo(0, 0);
+        }
+
+        const composerH = composerRef.current?.offsetHeight ?? 58;
+        const gap = 8;
+        const top = Math.round(vv.offsetTop + vv.height - composerH - gap);
+        const kb = Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height));
+        const key = `${top}:${kb}`;
         if (key === lastKey) return;
         lastKey = key;
-        root.style.setProperty("--vv-offset", `${offset}px`);
+
+        root.style.setProperty("--composer-top", `${top}px`);
         root.style.setProperty("--kb-inset", `${kb}px`);
       });
     };
 
-    const scheduleSync = () => {
-      sync();
-      [50, 150, 300, 500].forEach((ms) => window.setTimeout(sync, ms));
-    };
-
     sync();
     const vv = window.visualViewport;
-    vv?.addEventListener("resize", scheduleSync);
+    vv?.addEventListener("resize", sync);
     vv?.addEventListener("scroll", sync);
     window.addEventListener("resize", sync);
 
     return () => {
       cancelAnimationFrame(raf);
-      vv?.removeEventListener("resize", scheduleSync);
+      vv?.removeEventListener("resize", sync);
       vv?.removeEventListener("scroll", sync);
       window.removeEventListener("resize", sync);
     };
@@ -179,6 +185,7 @@ export default function ChatClient() {
       </div>
 
       <form
+        ref={composerRef}
         className="nf-chat-composer"
         onSubmit={(e) => {
           e.preventDefault();
