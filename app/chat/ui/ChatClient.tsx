@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { CHAT_WELCOME, formatChatFailure } from "@/app/lib/transactions/parse-quick";
+import ChatTopBar from "./ChatTopBar";
 
 type Msg = {
   id: string;
@@ -24,7 +24,6 @@ export default function ChatClient() {
   const [messages, setMessages] = useState<Msg[]>([
     { id: "welcome", role: "bot", text: CHAT_WELCOME, status: "ok" },
   ]);
-  const [showInstall, setShowInstall] = useState(false);
   const [, startTransition] = useTransition();
   const busy = messages.some((m) => m.status === "sending");
 
@@ -46,11 +45,11 @@ export default function ChatClient() {
       document.querySelectorAll('meta[data-nf-chat-theme="1"]').forEach((n) => n.remove());
       html.style.removeProperty("--kb-inset");
       html.style.removeProperty("--vv-offset");
+      html.style.removeProperty("--nf-topbar-h");
     };
   }, []);
 
-  // iOS scrolls the page upward when the keyboard opens (visualViewport.offsetTop > 0).
-  // Counter with translateY so header & messages stay visually put — same as manual scroll-down.
+  // Lift composer above keyboard; counter iOS viewport scroll for chat area only.
   useEffect(() => {
     const root = document.documentElement;
     let raf = 0;
@@ -73,8 +72,7 @@ export default function ChatClient() {
 
     const scheduleSync = () => {
       sync();
-      // iOS keyboard animates — re-sync while it settles.
-      [50, 150, 300].forEach((ms) => window.setTimeout(sync, ms));
+      [50, 150, 300, 500].forEach((ms) => window.setTimeout(sync, ms));
     };
 
     sync();
@@ -152,89 +150,32 @@ export default function ChatClient() {
   }
 
   return (
-    <div className="nf-chat">
-      <header className="nf-chat-header">
-        <div className="nf-chat-identity">
-          <Image
-            src="/noam-finance-bot.webp"
-            alt="Noam Finance"
-            width={44}
-            height={44}
-            className="nf-chat-avatar"
-            priority
-          />
-          <div className="min-w-0">
-            <div className="nf-chat-name">Noam Finance</div>
-            <div className="nf-chat-status">מחובר · תשובה מיידית</div>
-          </div>
-        </div>
-        <Link href="/dashboard" className="nf-chat-dash" prefetch>
-          לאפליקציה
-        </Link>
-        <button
-          type="button"
-          className="nf-chat-install-btn"
-          onClick={() => setShowInstall((v) => !v)}
-          aria-expanded={showInstall}
-        >
-          למסך הבית
-        </button>
-      </header>
+    <div className="nf-chat-page">
+      <ChatTopBar />
 
-      {showInstall && (
-        <div className="nf-chat-install">
-          <p className="font-semibold text-white">חשוב: שמור את הקישור של הצ׳אט</p>
-          <ol>
-            <li>
-              פתח בדיוק: <strong>/chat</strong> (לא את המסך הראשי).
-            </li>
-            <li>
-              Safari → שיתוף → <strong>הוסף למסך הבית</strong>.
-            </li>
-            <li>
-              לווידג׳ט: אפליקציית <strong>קיצורים</strong> → Open URL → אותה כתובת `/chat`.
-            </li>
-          </ol>
-          <p className="nf-chat-install-note">
-            רק מ־"הוסף למסך הבית" נעלם סרגל Safari הלבן למטה. בטאב רגיל הסרגל שייך לדפדפן.
-          </p>
-          <button
-            type="button"
-            className="nf-chat-copy"
-            onClick={async () => {
-              try {
-                await navigator.clipboard.writeText(`${window.location.origin}/chat`);
-              } catch {
-                /* */
-              }
-            }}
-          >
-            העתק קישור לצ׳אט
-          </button>
-        </div>
-      )}
-
-      <div ref={listRef} className="nf-chat-messages" role="log" aria-live="polite">
-        {messages.map((m) => (
-          <div key={m.id} className={`nf-bubble-row ${m.role === "user" ? "is-user" : "is-bot"}`}>
-            {m.role === "bot" && (
-              <Image
-                src="/noam-finance-bot.webp"
-                alt=""
-                width={28}
-                height={28}
-                className="nf-bubble-avatar"
-              />
-            )}
-            <div
-              className={`nf-bubble ${m.role === "user" ? "nf-bubble-user" : "nf-bubble-bot"} ${
-                m.status === "sending" ? "is-sending" : ""
-              } ${m.status === "error" ? "is-error" : ""}`}
-            >
-              {m.text}
+      <div className="nf-chat-thread">
+        <div ref={listRef} className="nf-chat-messages" role="log" aria-live="polite">
+          {messages.map((m) => (
+            <div key={m.id} className={`nf-bubble-row ${m.role === "user" ? "is-user" : "is-bot"}`}>
+              {m.role === "bot" && (
+                <Image
+                  src="/noam-finance-bot.webp"
+                  alt=""
+                  width={28}
+                  height={28}
+                  className="nf-bubble-avatar"
+                />
+              )}
+              <div
+                className={`nf-bubble ${m.role === "user" ? "nf-bubble-user" : "nf-bubble-bot"} ${
+                  m.status === "sending" ? "is-sending" : ""
+                } ${m.status === "error" ? "is-error" : ""}`}
+              >
+                {m.text}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <form

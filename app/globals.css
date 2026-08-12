@@ -403,35 +403,57 @@ body.nf-chat-active {
   }
 
   /* ─── Noam Finance chat ───────────────────── */
-  .nf-chat {
+  .nf-chat-page {
     --nf-blue: #0b1c2a;
     --nf-accent: #2dd4bf;
     --nf-accent-2: #38bdf8;
     --composer-h: 3.6rem;
+    --nf-topbar-h: 5.5rem;
     position: fixed;
     inset: 0;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
     background: var(--nf-blue);
     color: #e8f4ff;
+    overflow: hidden;
+  }
+
+  /* Fixed top bar — independent from chat, never moves with keyboard. */
+  .nf-chat-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: var(--nf-blue);
     padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
     padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
-    padding-bottom: calc(
-      max(0.55rem, env(safe-area-inset-bottom, 0px)) + var(--kb-inset, 0px)
-    );
-    overflow: hidden;
-    box-sizing: border-box;
-    /* Cancel iOS upward viewport scroll when keyboard opens. */
-    transform: translateY(var(--vv-offset, 0px));
   }
-  .nf-chat-header {
+  .nf-chat-topbar-inner {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     padding: 0.25rem 0.1rem 0.75rem;
-    flex-shrink: 0;
+  }
+  .nf-chat-topbar-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.12);
+    margin: 0;
+  }
+
+  /* Chat thread — scrollable messages only, below top bar. */
+  .nf-chat-thread {
+    position: fixed;
+    top: var(--nf-topbar-h, 5.5rem);
+    left: 0;
+    right: 0;
+    bottom: calc(
+      var(--composer-h) + 1rem + max(0.55rem, env(safe-area-inset-bottom, 0px)) + var(--kb-inset, 0px)
+    );
+    z-index: 10;
+    padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+    padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+    transform: translateY(var(--vv-offset, 0px));
+    overflow: hidden;
   }
   .nf-chat-dash {
     border-radius: 9999px;
@@ -507,15 +529,14 @@ body.nf-chat-active {
     padding: 0.55rem 0.75rem;
   }
   .nf-chat-messages {
-    flex: 1 1 auto;
-    min-height: 0;
+    height: 100%;
     overflow-y: auto;
     overflow-x: hidden;
     overscroll-behavior-y: contain;
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
-    padding: 0.25rem 0.1rem 0.85rem;
+    padding: 0.85rem 0.1rem 0.5rem;
     -webkit-overflow-scrolling: touch;
   }
   .nf-bubble-row {
@@ -565,16 +586,22 @@ body.nf-chat-active {
     color: #fecaca;
   }
   .nf-chat-composer {
-    flex-shrink: 0;
+    position: fixed;
+    z-index: 30;
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+    bottom: calc(max(0.55rem, env(safe-area-inset-bottom, 0px)) + var(--kb-inset, 0px));
     display: flex;
     align-items: center;
     gap: 0.55rem;
     min-height: var(--composer-h);
     padding: 0.45rem;
     border-radius: 1.25rem;
-    background: rgba(11, 28, 42, 0.96);
+    background: rgba(11, 28, 42, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(12px);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.25);
+    transform: translateY(var(--vv-offset, 0px));
   }
   .nf-chat-input {
     flex: 1;
