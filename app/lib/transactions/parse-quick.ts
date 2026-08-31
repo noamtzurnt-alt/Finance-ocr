@@ -167,9 +167,22 @@ export function formatQuickReply(tx: Omit<QuickTransaction, "description"> & { d
 }
 
 export const CHAT_SUCCESS_REPLY = "התהליך הצליח";
+export const CHAT_PARSE_FAILURE = "לא הצלחתי לקלוט את התנועה";
+export const CHAT_PAYMENT_PROMPT = "מעולה, מהם אמצעי התשלום?";
+export const CHAT_PAYMENT_OTHER_PROMPT = "הקלד את אמצעי התשלום";
+export const CHAT_PAYMENT_SUCCESS = "עודכן בהצלחה!";
+export const CHAT_PAYMENT_FAILURE = "לא עודכן";
 
 export function formatChatFailure(reason: string): string {
   return `התהליך לא הצליח\n${reason}`;
+}
+
+export function formatChatParseFailure(reason: string): string {
+  return `${CHAT_PARSE_FAILURE}\n${reason}`;
+}
+
+export function formatChatPaymentFailure(reason: string): string {
+  return `${CHAT_PAYMENT_FAILURE}\n${reason}`;
 }
 
 export const QUICK_HELP =

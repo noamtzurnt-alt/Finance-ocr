@@ -586,6 +586,31 @@ body.nf-chat-active {
     border-color: rgba(248, 113, 113, 0.45);
     color: #fecaca;
   }
+  .nf-payment-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+    margin-top: 0.75rem;
+  }
+  .nf-payment-option {
+    width: 100%;
+    text-align: start;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.08);
+    color: #e8f4ff;
+    font-size: 0.86rem;
+    font-weight: 600;
+    padding: 0.62rem 0.8rem;
+    transition: background 120ms ease, transform 120ms ease, opacity 120ms ease;
+  }
+  .nf-payment-option:not(:disabled):active {
+    transform: scale(0.98);
+    background: rgba(45, 212, 191, 0.18);
+  }
+  .nf-payment-option:disabled {
+    opacity: 0.45;
+  }
   .nf-chat-composer {
     position: fixed;
     z-index: 30;

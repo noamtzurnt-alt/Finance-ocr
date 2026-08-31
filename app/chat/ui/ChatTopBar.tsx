@@ -54,20 +54,26 @@ export default function ChatTopBar() {
 
       {showInstall && (
         <div className="nf-chat-install">
-          <p className="font-semibold text-white">חשוב: שמור את הקישור של הצ׳אט</p>
+          <p className="font-semibold text-white">הוספה למסך הבית + ווידג׳ט</p>
           <ol>
             <li>
               פתח בדיוק: <strong>/chat</strong> (לא את המסך הראשי).
             </li>
             <li>
-              Safari → שיתוף → <strong>הוסף למסך הבית</strong>.
+              Safari → שיתוף → <strong>הוסף למסך הבית</strong> → הוסף.
             </li>
             <li>
-              לווידג׳ט: אפליקציית <strong>קיצורים</strong> → Open URL → אותה כתובת `/chat`.
+              לווידג׳ט: אפליקציית <strong>קיצורים</strong> → + → <strong>Open URL</strong>.
+            </li>
+            <li>
+              הדבק את הקישור לצ׳אט, שם: <strong>Noam Finance</strong>, הוסף לווידג׳ט.
+            </li>
+            <li>
+              לחץ ארוך על מסך הבית → <strong>ערוך</strong> → גרור את הקיצור למסך.
             </li>
           </ol>
           <p className="nf-chat-install-note">
-            רק מ־"הוסף למסך הבית" נעלם סרגל Safari הלבן למטה. בטאב רגיל הסרגל שייך לדפדפן.
+            רק מ־"הוסף למסך הבית" נעלם סרגל Safari הלבן למטה. הווידג׳ט פותח ישר את הצ׳אט.
           </p>
           <button
             type="button"

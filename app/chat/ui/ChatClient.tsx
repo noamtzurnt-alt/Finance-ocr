@@ -2,7 +2,15 @@
 
 import Image from "next/image";
 import { useEffect, useId, useRef, useState, useTransition } from "react";
-import { CHAT_WELCOME, formatChatFailure } from "@/app/lib/transactions/parse-quick";
+import {
+  CHAT_PAYMENT_OTHER_PROMPT,
+  CHAT_WELCOME,
+  formatChatFailure,
+} from "@/app/lib/transactions/parse-quick";
+import {
+  CHAT_PAYMENT_OPTIONS,
+  isOtherPaymentOption,
+} from "@/app/lib/transactions/chat-payment";
 import ChatTopBar from "./ChatTopBar";
 
 type Msg = {
@@ -10,6 +18,8 @@ type Msg = {
   role: "user" | "bot";
   text: string;
   status?: "sending" | "ok" | "error";
+  paymentOptions?: boolean;
+  paymentDisabled?: boolean;
 };
 
 function uid() {
@@ -25,6 +35,8 @@ export default function ChatClient() {
   const [messages, setMessages] = useState<Msg[]>([
     { id: "welcome", role: "bot", text: CHAT_WELCOME, status: "ok" },
   ]);
+  const [pendingPaymentTxId, setPendingPaymentTxId] = useState<string | null>(null);
+  const [awaitingCustomPayment, setAwaitingCustomPayment] = useState(false);
   const [, startTransition] = useTransition();
   const busy = messages.some((m) => m.status === "sending");
 
@@ -50,8 +62,6 @@ export default function ChatClient() {
     };
   }, []);
 
-  // Pin composer to the bottom of the visible viewport (above keyboard).
-  // Top bar is never touched — no transforms, no scroll offsets.
   useEffect(() => {
     const root = document.documentElement;
     let raf = 0;
@@ -63,7 +73,6 @@ export default function ChatClient() {
         const vv = window.visualViewport;
         if (!vv) return;
 
-        // Stop iOS from scrolling the page upward (that was moving the top bar).
         if (vv.offsetTop > 0) {
           window.scrollTo(0, 0);
         }
@@ -100,35 +109,38 @@ export default function ChatClient() {
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  async function send(raw: string) {
-    const value = raw.trim();
-    if (!value || busy) return;
+  function disablePaymentOptions() {
+    setMessages((prev) =>
+      prev.map((m) => (m.paymentOptions ? { ...m, paymentDisabled: true } : m)),
+    );
+  }
 
-    const userMsg: Msg = { id: uid(), role: "user", text: value, status: "ok" };
+  async function submitPayment(transactionId: string, paymentMethod: string, userLabel: string) {
     const pendingId = uid();
-
     setMessages((prev) => [
       ...prev,
-      userMsg,
+      { id: uid(), role: "user", text: userLabel, status: "ok" },
       { id: pendingId, role: "bot", text: "…", status: "sending" },
     ]);
-    setText("");
+    disablePaymentOptions();
+    setPendingPaymentTxId(null);
+    setAwaitingCustomPayment(false);
 
     try {
-      const res = await fetch("/api/chat/quick", {
+      const res = await fetch("/api/chat/payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: value }),
+        body: JSON.stringify({ transactionId, paymentMethod }),
       });
       const data = (await res.json().catch(() => null)) as
-        | { ok?: boolean; reply?: string; error?: string }
+        | { ok?: boolean; reply?: string }
         | null;
 
       const reply =
         data?.reply ||
         (res.status === 401
-          ? formatChatFailure("צריך להתחבר מחדש כדי להוסיף תנועה.")
-          : formatChatFailure(data?.error || `שגיאת שרת (${res.status})`));
+          ? "לא עודכן\nצריך להתחבר מחדש."
+          : `לא עודכן\nשגיאת שרת (${res.status})`);
 
       startTransition(() => {
         setMessages((prev) =>
@@ -145,6 +157,99 @@ export default function ChatClient() {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === pendingId
+              ? { ...m, text: `לא עודכן\n${msg}`, status: "error" }
+              : m,
+          ),
+        );
+      });
+    } finally {
+      inputRef.current?.focus({ preventScroll: true });
+    }
+  }
+
+  function pickPaymentOption(optionId: string, label: string, value: string) {
+    if (!pendingPaymentTxId || busy) return;
+
+    if (isOtherPaymentOption(optionId)) {
+      disablePaymentOptions();
+      setAwaitingCustomPayment(true);
+      setMessages((prev) => [
+        ...prev,
+        { id: uid(), role: "user", text: label, status: "ok" },
+        { id: uid(), role: "bot", text: CHAT_PAYMENT_OTHER_PROMPT, status: "ok" },
+      ]);
+      inputRef.current?.focus({ preventScroll: true });
+      return;
+    }
+
+    void submitPayment(pendingPaymentTxId, value, label);
+  }
+
+  async function sendExpense(raw: string) {
+    const value = raw.trim();
+    if (!value || busy) return;
+
+    const userMsg: Msg = { id: uid(), role: "user", text: value, status: "ok" };
+    const pendingId = uid();
+
+    setMessages((prev) => [
+      ...prev,
+      userMsg,
+      { id: pendingId, role: "bot", text: "…", status: "sending" },
+    ]);
+    setText("");
+    setAwaitingCustomPayment(false);
+    disablePaymentOptions();
+    setPendingPaymentTxId(null);
+
+    try {
+      const res = await fetch("/api/chat/quick", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: value }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | {
+            ok?: boolean;
+            reply?: string;
+            step?: string;
+            transaction?: { id: string };
+          }
+        | null;
+
+      const reply =
+        data?.reply ||
+        (res.status === 401
+          ? formatChatFailure("צריך להתחבר מחדש כדי להוסיף תנועה.")
+          : formatChatFailure(`שגיאת שרת (${res.status})`));
+
+      const needsPayment = Boolean(data?.ok && data.step === "payment" && data.transaction?.id);
+
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId
+              ? {
+                  ...m,
+                  text: reply,
+                  status: data?.ok ? "ok" : "error",
+                  paymentOptions: needsPayment,
+                  paymentDisabled: false,
+                }
+              : m,
+          ),
+        );
+      });
+
+      if (needsPayment && data?.transaction?.id) {
+        setPendingPaymentTxId(data.transaction.id);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId
               ? { ...m, text: formatChatFailure(msg), status: "error" }
               : m,
           ),
@@ -154,6 +259,21 @@ export default function ChatClient() {
       inputRef.current?.focus({ preventScroll: true });
     }
   }
+
+  async function send(raw: string) {
+    const value = raw.trim();
+    if (!value || busy) return;
+
+    if (awaitingCustomPayment && pendingPaymentTxId) {
+      setText("");
+      await submitPayment(pendingPaymentTxId, value, value);
+      return;
+    }
+
+    await sendExpense(value);
+  }
+
+  const inputPlaceholder = awaitingCustomPayment ? "אמצעי תשלום…" : "ASK NOAM FINANCE";
 
   return (
     <div className="nf-chat-page">
@@ -178,6 +298,21 @@ export default function ChatClient() {
                 } ${m.status === "error" ? "is-error" : ""}`}
               >
                 {m.text}
+                {m.paymentOptions && (
+                  <div className="nf-payment-options">
+                    {CHAT_PAYMENT_OPTIONS.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className="nf-payment-option"
+                        disabled={busy || m.paymentDisabled}
+                        onClick={() => pickPaymentOption(option.id, option.label, option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -201,7 +336,7 @@ export default function ChatClient() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           onFocus={(e) => e.target.focus({ preventScroll: true })}
-          placeholder="ASK NOAM FINANCE"
+          placeholder={inputPlaceholder}
           autoComplete="off"
           autoCorrect="on"
           autoCapitalize="sentences"

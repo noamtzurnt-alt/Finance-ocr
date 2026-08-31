@@ -3,8 +3,10 @@ import { z } from "zod";
 import { prisma } from "@/app/lib/prisma";
 import { requireUser } from "@/app/lib/auth/server";
 import {
+  CHAT_PAYMENT_PROMPT,
   CHAT_SUCCESS_REPLY,
   formatChatFailure,
+  formatChatParseFailure,
   parseChatIntent,
 } from "@/app/lib/transactions/parse-quick";
 import { normalizeVendor } from "@/app/lib/transactions/classify";
@@ -50,7 +52,10 @@ export async function POST(req: Request) {
   const intent = parseChatIntent(text);
 
   if (intent.type === "unknown") {
-    return NextResponse.json({ ok: false, reply: formatChatFailure(intent.reason) }, { status: 200 });
+    return NextResponse.json(
+      { ok: false, reply: formatChatParseFailure(intent.reason) },
+      { status: 200 },
+    );
   }
 
   try {
@@ -119,7 +124,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      reply: CHAT_SUCCESS_REPLY,
+      step: "payment",
+      reply: CHAT_PAYMENT_PROMPT,
       transaction: {
         id: created.id,
         vendor: created.vendor,
