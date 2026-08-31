@@ -604,8 +604,17 @@ body.nf-chat-active {
     gap: 0.45rem;
     margin-top: 0.75rem;
   }
+  .nf-payment-custom-hint {
+    margin: 0.65rem 0 0;
+    font-size: 0.82rem;
+    color: rgba(232, 244, 255, 0.72);
+  }
   .nf-payment-option {
     width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
     text-align: start;
     border-radius: 0.85rem;
     border: 1px solid rgba(255, 255, 255, 0.14);
@@ -614,14 +623,56 @@ body.nf-chat-active {
     font-size: 0.86rem;
     font-weight: 600;
     padding: 0.62rem 0.8rem;
-    transition: background 120ms ease, transform 120ms ease, opacity 120ms ease;
+    transition: background 120ms ease, border-color 120ms ease, transform 120ms ease, opacity 120ms ease;
+  }
+  .nf-payment-option.is-selected {
+    border-color: rgba(45, 212, 191, 0.55);
+    background: rgba(45, 212, 191, 0.16);
+    color: #ecfffb;
+  }
+  .nf-payment-option-label {
+    flex: 1;
+    min-width: 0;
+  }
+  .nf-payment-option-check {
+    display: grid;
+    place-items: center;
+    width: 1.35rem;
+    height: 1.35rem;
+    border-radius: 9999px;
+    background: linear-gradient(145deg, #2dd4bf, #0ea5e9);
+    color: #041018;
+    flex-shrink: 0;
   }
   .nf-payment-option:not(:disabled):active {
     transform: scale(0.98);
-    background: rgba(45, 212, 191, 0.18);
   }
   .nf-payment-option:disabled {
     opacity: 0.45;
+  }
+  .nf-payment-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+  .nf-payment-confirm {
+    flex: 1;
+    border-radius: 0.85rem;
+    background: linear-gradient(145deg, #2dd4bf, #0ea5e9);
+    color: #041018;
+    font-size: 0.86rem;
+    font-weight: 700;
+    padding: 0.62rem 0.8rem;
+  }
+  .nf-payment-back {
+    flex: 1;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(232, 244, 255, 0.9);
+    font-size: 0.86rem;
+    font-weight: 600;
+    padding: 0.62rem 0.8rem;
   }
   .nf-chat-composer {
     position: fixed;

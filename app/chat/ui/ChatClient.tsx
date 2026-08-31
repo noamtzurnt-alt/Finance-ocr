@@ -13,6 +13,8 @@ import {
 } from "@/app/lib/transactions/chat-payment";
 import ChatTopBar from "./ChatTopBar";
 
+type PaymentPick = { id: string; label: string; value: string };
+
 type Msg = {
   id: string;
   role: "user" | "bot";
@@ -36,7 +38,9 @@ export default function ChatClient() {
     { id: "welcome", role: "bot", text: CHAT_WELCOME, status: "ok" },
   ]);
   const [pendingPaymentTxId, setPendingPaymentTxId] = useState<string | null>(null);
-  const [awaitingCustomPayment, setAwaitingCustomPayment] = useState(false);
+  const [activePaymentMsgId, setActivePaymentMsgId] = useState<string | null>(null);
+  const [selectedPayment, setSelectedPayment] = useState<PaymentPick | null>(null);
+  const [paymentCustomMode, setPaymentCustomMode] = useState(false);
   const [, startTransition] = useTransition();
   const busy = messages.some((m) => m.status === "sending");
 
@@ -104,12 +108,20 @@ export default function ChatClient() {
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+  }, [messages, selectedPayment, paymentCustomMode, text]);
+
+  function resetPaymentFlow() {
+    setPendingPaymentTxId(null);
+    setActivePaymentMsgId(null);
+    setSelectedPayment(null);
+    setPaymentCustomMode(false);
+  }
 
   function disablePaymentOptions() {
     setMessages((prev) =>
       prev.map((m) => (m.paymentOptions ? { ...m, paymentDisabled: true } : m)),
     );
+    resetPaymentFlow();
   }
 
   async function submitPayment(transactionId: string, paymentMethod: string, userLabel: string) {
@@ -120,8 +132,7 @@ export default function ChatClient() {
       { id: pendingId, role: "bot", text: "…", status: "sending" },
     ]);
     disablePaymentOptions();
-    setPendingPaymentTxId(null);
-    setAwaitingCustomPayment(false);
+    setText("");
 
     try {
       const res = await fetch("/api/chat/payment", {
@@ -164,22 +175,47 @@ export default function ChatClient() {
     }
   }
 
-  function pickPaymentOption(optionId: string, label: string, value: string) {
+  function pickPaymentOption(option: PaymentPick) {
     if (!pendingPaymentTxId || busy) return;
 
-    if (isOtherPaymentOption(optionId)) {
-      disablePaymentOptions();
-      setAwaitingCustomPayment(true);
-      setMessages((prev) => [
-        ...prev,
-        { id: uid(), role: "user", text: label, status: "ok" },
-        { id: uid(), role: "bot", text: CHAT_PAYMENT_OTHER_PROMPT, status: "ok" },
-      ]);
+    if (isOtherPaymentOption(option.id)) {
+      setSelectedPayment(option);
+      setPaymentCustomMode(true);
+      setText("");
       inputRef.current?.focus({ preventScroll: true });
       return;
     }
 
-    void submitPayment(pendingPaymentTxId, value, label);
+    setPaymentCustomMode(false);
+    setSelectedPayment(option);
+    setText("");
+  }
+
+  function backToPaymentOptions() {
+    setPaymentCustomMode(false);
+    setSelectedPayment(null);
+    setText("");
+    inputRef.current?.focus({ preventScroll: true });
+  }
+
+  function clearPaymentSelection() {
+    setSelectedPayment(null);
+    setPaymentCustomMode(false);
+    setText("");
+  }
+
+  function confirmPaymentSelection() {
+    if (!pendingPaymentTxId || busy) return;
+
+    if (paymentCustomMode) {
+      const custom = text.trim();
+      if (!custom) return;
+      void submitPayment(pendingPaymentTxId, custom, custom);
+      return;
+    }
+
+    if (!selectedPayment || isOtherPaymentOption(selectedPayment.id)) return;
+    void submitPayment(pendingPaymentTxId, selectedPayment.value, selectedPayment.label);
   }
 
   async function sendExpense(raw: string) {
@@ -195,9 +231,7 @@ export default function ChatClient() {
       { id: pendingId, role: "bot", text: "…", status: "sending" },
     ]);
     setText("");
-    setAwaitingCustomPayment(false);
     disablePaymentOptions();
-    setPendingPaymentTxId(null);
 
     try {
       const res = await fetch("/api/chat/quick", {
@@ -240,6 +274,9 @@ export default function ChatClient() {
 
       if (needsPayment && data?.transaction?.id) {
         setPendingPaymentTxId(data.transaction.id);
+        setActivePaymentMsgId(pendingId);
+        setSelectedPayment(null);
+        setPaymentCustomMode(false);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
@@ -261,8 +298,7 @@ export default function ChatClient() {
     const value = raw.trim();
     if (!value || busy) return;
 
-    if (awaitingCustomPayment && pendingPaymentTxId) {
-      setText("");
+    if (paymentCustomMode && pendingPaymentTxId) {
       await submitPayment(pendingPaymentTxId, value, value);
       return;
     }
@@ -270,7 +306,11 @@ export default function ChatClient() {
     await sendExpense(value);
   }
 
-  const inputPlaceholder = awaitingCustomPayment ? "אמצעי תשלום…" : "הקלד הודעה…";
+  const inputPlaceholder = paymentCustomMode ? "הקלד אמצעי תשלום…" : "הקלד הודעה…";
+  const canConfirmPreset = Boolean(
+    selectedPayment && !paymentCustomMode && !isOtherPaymentOption(selectedPayment.id),
+  );
+  const canConfirmCustom = Boolean(paymentCustomMode && text.trim());
 
   return (
     <div className="nf-chat-page">
@@ -278,41 +318,110 @@ export default function ChatClient() {
 
       <div className="nf-chat-thread">
         <div ref={listRef} className="nf-chat-messages" role="log" aria-live="polite">
-          {messages.map((m) => (
-            <div key={m.id} className={`nf-bubble-row ${m.role === "user" ? "is-user" : "is-bot"}`}>
-              {m.role === "bot" && (
-                <Image
-                  src="/noam-finance-bot.webp"
-                  alt=""
-                  width={28}
-                  height={28}
-                  className="nf-bubble-avatar"
-                />
-              )}
-              <div
-                className={`nf-bubble ${m.role === "user" ? "nf-bubble-user" : "nf-bubble-bot"} ${
-                  m.status === "sending" ? "is-sending" : ""
-                } ${m.status === "error" ? "is-error" : ""}`}
-              >
-                {m.text}
-                {m.paymentOptions && (
-                  <div className="nf-payment-options">
-                    {CHAT_PAYMENT_OPTIONS.map((option) => (
-                      <button
-                        key={option.id}
-                        type="button"
-                        className="nf-payment-option"
-                        disabled={busy || m.paymentDisabled}
-                        onClick={() => pickPaymentOption(option.id, option.label, option.value)}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
+          {messages.map((m) => {
+            const isActivePayment =
+              m.paymentOptions && m.id === activePaymentMsgId && !m.paymentDisabled;
+
+            return (
+              <div key={m.id} className={`nf-bubble-row ${m.role === "user" ? "is-user" : "is-bot"}`}>
+                {m.role === "bot" && (
+                  <Image
+                    src="/noam-finance-bot.webp"
+                    alt=""
+                    width={28}
+                    height={28}
+                    className="nf-bubble-avatar"
+                  />
                 )}
+                <div
+                  className={`nf-bubble ${m.role === "user" ? "nf-bubble-user" : "nf-bubble-bot"} ${
+                    m.status === "sending" ? "is-sending" : ""
+                  } ${m.status === "error" ? "is-error" : ""}`}
+                >
+                  {m.text}
+                  {m.paymentOptions && (
+                    <>
+                      {isActivePayment && paymentCustomMode && (
+                        <p className="nf-payment-custom-hint">{CHAT_PAYMENT_OTHER_PROMPT}</p>
+                      )}
+                      <div className="nf-payment-options">
+                        {CHAT_PAYMENT_OPTIONS.map((option) => {
+                          const isSelected = isActivePayment && selectedPayment?.id === option.id;
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              className={`nf-payment-option${isSelected ? " is-selected" : ""}`}
+                              disabled={busy || m.paymentDisabled}
+                              onClick={() => pickPaymentOption(option)}
+                            >
+                              <span className="nf-payment-option-label">{option.label}</span>
+                              {isSelected && (
+                                <span className="nf-payment-option-check" aria-hidden="true">
+                                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {isActivePayment && (
+                        <div className="nf-payment-actions">
+                          {paymentCustomMode ? (
+                            <>
+                              <button
+                                type="button"
+                                className="nf-payment-back"
+                                disabled={busy}
+                                onClick={backToPaymentOptions}
+                              >
+                                חזרה לבחירה
+                              </button>
+                              {canConfirmCustom && (
+                                <button
+                                  type="button"
+                                  className="nf-payment-confirm"
+                                  disabled={busy}
+                                  onClick={confirmPaymentSelection}
+                                >
+                                  אישור
+                                </button>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              {selectedPayment && (
+                                <button
+                                  type="button"
+                                  className="nf-payment-back"
+                                  disabled={busy}
+                                  onClick={clearPaymentSelection}
+                                >
+                                  ביטול
+                                </button>
+                              )}
+                              {canConfirmPreset && (
+                                <button
+                                  type="button"
+                                  className="nf-payment-confirm"
+                                  disabled={busy}
+                                  onClick={confirmPaymentSelection}
+                                >
+                                  אישור
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -321,6 +430,10 @@ export default function ChatClient() {
         className="nf-chat-composer"
         onSubmit={(e) => {
           e.preventDefault();
+          if (paymentCustomMode && canConfirmCustom) {
+            confirmPaymentSelection();
+            return;
+          }
           void send(text);
         }}
       >
@@ -338,19 +451,28 @@ export default function ChatClient() {
           autoCorrect="on"
           autoCapitalize="sentences"
           spellCheck
-          enterKeyHint="send"
+          enterKeyHint={paymentCustomMode ? "done" : "send"}
           inputMode="text"
           className="nf-chat-input"
         />
         <button
           type="submit"
           className="nf-chat-send"
-          disabled={!text.trim() || busy}
-          aria-label="שלח"
+          disabled={
+            busy ||
+            (paymentCustomMode ? !canConfirmCustom : !text.trim())
+          }
+          aria-label={paymentCustomMode ? "אישור" : "שלח"}
         >
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-            <path d="M3.4 20.6 21 12 3.4 3.4l.1 6.8L15 12 3.5 13.8z" />
-          </svg>
+          {paymentCustomMode ? (
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
+              <path d="M3.4 20.6 21 12 3.4 3.4l.1 6.8L15 12 3.5 13.8z" />
+            </svg>
+          )}
         </button>
       </form>
     </div>
