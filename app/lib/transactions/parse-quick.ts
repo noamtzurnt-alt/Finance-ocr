@@ -188,4 +188,4 @@ export function formatChatPaymentFailure(reason: string): string {
 export const QUICK_HELP =
   "כתוב לי הוצאה כמו בוואטסאפ:\nקוטג 10 שקלים\nסרט 80\nאו: קפה סכום 12 ₪";
 
-export const CHAT_WELCOME = "היי כאן Noam Finance איזה תנועה תרצה להוסיף?";
+export const CHAT_WELCOME = "היי כאן Noam Finance איזו תנועה תרצה להוסיף?";

@@ -56,7 +56,6 @@ export default function ChatClient() {
       html.classList.remove("nf-chat-active");
       body.classList.remove("nf-chat-active");
       document.querySelectorAll('meta[data-nf-chat-theme="1"]').forEach((n) => n.remove());
-      html.style.removeProperty("--composer-top");
       html.style.removeProperty("--kb-inset");
       html.style.removeProperty("--nf-topbar-h");
     };
@@ -78,15 +77,13 @@ export default function ChatClient() {
         }
 
         const composerH = composerRef.current?.offsetHeight ?? 58;
-        const gap = 8;
-        const top = Math.round(vv.offsetTop + vv.height - composerH - gap);
         const kb = Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height));
-        const key = `${top}:${kb}`;
+        const key = `${kb}`;
         if (key === lastKey) return;
         lastKey = key;
 
-        root.style.setProperty("--composer-top", `${top}px`);
         root.style.setProperty("--kb-inset", `${kb}px`);
+        root.style.setProperty("--composer-h", `${composerH}px`);
       });
     };
 
@@ -273,7 +270,7 @@ export default function ChatClient() {
     await sendExpense(value);
   }
 
-  const inputPlaceholder = awaitingCustomPayment ? "אמצעי תשלום…" : "ASK NOAM FINANCE";
+  const inputPlaceholder = awaitingCustomPayment ? "אמצעי תשלום…" : "הקלד הודעה…";
 
   return (
     <div className="nf-chat-page">

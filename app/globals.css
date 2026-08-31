@@ -433,8 +433,20 @@ body.nf-chat-active {
   .nf-chat-topbar-inner {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.25rem 0.1rem 0.75rem;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.35rem 0.1rem 0.85rem;
+  }
+  .nf-chat-back {
+    display: grid;
+    place-items: center;
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 9999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(232, 244, 255, 0.92);
+    flex-shrink: 0;
   }
   .nf-chat-topbar-divider {
     height: 1px;
@@ -445,11 +457,11 @@ body.nf-chat-active {
   /* Chat thread — scrollable messages only, below top bar. */
   .nf-chat-thread {
     position: fixed;
-    top: var(--nf-topbar-h, 5.5rem);
+    top: calc(var(--nf-topbar-h, 5.5rem) + 0.35rem);
     left: 0;
     right: 0;
     bottom: calc(
-      var(--composer-h) + 1rem + max(0.55rem, env(safe-area-inset-bottom, 0px)) + var(--kb-inset, 0px)
+      var(--composer-h, 3.6rem) + 0.75rem + max(0.55rem, env(safe-area-inset-bottom, 0px)) + var(--kb-inset, 0px)
     );
     z-index: 10;
     padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
@@ -537,7 +549,7 @@ body.nf-chat-active {
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
-    padding: 0.85rem 0.1rem 0.5rem;
+    padding: 1.1rem 0.1rem 0.5rem;
     -webkit-overflow-scrolling: touch;
   }
   .nf-bubble-row {
@@ -614,16 +626,13 @@ body.nf-chat-active {
   .nf-chat-composer {
     position: fixed;
     z-index: 30;
-    top: var(
-      --composer-top,
-      calc(100dvh - var(--composer-h) - max(0.55rem, env(safe-area-inset-bottom, 0px)) - 8px)
-    );
     left: max(0.75rem, env(safe-area-inset-left, 0px));
     right: max(0.75rem, env(safe-area-inset-right, 0px));
+    bottom: calc(max(0.55rem, env(safe-area-inset-bottom, 0px)) + var(--kb-inset, 0px));
     display: flex;
     align-items: center;
     gap: 0.55rem;
-    min-height: var(--composer-h);
+    min-height: var(--composer-h, 3.6rem);
     padding: 0.45rem;
     border-radius: 1.25rem;
     background: rgba(11, 28, 42, 0.98);
