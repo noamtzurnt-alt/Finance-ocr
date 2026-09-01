@@ -30,6 +30,7 @@ function uid() {
 
 export default function ChatClient() {
   const inputId = useId();
+  const pageRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -60,12 +61,13 @@ export default function ChatClient() {
       html.classList.remove("nf-chat-active");
       body.classList.remove("nf-chat-active");
       document.querySelectorAll('meta[data-nf-chat-theme="1"]').forEach((n) => n.remove());
-      html.style.removeProperty("--kb-inset");
     };
   }, []);
 
   useEffect(() => {
-    const root = document.documentElement;
+    const page = pageRef.current;
+    if (!page) return;
+
     let raf = 0;
     let lastKb = -1;
 
@@ -80,26 +82,31 @@ export default function ChatClient() {
         }
 
         const rawKb = Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height));
-        // Ignore small iOS viewport deltas (home indicator) — only real keyboard.
-        const kb = rawKb > 100 ? rawKb : 0;
+        const kb = rawKb > 80 ? rawKb : 0;
         if (kb === lastKb) return;
         lastKb = kb;
 
-        root.style.setProperty("--kb-inset", `${kb}px`);
+        page.style.setProperty("--kb-inset", `${kb}px`);
       });
+    };
+
+    const scheduleSync = () => {
+      sync();
+      [50, 150, 300].forEach((ms) => window.setTimeout(sync, ms));
     };
 
     sync();
     const vv = window.visualViewport;
-    vv?.addEventListener("resize", sync);
+    vv?.addEventListener("resize", scheduleSync);
     vv?.addEventListener("scroll", sync);
     window.addEventListener("resize", sync);
 
     return () => {
       cancelAnimationFrame(raf);
-      vv?.removeEventListener("resize", sync);
+      vv?.removeEventListener("resize", scheduleSync);
       vv?.removeEventListener("scroll", sync);
       window.removeEventListener("resize", sync);
+      page.style.removeProperty("--kb-inset");
     };
   }, []);
 
@@ -311,7 +318,7 @@ export default function ChatClient() {
   const canConfirmCustom = Boolean(paymentCustomMode && text.trim());
 
   return (
-    <div className="nf-chat-page">
+    <div ref={pageRef} className="nf-chat-page">
       <ChatTopBar />
 
       <div className="nf-chat-thread">
@@ -443,7 +450,16 @@ export default function ChatClient() {
           ref={inputRef}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          onFocus={(e) => e.target.focus({ preventScroll: true })}
+          onFocus={(e) => {
+            e.target.focus({ preventScroll: true });
+            const page = pageRef.current;
+            const vv = window.visualViewport;
+            if (page && vv) {
+              const rawKb = Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height));
+              const kb = rawKb > 80 ? rawKb : 0;
+              page.style.setProperty("--kb-inset", `${kb}px`);
+            }
+          }}
           placeholder={inputPlaceholder}
           autoComplete="off"
           autoCorrect="on"

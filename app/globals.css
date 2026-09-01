@@ -407,7 +407,7 @@ body.nf-chat-active {
     --nf-blue: #0b1c2a;
     --nf-accent: #2dd4bf;
     --nf-accent-2: #38bdf8;
-    --kb-inset: 0px;
+    --composer-h: 4.25rem;
     position: fixed;
     inset: 0;
     display: flex;
@@ -416,7 +416,6 @@ body.nf-chat-active {
     color: #e8f4ff;
     overflow: hidden;
     box-sizing: border-box;
-    padding-bottom: var(--kb-inset);
   }
 
   /* Top bar — flex child, never moves independently. */
@@ -543,7 +542,7 @@ body.nf-chat-active {
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
-    padding: 0.35rem 0.1rem 0.75rem;
+    padding: 0.35rem 0.1rem calc(var(--composer-h) + 0.5rem);
     -webkit-overflow-scrolling: touch;
   }
   .nf-bubble-row {
@@ -669,11 +668,11 @@ body.nf-chat-active {
     padding: 0.62rem 0.8rem;
   }
   .nf-chat-composer {
-    flex-shrink: 0;
+    position: fixed;
     z-index: 30;
-    margin: 0.35rem max(0.75rem, env(safe-area-inset-right, 0px))
-      max(0.65rem, env(safe-area-inset-bottom, 0px))
-      max(0.75rem, env(safe-area-inset-left, 0px));
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+    bottom: calc(max(0.65rem, env(safe-area-inset-bottom, 0px)) + var(--kb-inset, 0px));
     display: flex;
     align-items: center;
     gap: 0.55rem;
