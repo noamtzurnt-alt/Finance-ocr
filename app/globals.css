@@ -685,7 +685,7 @@ body.nf-chat-active {
     box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.25);
   }
   .nf-chat-page[data-kb-open="true"] .nf-chat-composer {
-    bottom: calc(var(--kb-inset, 0px) + 0.35rem);
+    bottom: calc(var(--kb-inset, 0px) + 0.5rem);
   }
   .nf-chat-input {
     flex: 1;
