@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/prisma";
 import { requireUser } from "@/app/lib/auth/server";
+import { getTransactionsList } from "@/app/lib/transactions/list";
 
 const createSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -29,52 +30,28 @@ export async function GET(req: Request) {
 
   const url = new URL(req.url);
   const limit = Math.min(200, Math.max(10, Number(url.searchParams.get("limit") ?? "100") || 100));
-  const year = url.searchParams.get("year")?.trim() || "";
-  const month = url.searchParams.get("month")?.trim() || "";
+  const yearRaw = url.searchParams.get("year")?.trim() || "";
+  const monthRaw = url.searchParams.get("month")?.trim() || "";
 
-  const where: Record<string, unknown> = { userId: user.id };
-  if (year) {
-    const y = Number(year);
+  let year: number | undefined;
+  let month: number | undefined;
+  if (yearRaw) {
+    const y = Number(yearRaw);
     if (!Number.isFinite(y) || y < 2000 || y > 2100) {
       return NextResponse.json({ error: "Invalid year" }, { status: 400 });
     }
-    if (month) {
-      const m = Number(month);
+    year = y;
+    if (monthRaw) {
+      const m = Number(monthRaw);
       if (!Number.isFinite(m) || m < 1 || m > 12) {
         return NextResponse.json({ error: "Invalid month" }, { status: 400 });
       }
-      const start = new Date(y, m - 1, 1);
-      const end = new Date(y, m, 1);
-      where.date = { gte: start, lt: end };
-    } else {
-      const start = new Date(y, 0, 1);
-      const end = new Date(y + 1, 0, 1);
-      where.date = { gte: start, lt: end };
+      month = m;
     }
   }
 
-  const items = await prisma.transaction.findMany({
-    where,
-    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    take: limit,
-    include: { category: { select: { name: true, budgetScope: true } } },
-  });
-
-  return NextResponse.json(
-    items.map((t) => ({
-      id: t.id,
-      date: t.date.toISOString().slice(0, 10),
-      amount: t.amount.toString(),
-      currency: t.currency,
-      vendor: t.vendor,
-      description: t.description,
-      categoryId: t.categoryId,
-      categoryName: t.category?.name ?? null,
-      categoryScope: t.category?.budgetScope ?? null,
-      cardLast4: t.cardLast4,
-      updatedAt: t.updatedAt.toISOString(),
-    })),
-  );
+  const items = await getTransactionsList(user.id, { limit, year, month });
+  return NextResponse.json(items);
 }
 
 export async function POST(req: Request) {
@@ -109,4 +86,3 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ ok: true, id: created.id });
 }
-

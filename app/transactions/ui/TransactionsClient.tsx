@@ -79,10 +79,15 @@ function sumAmount(rows: Row[]) {
   return rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
 }
 
-export default function TransactionsClient(props: { categories: Category[] }) {
+export default function TransactionsClient(props: {
+  categories: Category[];
+  initialItems: Row[];
+  initialYear: number;
+  initialMonth: number;
+}) {
   const router = useRouter();
-  const [items, setItems] = useState<Row[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<Row[]>(props.initialItems);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editState, setEditState] = useState<EditState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -151,22 +156,19 @@ export default function TransactionsClient(props: { categories: Category[] }) {
     }
   }, [scope, categoriesByScope, categoryId]);
 
-  useEffect(() => {
-    const now = new Date();
-    const qs = new URLSearchParams({
-      limit: "200",
-      year: String(now.getFullYear()),
-      month: String(now.getMonth() + 1),
-    });
-    fetch(`/api/transactions?${qs.toString()}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((data: Row[]) => { setItems(data); setLoading(false); })
-      .catch(() => { setError("שגיאה בטעינת תנועות"); setLoading(false); });
-  }, []);
-
-  const [filterYear, setFilterYear] = useState(String(new Date().getFullYear()));
-  const [filterMonth, setFilterMonth] = useState(String(new Date().getMonth() + 1));
+  const [filterYear, setFilterYear] = useState(String(props.initialYear));
+  const [filterMonth, setFilterMonth] = useState(String(props.initialMonth));
   const [query, setQuery] = useState("");
+
+  // Pick up fresh server-fetched data (e.g. from LiveRefresh's router.refresh())
+  // only while still viewing the default current-month view — otherwise this
+  // would silently reset a user's manual month/year filter.
+  useEffect(() => {
+    if (filterYear === String(props.initialYear) && filterMonth === String(props.initialMonth)) {
+      setItems(props.initialItems);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props.initialItems]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

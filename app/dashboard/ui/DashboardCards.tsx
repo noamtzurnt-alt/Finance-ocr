@@ -2,21 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { parseWizardState } from "@/app/lib/budget/wizard-state";
+import { useRouter } from "next/navigation";
+import type { DashboardSummary } from "@/app/lib/dashboard/summary";
 
-type CategoryBreakdownItem = { category: string; amount: number };
-
-type Summary = {
-  income: string;
-  manualIncome: string | null;
-  incomeFromDocs: string;
-  expense: string;
-  todayExpense: string;
-  net: string;
-  budgetLimit: string;
-  pct: number;
-  categoryBreakdown: CategoryBreakdownItem[];
-};
+type Summary = DashboardSummary;
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={`animate-pulse rounded-lg bg-zinc-100 ${className ?? ""}`} />;
@@ -29,53 +18,24 @@ const CATEGORY_ICONS: Record<string, string> = {
   "שכירות": "🏠", "בזבוזים": "🎉", "ספר": "📚", "יום הולדת/אירוע מיוחד": "🎂",
 };
 
-// Read category budgets from saved wizard state (server)
-function categoryBudgetsFromWizardState(wizardState: unknown): Record<string, number> {
-  const state = parseWizardState(wizardState);
-  if (!state) return {};
-  const map: Record<string, number> = {};
-  for (const row of state.answers.expenseRows) {
-    const amt = Number(row.amount);
-    if (row.label && amt > 0) map[row.label] = amt;
-  }
-  return map;
-}
-
-export default function DashboardCards() {
-  const [data, setData] = useState<Summary | null>(null);
+export default function DashboardCards(props: {
+  initialSummary: Summary;
+  initialCategoryBudgets: Record<string, number>;
+}) {
+  const router = useRouter();
+  const [data, setData] = useState<Summary>(props.initialSummary);
   const [error, setError] = useState(false);
   const [editing, setEditing] = useState<EditField>(null);
-  const [incomeInput, setIncomeInput] = useState("");
+  const [incomeInput, setIncomeInput] = useState(props.initialSummary.manualIncome ?? "");
   const [savingIncome, setSavingIncome] = useState(false);
   const [showCategoryBreakdown, setShowCategoryBreakdown] = useState(false);
-  const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
+  const categoryBudgets = props.initialCategoryBudgets;
 
+  // Keep in sync when the server component re-fetches (e.g. via router.refresh()
+  // from LiveRefresh's SSE listener, or after a mutation below).
   useEffect(() => {
-    fetch("/api/budget/profile")
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((body: { profile: { wizardState?: unknown } | null }) => {
-        setCategoryBudgets(categoryBudgetsFromWizardState(body.profile?.wizardState));
-      })
-      .catch(() => {
-        // fallback: local cache on same device
-        try {
-          const raw = localStorage.getItem("budget_wizard_v4");
-          if (raw) {
-            const parsed = JSON.parse(raw) as { answers?: unknown };
-            setCategoryBudgets(categoryBudgetsFromWizardState({ answers: parsed.answers, step: 3, done: true }));
-          }
-        } catch { /* ignore */ }
-      });
-  }, []);
-
-  function loadData() {
-    fetch("/api/dashboard/summary")
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((d: Summary) => { setData(d); setIncomeInput(d.manualIncome ?? ""); })
-      .catch(() => setError(true));
-  }
-
-  useEffect(() => { loadData(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    setData(props.initialSummary);
+  }, [props.initialSummary]);
 
   async function saveIncome() {
     setSavingIncome(true);
@@ -85,7 +45,12 @@ export default function DashboardCards() {
       body: JSON.stringify({ amount: incomeInput }),
     });
     setSavingIncome(false);
-    if (res.ok) { setEditing(null); loadData(); }
+    if (res.ok) {
+      setEditing(null);
+      router.refresh();
+    } else {
+      setError(true);
+    }
   }
 
   async function clearIncome() {
@@ -93,14 +58,14 @@ export default function DashboardCards() {
     await fetch("/api/dashboard/income", { method: "DELETE" });
     setSavingIncome(false);
     setEditing(null);
-    loadData();
+    router.refresh();
   }
 
   if (error) {
     return (
       <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
         שגיאה בטעינת הנתונים.{" "}
-        <button className="font-semibold underline" onClick={() => { setError(false); setData(null); loadData(); }}>
+        <button className="font-semibold underline" onClick={() => { setError(false); router.refresh(); }}>
           נסה שוב
         </button>
       </div>

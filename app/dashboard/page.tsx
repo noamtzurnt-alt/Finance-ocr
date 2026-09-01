@@ -4,12 +4,19 @@ import { requireUser } from "@/app/lib/auth/server";
 import LogoutButton from "./ui/LogoutButton";
 import LiveRefresh from "@/app/ui/LiveRefresh";
 import DashboardContent from "./ui/DashboardContent";
+import { getDashboardSummary } from "@/app/lib/dashboard/summary";
+import { getCategoryBudgets } from "@/app/lib/dashboard/category-budgets";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await requireUser();
   if (!user) redirect("/login");
+
+  const [summary, categoryBudgets] = await Promise.all([
+    getDashboardSummary(user.id),
+    getCategoryBudgets(user.id),
+  ]);
 
   const todayLabel = new Intl.DateTimeFormat("he-IL", {
     weekday: "long",
@@ -39,7 +46,7 @@ export default async function DashboardPage() {
           <LogoutButton />
         </div>
       </div>
-      <DashboardContent />
+      <DashboardContent initialSummary={summary} initialCategoryBudgets={categoryBudgets} />
     </div>
   );
 }

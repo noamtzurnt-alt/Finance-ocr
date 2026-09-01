@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MIN_EXPENSE_ARCHIVE_YEAR } from "@/app/lib/receipts/defaults";
 import { hebrewMonthLabel } from "@/app/lib/receipts/year-date";
+import { expenseDateRange } from "@/app/lib/receipts/query-range";
 import ArchiveFilters from "./ArchiveFilters";
 
 type ExpenseDoc = {
@@ -33,9 +34,11 @@ export default function ReceiptsExpensesClient(props: {
   initialQ?: string;
   initialFrom?: string;
   initialTo?: string;
+  initialItems: ExpenseDoc[];
 }) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isFirstRun = useRef(true);
   const years = useMemo(() => {
     const y = new Date().getFullYear();
     const out: number[] = [];
@@ -48,8 +51,8 @@ export default function ReceiptsExpensesClient(props: {
   const [q, setQ] = useState(props.initialQ ?? "");
   const [from, setFrom] = useState(props.initialFrom ?? "");
   const [to, setTo] = useState(props.initialTo ?? "");
-  const [docs, setDocs] = useState<ExpenseDoc[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [docs, setDocs] = useState<ExpenseDoc[]>(props.initialItems);
+  const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
@@ -61,18 +64,9 @@ export default function ReceiptsExpensesClient(props: {
     params.set("type", "expense");
     params.set("limit", "200");
     if (q.trim()) params.set("q", q.trim());
-    if (from) {
-      params.set("from", from);
-    } else if (month) {
-      const m = String(month).padStart(2, "0");
-      params.set("from", `${year}-${m}-01`);
-      const last = new Date(year, month, 0).getDate();
-      if (!to) params.set("to", `${year}-${m}-${String(last).padStart(2, "0")}`);
-    } else {
-      params.set("from", `${year}-01-01`);
-      if (!to) params.set("to", `${year}-12-31`);
-    }
-    if (to) params.set("to", to);
+    const range = expenseDateRange({ year, month, from: from || undefined, to: to || undefined });
+    params.set("from", range.from);
+    if (range.to) params.set("to", range.to);
     return params.toString();
   }, [q, from, to, year, month]);
 
@@ -120,6 +114,12 @@ export default function ReceiptsExpensesClient(props: {
   }
 
   useEffect(() => {
+    if (isFirstRun.current) {
+      // Initial data already came from the server (SSR) for the current URL params.
+      isFirstRun.current = false;
+      syncUrl();
+      return;
+    }
     void load();
     syncUrl();
   }, [load, syncUrl]);

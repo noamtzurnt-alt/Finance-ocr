@@ -3,6 +3,8 @@ import { requireUser } from "@/app/lib/auth/server";
 import LiveRefresh from "@/app/ui/LiveRefresh";
 import { MIN_EXPENSE_ARCHIVE_YEAR } from "@/app/lib/receipts/defaults";
 import { parseArchiveMonth } from "@/app/lib/receipts/year-date";
+import { expenseDateRange } from "@/app/lib/receipts/query-range";
+import { getDocumentsList } from "@/app/lib/receipts/list-documents";
 import ReceiptsExpensesClient from "./ui/ReceiptsExpensesClient";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +22,15 @@ export default async function ReceiptsPage(props: {
     : new Date().getFullYear();
   const month = parseArchiveMonth(sp.month);
 
+  const range = expenseDateRange({ year, month, from: sp.from, to: sp.to });
+  const { items: initialItems } = await getDocumentsList(user.id, {
+    type: "expense",
+    q: sp.q,
+    from: range.from,
+    to: range.to,
+    limit: 200,
+  });
+
   return (
     <div className="space-y-5">
       <LiveRefresh />
@@ -36,6 +47,7 @@ export default async function ReceiptsPage(props: {
         initialQ={sp.q}
         initialFrom={sp.from}
         initialTo={sp.to}
+        initialItems={initialItems}
       />
     </div>
   );
