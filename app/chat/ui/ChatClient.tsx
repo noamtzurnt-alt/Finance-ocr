@@ -33,7 +33,7 @@ function applyKeyboardInset(page: HTMLElement, rawKb: number) {
   const open = kb > 0;
   page.dataset.kbOpen = open ? "true" : "false";
   // Nudge composer closer to the keyboard (iOS leaves extra visualViewport slack).
-  const inset = open ? Math.max(0, kb - 32) : 0;
+  const inset = open ? Math.max(0, kb - 20) : 0;
   page.style.setProperty("--kb-inset", `${inset}px`);
 }
 
