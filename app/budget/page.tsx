@@ -14,7 +14,7 @@ export default async function BudgetPage() {
         <div className="pointer-events-none absolute -left-4 -top-4 h-20 w-20 rounded-full bg-white/10" />
         <div className="relative">
           <h1 className="text-xl font-bold tracking-tight">💰 תקציב</h1>
-          <p className="mt-1 text-sm text-white/85">כמה נכנס, כמה יוצא — בצבע ובבהירות</p>
+          <p className="mt-1 text-sm text-white/85">כמה נכנס, כמה יוצא, בצבע ובבהירות</p>
         </div>
       </div>
 

@@ -17,7 +17,7 @@ export default async function TransactionsPage() {
       <div className="section-header">
         <div>
           <h1 className="section-title">כל התנועות</h1>
-          <p className="section-sub">הכנסות והוצאות יחד — תזרים מזומנים</p>
+          <p className="section-sub">הכנסות והוצאות יחד, תזרים מזומנים</p>
         </div>
         <Link className="btn" href="/dashboard">← דשבורד</Link>
       </div>

@@ -4,7 +4,7 @@ loadEnv({ path: ".env.local", override: true });
 
 import { prisma } from "../app/lib/prisma";
 import { extractVendorFromStoredFile } from "../app/lib/receipts/extract-vendor-from-file";
-import { isGeminiConfigured } from "../app/lib/gmail/gemini";
+import { isGeminiConfigured } from "../app/lib/receipts/gemini";
 
 const PLACEHOLDER = new Set(["לא צוין", "לא מוכר", "unknown", "n/a", "-"]);
 

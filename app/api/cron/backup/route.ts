@@ -51,20 +51,16 @@ export async function GET(req: Request) {
   const key = `backups/db-snapshot-${dateStr}.json`;
 
   try {
-    const [users, categories, documents, transactions, investmentAccounts, investmentYears, investmentEntries, budgets, contracts] =
+    const [users, categories, documents, transactions, budgets, contracts] =
       await Promise.all([
         prisma.user.findMany({
           select: {
             id: true,
             email: true,
-            phoneNumber: true,
-            whatsappIncomingNumber: true,
             businessType: true,
             businessName: true,
             taxId: true,
             vatPercent: true,
-            isAdmin: true,
-            approved: true,
             createdAt: true,
             updatedAt: true,
           },
@@ -72,9 +68,6 @@ export async function GET(req: Request) {
         prisma.category.findMany(),
         prisma.document.findMany(),
         prisma.transaction.findMany(),
-        prisma.investmentAccount.findMany(),
-        prisma.investmentYear.findMany(),
-        prisma.investmentEntry.findMany(),
         prisma.budget.findMany(),
         prisma.contract.findMany({
           select: {
@@ -99,9 +92,6 @@ export async function GET(req: Request) {
       categories,
       documents,
       transactions,
-      investmentAccounts,
-      investmentYears,
-      investmentEntries,
       budgets,
       contracts,
     };

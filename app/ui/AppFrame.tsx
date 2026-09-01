@@ -12,7 +12,7 @@ function cx(...xs: Array<string | false | null | undefined>) {
 type NavItem = {
   href: string;
   label: string;
-  color: string; // tailwind bg color for active icon
+  color: string;
   icon: (props: { className?: string }) => React.ReactNode;
 };
 
@@ -31,15 +31,6 @@ const nav: NavItem[] = [
     ),
   },
   {
-    href: "/chat",
-    label: "Noam Finance",
-    color: "from-teal-500 to-cyan-500",
-    icon: ({ className }) => (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src="/noam-finance-bot.webp" alt="" className={`${className ?? ""} rounded-full object-cover`} />
-    ),
-  },
-  {
     href: "/transactions",
     label: "כל התנועות",
     color: "from-blue-500 to-cyan-500",
@@ -50,35 +41,13 @@ const nav: NavItem[] = [
     ),
   },
   {
-    href: "/contracts",
-    label: "חוזים",
-    color: "from-violet-500 to-purple-500",
-    icon: ({ className }) => (
-      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M7 3h7l3 3v15a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
-        <path d="M14 3v4h4M8 11h6M8 15h4" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    href: "/receipts",
-    label: "הוצאות מוכרות",
+    href: "/business",
+    label: "עסקי",
     color: "from-amber-500 to-orange-500",
     icon: ({ className }) => (
       <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M12 16V4m0 0 4 4m-4-4-4 4" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    href: "/payment-receipts",
-    label: "קבלות הכנסות",
-    color: "from-lime-500 to-green-500",
-    icon: ({ className }) => (
-      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V9.5Z" strokeLinejoin="round" />
+        <path d="M9 21V12h6v9" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     ),
   },
@@ -92,34 +61,13 @@ const nav: NavItem[] = [
       </svg>
     ),
   },
-  {
-    href: "/export",
-    label: "ייצוא",
-    color: "from-sky-500 to-blue-500",
-    icon: ({ className }) => (
-      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M12 3v12M8 11l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M4 21h16" strokeLinecap="round" />
-      </svg>
-    ),
-  },
-  {
-    href: "/settings",
-    label: "הגדרות",
-    color: "from-zinc-400 to-slate-500",
-    icon: ({ className }) => (
-      <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
-        <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
-      </svg>
-    ),
-  },
 ];
+
+const BUSINESS_PATHS = ["/business", "/contracts", "/receipts", "/payment-receipts", "/export"];
 
 function SidebarContent({ active, onClose }: { active: string; onClose?: () => void }) {
   return (
     <>
-      {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
           <svg viewBox="0 0 20 20" className="h-4 w-4 text-white" fill="currentColor">
@@ -127,12 +75,11 @@ function SidebarContent({ active, onClose }: { active: string; onClose?: () => v
           </svg>
         </div>
         <div>
-          <div className="text-sm font-semibold text-white leading-tight">Finance OCR</div>
+          <div className="text-sm font-semibold text-white leading-tight">Finance</div>
           <div className="text-[0.65rem] text-white/40 leading-tight">ניהול כספים</div>
         </div>
       </div>
 
-      {/* Nav */}
       <div className="sidebar-section-label">תפריט</div>
       <nav className="sidebar-nav">
         {nav.map((item) => {
@@ -153,11 +100,13 @@ function SidebarContent({ active, onClose }: { active: string; onClose?: () => v
         })}
       </nav>
 
-      {/* Footer hint */}
-      <div className="px-3 pb-4 pt-1">
+      <div className="px-3 pb-4 pt-1 space-y-2">
         <div className="rounded-xl bg-white/5 px-3 py-2.5 text-[0.72rem] leading-relaxed text-white/35">
-          העלאה → תיקון ידני → ייצוא לרו״ח
+          תנועות → תקציב → עסקי → ייצוא לרו״ח
         </div>
+        <Link href="/passkeys" onClick={onClose} className="block text-center text-[0.7rem] text-white/30 hover:text-white/60">
+          ניהול Passkeys
+        </Link>
       </div>
     </>
   );
@@ -166,44 +115,32 @@ function SidebarContent({ active, onClose }: { active: string; onClose?: () => v
 export default function AppFrame(props: { children: React.ReactNode }) {
   const pathname = usePathname() || "/";
   const sp = useSearchParams();
-  const isPreview = sp?.get("preview") === "1";
   const isAuthPage = pathname === "/login" || pathname === "/setup";
   const isChatPage = pathname === "/chat" || pathname.startsWith("/chat/");
   const [open, setOpen] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
   const spKey = sp?.toString() ?? "";
 
   const active = useMemo(() => {
+    if (BUSINESS_PATHS.some((p) => pathname.startsWith(p))) return "/business";
     const direct = nav.find((n) => pathname.startsWith(n.href))?.href;
     if (direct) return direct;
     if (pathname.startsWith("/documents")) {
       const from = new URLSearchParams(spKey).get("from");
-      if (from === "receipts") return "/receipts";
-      if (from === "payment-receipts") return "/payment-receipts";
+      if (from === "receipts" || from === "payment-receipts") return "/business";
     }
     return "/dashboard";
   }, [pathname, spKey]);
 
-  const previewUrl = useMemo(() => {
-    const p = new URLSearchParams(sp?.toString());
-    p.set("preview", "1");
-    const qs = p.toString();
-    return qs ? `${pathname}?${qs}` : pathname;
-  }, [pathname, sp]);
-
-  const isTermsOrPrivacy = pathname === "/terms" || pathname === "/privacy";
   if (isAuthPage) return <>{props.children}</>;
-  if (isTermsOrPrivacy) return <>{props.children}</>;
   if (isChatPage) return <>{props.children}</>;
 
   return (
     <div className="app-shell">
-      {/* Top bar */}
       <div className="app-topbar">
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3">
+        <div className="app-topbar-inner">
           <button
             type="button"
-            className="btn btn-ghost md:hidden"
+            className="btn btn-ghost btn-topbar md:hidden"
             onClick={() => setOpen(true)}
             aria-label="פתח תפריט"
           >
@@ -212,53 +149,30 @@ export default function AppFrame(props: { children: React.ReactNode }) {
             </svg>
           </button>
 
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex min-h-11 min-w-0 items-center gap-2 py-1">
             <span className="brand-badge" aria-hidden />
-            <span className="text-sm font-semibold tracking-tight text-zinc-900">Finance OCR</span>
+            <span className="text-sm font-semibold tracking-tight text-zinc-900">Finance</span>
           </Link>
 
           <div className="flex-1" />
-
-          {!isPreview && (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setPreviewOpen(true)}
-              title="תצוגת מובייל"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z" />
-                <path d="M11 19h2" />
-              </svg>
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Layout */}
-      <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-[260px_1fr]">
-        {/* Sidebar desktop */}
+      <div className="app-main-wrap">
         <aside className="hidden md:block">
           <div className="sidebar">
             <SidebarContent active={active} />
           </div>
         </aside>
 
-        {/* Main content */}
         <main className="min-w-0">
           {props.children}
           <footer className="mt-10 border-t border-zinc-200/60 pt-4 pb-2 text-center text-xs text-zinc-400">
-            <p className="mb-1">כלי עזר לניהול בלבד — האחריות על הדיווח לרשויות המס עליך ועל רואה החשבון שלך.</p>
-            <p>
-              <Link href="/terms" className="font-medium text-zinc-500 underline hover:text-zinc-700">תנאי שימוש</Link>
-              {" · "}
-              <Link href="/privacy" className="font-medium text-zinc-500 underline hover:text-zinc-700">פרטיות</Link>
-            </p>
+            כלי עזר לניהול בלבד, האחריות על הדיווח לרשויות המס עליך ועל רואה החשבון שלך.
           </footer>
         </main>
       </div>
 
-      {/* Mobile drawer */}
       {open && (
         <div className="fixed inset-0 z-50 md:hidden">
           <button
@@ -267,51 +181,22 @@ export default function AppFrame(props: { children: React.ReactNode }) {
             aria-label="סגור תפריט"
             onClick={() => setOpen(false)}
           />
-          <div className="absolute right-0 top-0 h-full w-[82%] max-w-xs overflow-y-auto shadow-2xl"
-               style={{ background: "var(--sidebar-bg)" }}>
-            <div className="flex items-center justify-end px-3 pt-3">
-              <button type="button" className="btn btn-ghost text-white/60 hover:text-white" onClick={() => setOpen(false)}>
+          <div
+            className="app-mobile-drawer absolute right-0 top-0 h-full w-[82%] max-w-xs overflow-y-auto shadow-2xl"
+            style={{ background: "var(--sidebar-bg)" }}
+          >
+            <div className="flex items-center justify-end px-3 pt-2">
+              <button
+                type="button"
+                className="btn btn-ghost btn-topbar text-white/60 hover:text-white"
+                onClick={() => setOpen(false)}
+              >
                 <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M6 6l12 12M18 6 6 18" strokeLinecap="round" />
                 </svg>
               </button>
             </div>
             <SidebarContent active={active} onClose={() => setOpen(false)} />
-          </div>
-        </div>
-      )}
-
-      {/* iPhone preview modal */}
-      {previewOpen && (
-        <div className="fixed inset-0 z-[60]">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/50"
-            aria-label="סגור תצוגה"
-            onClick={() => setPreviewOpen(false)}
-          />
-          <div className="absolute inset-x-0 top-8 mx-auto w-[min(980px,92vw)]">
-            <div className="card card-soft overflow-hidden">
-              <div className="flex items-center justify-between border-b border-zinc-200/70 bg-white/70 px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <span className="brand-badge" aria-hidden />
-                  <div>
-                    <div className="text-sm font-semibold text-zinc-900">תצוגת מובייל</div>
-                    <div className="text-xs text-zinc-500">iPhone 15 Pro (393×852)</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <a className="btn" href={previewUrl} target="_blank" rel="noreferrer">פתח בטאב</a>
-                  <button type="button" className="btn" onClick={() => setPreviewOpen(false)}>סגור</button>
-                </div>
-              </div>
-              <div className="flex justify-center bg-zinc-50/40 p-6">
-                <div className="device-iphone">
-                  <div className="device-notch" aria-hidden />
-                  <iframe title="Mobile preview" className="device-screen" src={previewUrl} />
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       )}

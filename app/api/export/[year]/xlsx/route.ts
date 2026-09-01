@@ -100,12 +100,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ year: string }
   const totalVatReceipts = receiptRows.reduce((s, r) => s + r["מע״מ (₪)"], 0);
 
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Finance OCR";
+  wb.creator = "Finance";
   wb.created = new Date();
 
-  // Document 1 — all recognized expenses for the year
+  // Document 1, all recognized expenses for the year
   addSheetFromRows(wb, `הוצאות_מוכרות_${y}`, expenseRows);
-  // Document 2 — all income receipts for the year
+  // Document 2, all income receipts for the year
   addSheetFromRows(wb, `קבלות_הכנסות_${y}`, receiptRows);
 
   addSheetFromRows(wb, "סיכום", [

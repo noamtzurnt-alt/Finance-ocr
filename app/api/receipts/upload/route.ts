@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/app/lib/auth/server";
 import { putObject } from "@/app/lib/r2/objects";
 import { createExpenseDocument } from "@/app/lib/receipts/create-expense";
-import { ensureEmailInboxFolder } from "@/app/lib/gmail/email-folder";
+import { ensureEmailInboxFolder } from "@/app/lib/receipts/email-folder";
 import { parseArchiveMonth } from "@/app/lib/receipts/year-date";
 import { MIN_EXPENSE_ARCHIVE_YEAR } from "@/app/lib/receipts/defaults";
 import { analyzeExpenseFile } from "@/app/lib/receipts/analyze-expense-file";

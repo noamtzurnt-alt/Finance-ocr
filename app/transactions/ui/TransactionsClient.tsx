@@ -25,7 +25,6 @@ type Row = {
   categoryName: string | null;
   categoryScope: BudgetScope | null;
   cardLast4: string | null;
-  isFixed: boolean;
   updatedAt: string;
 };
 
@@ -37,7 +36,6 @@ type EditState = {
   description: string;
   categoryId: string;
   cardLast4: string;
-  isFixed: boolean;
   scope: BudgetScope;
 };
 
@@ -112,7 +110,6 @@ export default function TransactionsClient(props: { categories: Category[] }) {
   const [description, setDescription] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [cardLast4, setCardLast4] = useState("7374");
-  const [isFixed, setIsFixed] = useState(false);
 
   useEffect(() => {
     try {
@@ -223,7 +220,6 @@ export default function TransactionsClient(props: { categories: Category[] }) {
         categoryId,
         currency: "ILS",
         cardLast4: null,
-        isFixed,
       }),
     });
     setLoading(false);
@@ -254,7 +250,6 @@ export default function TransactionsClient(props: { categories: Category[] }) {
       description: t.description ?? "",
       categoryId: t.categoryId ?? "",
       cardLast4: t.cardLast4 ?? "",
-      isFixed: t.isFixed,
       scope: rowScope,
     });
     setTimeout(() => editRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
@@ -278,7 +273,6 @@ export default function TransactionsClient(props: { categories: Category[] }) {
         description: editState.description || null,
         categoryId: editState.categoryId || null,
         cardLast4: editState.cardLast4 || null,
-        isFixed: editState.isFixed,
       }),
     });
     setSaving(false);
@@ -301,7 +295,6 @@ export default function TransactionsClient(props: { categories: Category[] }) {
               categoryName: updatedCategory?.name ?? null,
               categoryScope: updatedCategory?.budgetScope ?? null,
               cardLast4: editState.cardLast4 || null,
-              isFixed: editState.isFixed,
             }
           : x,
       ),
@@ -427,7 +420,7 @@ export default function TransactionsClient(props: { categories: Category[] }) {
                           <span className="mr-1 text-xs text-zinc-400">{t.currency}</span>
                         </td>
                         <td className="text-xs text-zinc-500 max-w-[14rem]">
-                          {t.description || <span className="text-zinc-300">—</span>}
+                          {t.description || <span className="text-zinc-300"></span>}
                         </td>
                         <td>
                           <div className="flex gap-1">
@@ -531,15 +524,6 @@ export default function TransactionsClient(props: { categories: Category[] }) {
               </select>
             </div>
             <div className="lg:col-span-3 flex items-end gap-3">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={isFixed}
-                  onChange={(e) => setIsFixed(e.target.checked)}
-                  className="h-4 w-4 rounded border-zinc-300 accent-indigo-600"
-                />
-                <span className="text-xs font-medium text-zinc-600">הוצאה קבועה</span>
-              </label>
               <button className="btn btn-primary disabled:opacity-60 mr-auto" type="submit" disabled={loading || !categoryId}>
                 + הוסף תנועה
               </button>

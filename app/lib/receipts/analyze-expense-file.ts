@@ -1,4 +1,4 @@
-import { analyzeReceiptFile } from "@/app/lib/gmail/gemini";
+import { analyzeReceiptFile } from "@/app/lib/receipts/gemini";
 
 const EARLIEST_RECEIPT_YEAR = 2000;
 

@@ -26,7 +26,7 @@ export default async function ReceiptsPage(props: {
       <div className="section-header">
         <div>
           <h1 className="section-title">הוצאות מוכרות (הוצאות)</h1>
-          <p className="section-sub">כל ההוצאות לפי תאריך — בהעלאה ידנית ומבוקרת בלבד</p>
+          <p className="section-sub">כל ההוצאות לפי תאריך, בהעלאה ידנית ומבוקרת בלבד</p>
         </div>
       </div>
 

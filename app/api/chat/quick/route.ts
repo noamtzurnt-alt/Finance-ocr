@@ -10,6 +10,15 @@ import {
   parseChatIntent,
 } from "@/app/lib/transactions/parse-quick";
 import { normalizeVendor } from "@/app/lib/transactions/classify";
+import {
+  CHAT_DELETE_BY_INDEX_SUCCESS,
+  editPrompt,
+} from "@/app/lib/transactions/chat-commands";
+import { formatTransactionList } from "@/app/lib/transactions/chat-list";
+import {
+  fetchListedTransactions,
+  getTransactionByListIndex,
+} from "@/app/lib/transactions/chat-transactions";
 
 export const runtime = "nodejs";
 
@@ -59,6 +68,77 @@ export async function POST(req: Request) {
   }
 
   try {
+    if (intent.type === "list") {
+      const now = new Date();
+      const rows = await fetchListedTransactions(user.id, now);
+      return NextResponse.json({
+        ok: true,
+        step: "list",
+        reply: formatTransactionList(rows, now),
+      });
+    }
+
+    if (intent.type === "deleteByIndex") {
+      const row = await getTransactionByListIndex(user.id, intent.index);
+      if (!row) {
+        return NextResponse.json(
+          {
+            ok: false,
+            reply: formatChatFailure(`לא מצאתי תנועה מספר ${intent.index} ברשימה.`),
+          },
+          { status: 200 },
+        );
+      }
+
+      await prisma.transaction.delete({ where: { id: row.id } });
+      return NextResponse.json({
+        ok: true,
+        reply: CHAT_DELETE_BY_INDEX_SUCCESS,
+        deleted: { id: row.id, vendor: row.vendor, amount: row.amount },
+      });
+    }
+
+    if (intent.type === "editByIndex") {
+      const row = await getTransactionByListIndex(user.id, intent.index);
+      if (!row) {
+        return NextResponse.json(
+          {
+            ok: false,
+            reply: formatChatFailure(`לא מצאתי תנועה מספר ${intent.index} ברשימה.`),
+          },
+          { status: 200 },
+        );
+      }
+
+      const reply = editPrompt(intent.field, intent.index);
+      if (intent.field === "payment") {
+        return NextResponse.json({
+          ok: true,
+          step: "edit_payment",
+          reply,
+          transaction: {
+            id: row.id,
+            vendor: row.vendor,
+            amount: row.amount,
+            currency: row.currency,
+            description: row.description,
+            date: row.date,
+          },
+        });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        step: "edit_input",
+        reply,
+        edit: {
+          transactionId: row.id,
+          field: intent.field,
+          index: intent.index,
+        },
+      });
+    }
+
     if (intent.type === "delete") {
       const wantedVendor = normalizeVendor(intent.vendor);
       const recent = await prisma.transaction.findMany({

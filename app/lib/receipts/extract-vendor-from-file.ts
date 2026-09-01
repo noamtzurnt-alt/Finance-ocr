@@ -1,6 +1,6 @@
 import { prisma } from "@/app/lib/prisma";
 import { getObjectBytes, objectExists } from "@/app/lib/r2/objects";
-import { analyzeReceiptFile } from "@/app/lib/gmail/gemini";
+import { analyzeReceiptFile } from "@/app/lib/receipts/gemini";
 import { parseDetectedReceiptDate } from "@/app/lib/receipts/analyze-expense-file";
 
 export type ExtractVendorResult =

@@ -13,7 +13,7 @@ async function sleep(ms: number) {
   await new Promise((r) => setTimeout(r, ms));
 }
 
-type Entity = "document" | "category" | "budget" | "contract" | "transaction" | "investment";
+type Entity = "document" | "category" | "budget" | "contract" | "transaction";
 
 export async function GET(req: Request) {
   const user = await requireUser();
@@ -90,27 +90,6 @@ export async function GET(req: Request) {
           select: { id: true, updatedAt: true },
         });
         if (contract) candidates.push({ entity: "contract", id: contract.id, at: contract.updatedAt });
-
-        const invAcc = await prisma.investmentAccount.findFirst({
-          where: { userId: user.id, updatedAt: { gt: last } },
-          orderBy: { updatedAt: "asc" },
-          select: { id: true, updatedAt: true },
-        });
-        if (invAcc) candidates.push({ entity: "investment", id: invAcc.id, at: invAcc.updatedAt });
-
-        const invYear = await prisma.investmentYear.findFirst({
-          where: { userId: user.id, updatedAt: { gt: last } },
-          orderBy: { updatedAt: "asc" },
-          select: { id: true, updatedAt: true },
-        });
-        if (invYear) candidates.push({ entity: "investment", id: invYear.id, at: invYear.updatedAt });
-
-        const invEntry = await prisma.investmentEntry.findFirst({
-          where: { userId: user.id, updatedAt: { gt: last } },
-          orderBy: { updatedAt: "asc" },
-          select: { id: true, updatedAt: true },
-        });
-        if (invEntry) candidates.push({ entity: "investment", id: invEntry.id, at: invEntry.updatedAt });
       }
 
       if (candidates.length) {

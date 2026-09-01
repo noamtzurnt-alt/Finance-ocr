@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 
 export function getWebAuthnRelyingParty() {
   return {
-    name: process.env.PASSKEY_RP_NAME ?? "Finance OCR",
+    name: process.env.PASSKEY_RP_NAME ?? "Finance",
   };
 }
 

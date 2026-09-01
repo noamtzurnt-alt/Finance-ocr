@@ -19,21 +19,6 @@ type ExpenseDoc = {
   needsReview?: boolean;
 };
 
-const RECURRING_EXPENSES = [
-  "Gemini",
-  "Cursor",
-  "Claude",
-  "סים עסקי ×2",
-  "דומיינים",
-  "Apple — מנוי שנתי",
-  "CapCut",
-  "Green API",
-  "Meta / Facebook",
-  "שיווק ממומן",
-  "תשלומי רואה חשבון",
-  "חשבונית ירוקה",
-] as const;
-
 function fileIcon(name: string) {
   const lower = name.toLowerCase();
   if (lower.endsWith(".pdf")) return "📄";
@@ -70,8 +55,6 @@ export default function ReceiptsExpensesClient(props: {
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [detectingId, setDetectingId] = useState<string | null>(null);
-  const [detectingAll, setDetectingAll] = useState(false);
 
   const buildQuery = useCallback(() => {
     const params = new URLSearchParams();
@@ -136,89 +119,6 @@ export default function ReceiptsExpensesClient(props: {
     }
   }
 
-  async function detectVendor(id: string) {
-    setDetectingId(id);
-    setError(null);
-    setSyncMsg(null);
-    try {
-      const res = await fetch(`/api/documents/${id}/extract-vendor`, { method: "POST" });
-      const data = (await res.json()) as { vendor?: string; date?: string | null; error?: string };
-      if (!res.ok) {
-        setError(data.error ?? "זיהוי הספק נכשל");
-        return;
-      }
-      setSyncMsg(
-        data.date
-          ? `הפרטים עודכנו: ${data.vendor ?? ""} · ${data.date}`
-          : `זוהה ספק: ${data.vendor ?? ""}`,
-      );
-      await load();
-    } catch {
-      setError("זיהוי הספק נכשל");
-    } finally {
-      setDetectingId(null);
-    }
-  }
-
-  const missingVendorIds = useMemo(
-    () =>
-      docs
-        .filter((d) => {
-          const v = d.vendor.trim();
-          return !v || v === "לא צוין" || v === "לא מוכר";
-        })
-        .map((d) => d.id),
-    [docs],
-  );
-
-  async function detectVendorsBulk() {
-    if (missingVendorIds.length === 0) {
-      setSyncMsg("אין מסמכים עם ספק חסר ברשימה הנוכחית");
-      return;
-    }
-    setDetectingAll(true);
-    setError(null);
-    setSyncMsg(null);
-    let updated = 0;
-    let failed = 0;
-    let skipped = 0;
-    try {
-      // One-by-one so each Gemini call stays within a single serverless timeout.
-      for (let i = 0; i < missingVendorIds.length; i++) {
-        const id = missingVendorIds[i]!;
-        setDetectingId(id);
-        setSyncMsg(`מזהה ספקים... ${i + 1}/${missingVendorIds.length}`);
-        try {
-          const res = await fetch(`/api/documents/${id}/extract-vendor`, { method: "POST" });
-          const data = (await res.json()) as { vendor?: string; error?: string };
-          if (res.ok && data.vendor) {
-            updated += 1;
-          } else if (data.error?.includes("אינו נתמך") || res.status === 422) {
-            // unsupported / no vendor found
-            if (data.error?.includes("אינו נתמך")) skipped += 1;
-            else failed += 1;
-          } else {
-            failed += 1;
-          }
-        } catch {
-          failed += 1;
-        }
-      }
-      const parts = [
-        `עודכנו ${updated}`,
-        failed > 0 ? `${failed} נכשלו` : null,
-        skipped > 0 ? `${skipped} דולגו` : null,
-      ].filter(Boolean);
-      setSyncMsg(`זיהוי ספקים: ${parts.join(" · ")} (מתוך ${missingVendorIds.length})`);
-      await load();
-    } catch {
-      setError("זיהוי ספקים נכשל");
-    } finally {
-      setDetectingId(null);
-      setDetectingAll(false);
-    }
-  }
-
   useEffect(() => {
     void load();
     syncUrl();
@@ -268,19 +168,6 @@ export default function ReceiptsExpensesClient(props: {
           </div>
           <ArchiveFilters year={year} month={month} years={years} onYearChange={setYear} onMonthChange={setMonth} />
           <div className="ms-auto flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className="btn"
-              disabled={detectingAll || missingVendorIds.length === 0}
-              title="שואב את שם הספק מתוך קבצי הקבלות שחסר בהם ספק"
-              onClick={() => void detectVendorsBulk()}
-            >
-              {detectingAll
-                ? "מזהה ספקים..."
-                : missingVendorIds.length > 0
-                  ? `זהה ספקים (${missingVendorIds.length})`
-                  : "זהה ספקים"}
-            </button>
             <button
               type="button"
               className="btn btn-primary"
@@ -344,114 +231,84 @@ export default function ReceiptsExpensesClient(props: {
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       ) : null}
 
-      {/* Table + recurring-expenses side list */}
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_220px]">
-        <div className="card">
-          <table className="data-table w-full table-fixed">
-            <thead>
+      <div className="card">
+        <table className="data-table w-full table-fixed">
+          <thead>
+            <tr>
+              <th className="w-24">תאריך</th>
+              <th className="w-40">ספק</th>
+              <th>תיאור</th>
+              <th className="w-[220px] text-left">פעולות</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading && docs.length === 0 ? (
               <tr>
-                <th className="w-24">תאריך</th>
-                <th className="w-40">ספק</th>
-                <th>תיאור</th>
-                <th className="w-[290px] text-left">פעולות</th>
+                <td colSpan={4} className="py-10 text-center text-zinc-400">
+                  טוען...
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {loading && docs.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-10 text-center text-zinc-400">
-                    טוען...
-                  </td>
-                </tr>
-              ) : docs.length === 0 ? (
-                <tr>
-                  <td colSpan={4} className="py-14 text-center text-zinc-400">
-                    אין הוצאות בתקופה הזו. העלה קבצים עם ״העלאה ידנית״ למעלה.
-                  </td>
-                </tr>
-              ) : (
-                docs.map((d) => (
-                  <tr
-                    key={d.id}
-                    className="cursor-pointer"
-                    title="לחיצה פותחת תצוגה מקדימה"
-                    onClick={() => setPreviewId(d.id)}
-                  >
-                    <td className="whitespace-nowrap text-xs text-zinc-500">{d.date}</td>
-                    <td>
-                      <span className="flex items-center gap-1.5 font-semibold">
-                        <span className="shrink-0">{fileIcon(d.fileName)}</span>
-                        <span className="truncate" title={d.vendor}>
-                          {detectingId === d.id ? "מזהה..." : d.vendor}
-                        </span>
-                      </span>
-                    </td>
-                    <td>
-                      <span className="block truncate text-sm text-zinc-500" title={d.description ?? ""}>
-                        {d.description ?? ""}
-                      </span>
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1 whitespace-nowrap">
-                        <button type="button" className="btn btn-ghost text-xs" onClick={() => setPreviewId(d.id)}>
-                          תצוגה
-                        </button>
-                        <button
-                          type="button"
-                          className="btn btn-ghost text-xs"
-                          disabled={detectingId === d.id}
-                          title="זיהוי ספק, תאריך וסכומים מתוך הקבלה"
-                          onClick={() => void detectVendor(d.id)}
-                        >
-                          {detectingId === d.id ? "מזהה..." : "זהה פרטים"}
-                        </button>
-                        {d.sourceUrl ? (
-                          <a
-                            className="btn btn-ghost text-xs"
-                            href={d.sourceUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            מקור
-                          </a>
-                        ) : null}
-                        <a className="btn btn-ghost text-xs" href={`/api/documents/${d.id}/download`}>
-                          הורדה
-                        </a>
-                        <button
-                          type="button"
-                          className="btn btn-danger text-xs"
-                          disabled={deletingId === d.id}
-                          onClick={() => void deleteDoc(d.id)}
-                        >
-                          {deletingId === d.id ? "מוחק..." : "מחק"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <aside className="card p-4 max-xl:order-first xl:sticky xl:top-4">
-          <h2 className="text-sm font-semibold text-zinc-900">ההוצאות הקבועות שלי</h2>
-          <p className="mt-1 text-xs text-zinc-500">לחיצה מחפשת את השם ברשימה.</p>
-          <ul className="mt-3 grid grid-cols-2 gap-1 xl:grid-cols-1">
-            {RECURRING_EXPENSES.map((expense) => (
-              <li key={expense}>
-                <button
-                  type="button"
-                  className="w-full rounded-lg px-2.5 py-1.5 text-right text-sm text-zinc-700 transition hover:bg-indigo-50 hover:text-indigo-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
-                  onClick={() => setQ(expense.replace(" ×2", "").replace(/ — .+$/, ""))}
+            ) : docs.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="py-14 text-center text-zinc-400">
+                  אין הוצאות בתקופה הזו. העלה קבצים עם ״העלאה ידנית״ למעלה.
+                </td>
+              </tr>
+            ) : (
+              docs.map((d) => (
+                <tr
+                  key={d.id}
+                  className="cursor-pointer"
+                  title="לחיצה פותחת תצוגה מקדימה"
+                  onClick={() => setPreviewId(d.id)}
                 >
-                  {expense}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
+                  <td className="whitespace-nowrap text-xs text-zinc-500">{d.date}</td>
+                  <td>
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <span className="shrink-0">{fileIcon(d.fileName)}</span>
+                      <span className="truncate" title={d.vendor}>
+                        {d.vendor}
+                      </span>
+                    </span>
+                  </td>
+                  <td>
+                    <span className="block truncate text-sm text-zinc-500" title={d.description ?? ""}>
+                      {d.description ?? ""}
+                    </span>
+                  </td>
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1 whitespace-nowrap">
+                      <button type="button" className="btn btn-ghost text-xs" onClick={() => setPreviewId(d.id)}>
+                        תצוגה
+                      </button>
+                      {d.sourceUrl ? (
+                        <a
+                          className="btn btn-ghost text-xs"
+                          href={d.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          מקור
+                        </a>
+                      ) : null}
+                      <a className="btn btn-ghost text-xs" href={`/api/documents/${d.id}/download`}>
+                        הורדה
+                      </a>
+                      <button
+                        type="button"
+                        className="btn btn-danger text-xs"
+                        disabled={deletingId === d.id}
+                        onClick={() => void deleteDoc(d.id)}
+                      >
+                        {deletingId === d.id ? "מוחק..." : "מחק"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
 
       {previewDoc ? (

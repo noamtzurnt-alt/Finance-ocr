@@ -20,8 +20,6 @@ export async function GET() {
       fileName: true,
       fileMime: true,
       fileSize: true,
-      emailHtmlKey: true,
-      gmailMessageId: true,
       createdAt: true,
       updatedAt: true,
     },
@@ -30,10 +28,6 @@ export async function GET() {
   return NextResponse.json(
     items.map((c) => ({
       ...c,
-      hasEmailHtml: Boolean(c.emailHtmlKey),
-      importedFromGmail: Boolean(c.gmailMessageId),
-      emailHtmlKey: undefined,
-      gmailMessageId: undefined,
       contractDate: c.contractDate?.toISOString() ?? null,
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
@@ -58,7 +52,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "יש לצרף קובץ חוזה" }, { status: 400 });
   }
   if (!isContractFile(file)) {
-    return NextResponse.json({ error: "סוג קובץ לא נתמך — רק תמונה או PDF" }, { status: 400 });
+    return NextResponse.json({ error: "סוג קובץ לא נתמך, רק תמונה או PDF" }, { status: 400 });
   }
 
   const contractDate = dateRaw ? new Date(dateRaw) : null;

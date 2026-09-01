@@ -9,7 +9,7 @@ export default async function SetupPage() {
   if (users > 0) redirect("/login");
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-zinc-50 p-6">
+    <div className="auth-page flex items-center justify-center bg-zinc-50 p-6">
       <div className="w-full max-w-sm rounded-2xl border bg-white p-6 shadow-sm">
         <h1 className="text-xl font-semibold text-zinc-950">הגדרה ראשונית</h1>
         <p className="mt-1 text-sm text-zinc-600">

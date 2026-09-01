@@ -4,7 +4,6 @@ import LiveRefresh from "@/app/ui/LiveRefresh";
 import Link from "next/link";
 import { Suspense } from "react";
 import PaymentReceiptsTable from "./ui/PaymentReceiptsTable";
-import GmailSyncButton from "@/app/ui/GmailSyncButton";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +20,9 @@ export default async function PaymentReceiptsPage(props: { searchParams?: Promis
       <div className="section-header">
         <div>
           <h1 className="section-title">קבלות (הכנסות)</h1>
-          <p className="section-sub">קבלות על כסף שנכנס בפועל לחשבון · גם מ־Morning וגם מהמייל</p>
+          <p className="section-sub">קבלות על כסף שנכנס בפועל לחשבון</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <GmailSyncButton purpose="receipts" />
           <Link className="btn" href={showAll ? "/payment-receipts?all=0" : "/payment-receipts"}>
             {showAll ? "החודש בלבד" : "הצג הכל"}
           </Link>

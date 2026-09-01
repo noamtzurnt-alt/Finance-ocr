@@ -17,7 +17,7 @@ export default async function ContractsPage() {
         <div>
           <h1 className="section-title">חוזים</h1>
           <p className="section-sub">
-            חוזי לקוחות לפי שם — כולל PDF חתום ועותק HTML של מייל החתימה
+            חוזי לקוחות לפי שם, כולל PDF חתום ועותק HTML של מייל החתימה
           </p>
         </div>
       </div>

@@ -24,7 +24,7 @@ function addSheetFromRows(wb: ExcelJS.Workbook, name: string, rows: Record<strin
 
 async function buildWorkbook(sheetName: string, rows: Record<string, unknown>[]) {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Finance OCR";
+  wb.creator = "Finance";
   wb.created = new Date();
   addSheetFromRows(wb, sheetName, rows);
   return Buffer.from(await wb.xlsx.writeBuffer());

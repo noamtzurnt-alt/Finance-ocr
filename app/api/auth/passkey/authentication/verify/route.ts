@@ -98,14 +98,8 @@ export async function POST(req: Request) {
     select: { id: true },
   });
 
-  const user = await prisma.user.findUnique({ where: { id: cred.userId }, select: { id: true, email: true, approved: true } });
+  const user = await prisma.user.findUnique({ where: { id: cred.userId }, select: { id: true, email: true } });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 401 });
-  if (!user.approved) {
-    return NextResponse.json(
-      { error: "pending_approval", message: "ממתין לאישור מנהל המערכת. תקבל הודעה כשהחשבון יאושר." },
-      { status: 403 },
-    );
-  }
 
   const token = await signSessionToken({ sub: user.id, email: user.email }, secret);
   await setSessionCookie(token);

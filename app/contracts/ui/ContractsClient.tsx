@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import GmailSyncButton from "@/app/ui/GmailSyncButton";
 
 export type ContractRow = {
   id: string;
@@ -12,8 +11,6 @@ export type ContractRow = {
   fileName: string;
   fileMime: string;
   fileSize: number;
-  hasEmailHtml: boolean;
-  importedFromGmail: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -108,16 +105,6 @@ export default function ContractsClient(props: { initial: ContractRow[] }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-200/70 bg-emerald-50/70 px-4 py-3">
-        <div>
-          <p className="text-sm font-semibold text-emerald-900">קליטת חוזים אוטומטית פעילה</p>
-          <p className="text-xs text-emerald-800">
-            חוזים חתומים שמגיעים ל־ntdigitaldomain@gmail.com נשמרים כאן עם ה־PDF והמייל המקורי.
-          </p>
-        </div>
-        <GmailSyncButton purpose="contracts" onDone={load} />
-      </div>
-
       <form
         onSubmit={create}
         className="grid gap-4 rounded-2xl border border-violet-200/70 bg-gradient-to-l from-violet-50/80 to-purple-50/50 p-5 sm:grid-cols-2"
@@ -190,7 +177,7 @@ export default function ContractsClient(props: { initial: ContractRow[] }) {
         <p className="text-sm text-zinc-600">טוען...</p>
       ) : filtered.length === 0 ? (
         <div className="card py-14 text-center text-zinc-400">
-          אין חוזים עדיין — הוסף לקוח וצרף את קובץ החוזה למעלה
+          אין חוזים עדיין, הוסף לקוח וצרף את קובץ החוזה למעלה
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
@@ -241,14 +228,7 @@ function ContractCard(props: {
           {editing ? (
             <input className="field" value={clientName} onChange={(e) => setClientName(e.target.value)} />
           ) : (
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate text-base font-semibold text-zinc-900">{props.item.clientName}</h3>
-              {props.item.importedFromGmail ? (
-                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-800">
-                  נקלט מ־Gmail
-                </span>
-              ) : null}
-            </div>
+            <h3 className="truncate text-base font-semibold text-zinc-900">{props.item.clientName}</h3>
           )}
           <p className="mt-1 text-xs text-zinc-500">
             {props.item.contractDate
@@ -296,16 +276,6 @@ function ContractCard(props: {
         >
           צפה ב־PDF
         </a>
-        {props.item.hasEmailHtml ? (
-          <a
-            className="btn text-sm"
-            href={`/api/contracts/${props.item.id}/view?file=email`}
-            target="_blank"
-            rel="noreferrer"
-          >
-            צפה במייל HTML
-          </a>
-        ) : null}
         {editing ? (
           <>
             <button type="button" className="btn btn-primary text-sm" onClick={() => void save()} disabled={busy}>

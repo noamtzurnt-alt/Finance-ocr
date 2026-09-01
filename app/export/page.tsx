@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/app/lib/auth/server";
 import ExportClient from "./ui/ExportClient";
@@ -25,11 +24,7 @@ export default async function ExportPage() {
         role="alert"
       >
         <strong>הבהרה:</strong> המערכת היא כלי עזר לניהול בלבד ואינה תחליף לייעוץ מס או רואה חשבון.
-        האחריות על דיווח לרשויות המס, הגשת דוחות ורישום ספרים מוטלת עליך ורואה החשבון שלך בלבד.{" "}
-        <Link href="/terms" className="font-medium underline hover:no-underline">
-          תנאי שימוש
-        </Link>
-        .
+        האחריות על דיווח לרשויות המס, הגשת דוחות ורישום ספרים מוטלת עליך ורואה החשבון שלך בלבד.
       </div>
 
       <div className="card p-4">

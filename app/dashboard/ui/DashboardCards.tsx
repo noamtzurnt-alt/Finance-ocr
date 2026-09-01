@@ -4,23 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { parseWizardState } from "@/app/lib/budget/wizard-state";
 
-type DfsiData = {
-  status: "excellent" | "on_track" | "warning" | "over";
-  spendingVelocity: number;
-  dailyBudget: string;
-  safeToSpendToday: string;
-  variableExpenses: string;
-  fixedExpenses: string;
-  disposableIncome: string;
-  expectedVariableSpend: string;
-  daysElapsed: number;
-  daysInMonth: number;
-  daysRemaining: number;
-  nudge: string;
-  hasIncome: boolean;
-  budgetFromWizard: boolean;
-};
-
 type CategoryBreakdownItem = { category: string; amount: number };
 
 type Summary = {
@@ -33,7 +16,6 @@ type Summary = {
   budgetLimit: string;
   pct: number;
   categoryBreakdown: CategoryBreakdownItem[];
-  dfsi: DfsiData;
 };
 
 function Skeleton({ className }: { className?: string }) {
@@ -45,13 +27,6 @@ type EditField = "income" | "expense" | null;
 const CATEGORY_ICONS: Record<string, string> = {
   "אוכל": "🍽", "בגדים": "👕", "דלק/רכב": "🚗", "תוכנות/מנויים": "💻",
   "שכירות": "🏠", "בזבוזים": "🎉", "ספר": "📚", "יום הולדת/אירוע מיוחד": "🎂",
-};
-
-const DFSI_CONFIG = {
-  excellent: { label: "מעולה",  color: "text-emerald-700", bg: "bg-gradient-to-br from-emerald-50 to-teal-50",   border: "border-emerald-200", bar: "bg-gradient-to-r from-emerald-400 to-teal-500",   actionBg: "bg-gradient-to-br from-emerald-500 to-teal-600",   icon: "✓" },
-  on_track:  { label: "במסלול", color: "text-blue-700",    bg: "bg-gradient-to-br from-blue-50 to-indigo-50",    border: "border-blue-200",    bar: "bg-gradient-to-r from-blue-400 to-indigo-500",    actionBg: "bg-gradient-to-br from-blue-500 to-indigo-600",    icon: "→" },
-  warning:   { label: "שים לב", color: "text-amber-700",   bg: "bg-gradient-to-br from-amber-50 to-orange-50",   border: "border-amber-200",   bar: "bg-gradient-to-r from-amber-400 to-orange-500",   actionBg: "bg-gradient-to-br from-amber-500 to-orange-500",   icon: "!" },
-  over:      { label: "חריגה",  color: "text-red-700",     bg: "bg-gradient-to-br from-red-50 to-rose-50",       border: "border-red-200",     bar: "bg-gradient-to-r from-red-500 to-rose-600",       actionBg: "bg-gradient-to-br from-red-500 to-rose-600",       icon: "✗" },
 };
 
 // Read category budgets from saved wizard state (server)
@@ -131,9 +106,6 @@ export default function DashboardCards() {
       </div>
     );
   }
-
-  const dfsi = data?.dfsi;
-  const dfsiCfg = dfsi ? DFSI_CONFIG[dfsi.status] : DFSI_CONFIG.on_track;
 
   return (
     <div className="space-y-5">
@@ -344,129 +316,6 @@ export default function DashboardCards() {
         </div>
       </div>
 
-      {/* ── DFSI: Daily Financial Status Indicator ── */}
-      <div className={`card overflow-hidden border ${dfsi ? dfsiCfg.border : "border-zinc-200"}`}>
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 px-5 py-4">
-          <div>
-            <div className="flex items-center gap-2.5">
-              <div className="font-semibold text-zinc-900">מדד פיננסי יומי</div>
-              {dfsi && (
-                <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-bold ${dfsiCfg.bg} ${dfsiCfg.color} ${dfsiCfg.border} border`}>
-                  <span>{dfsiCfg.icon}</span>
-                  {dfsiCfg.label}
-                </span>
-              )}
-            </div>
-            <div className="mt-0.5 text-xs text-zinc-500">
-              {dfsi?.budgetFromWizard
-                ? "מחשב לפי תקציב שהגדרת בצ׳ק-אפ הפיננסי"
-                : "מחשב על בסיס הוצאות משתנות בלבד. הוצאות קבועות לא פוגעות בציון"}
-            </div>
-          </div>
-          <Link className="btn text-sm" href="/transactions">כל התנועות</Link>
-        </div>
-
-        <div className="p-5">
-          {!data ? (
-            <div className="space-y-3">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-14 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-            </div>
-          ) : !dfsi?.hasIncome ? (
-            /* No income set */
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-2xl">💡</div>
-              <div>
-                <div className="font-semibold text-zinc-800">הגדר הכנסה חודשית לקבל תמונת מצב</div>
-                <div className="mt-1 text-sm text-zinc-500">לחץ על ✏️ ליד "הכנסות החודש" כדי להזין הכנסה</div>
-              </div>
-            </div>
-          ) : (() => {
-            const actual    = Number(dfsi.variableExpenses);
-            const expected  = Number(dfsi.expectedVariableSpend);
-            const diff      = actual - expected; // positive = overspent
-            const isOver    = diff > 0;
-            const maxVal    = Math.max(actual, expected, 1);
-            const actualW   = Math.min((actual / maxVal) * 100, 100);
-            const expectedW = Math.min((expected / maxVal) * 100, 100);
-
-            return (
-              <div className="space-y-4">
-
-                {/* ── Hero: what happened ── */}
-                <div className={`rounded-2xl border p-5 ${dfsiCfg.bg} ${dfsiCfg.border}`}>
-                  <div className={`text-2xl font-bold leading-snug ${dfsiCfg.color}`}>
-                    {diff === 0
-                      ? "בדיוק בתוכנית 🎯"
-                      : isOver
-                        ? `הוצאת ${Math.round(diff).toLocaleString()} ₪ יותר מהתוכנית`
-                        : `חסכת ${Math.abs(Math.round(diff)).toLocaleString()} ₪ עד כה`}
-                  </div>
-                  <div className="mt-1 text-sm text-zinc-500">
-                    {expected > 0
-                      ? `עד יום ${dfsi.daysElapsed} בחודש תכננת ${Math.round(expected).toLocaleString()} ₪, הוצאת ${Math.round(actual).toLocaleString()} ₪`
-                      : `הוצאת ${Math.round(actual).toLocaleString()} ₪ עד כה`}
-                  </div>
-
-                  {/* Visual comparison bars */}
-                  {expected > 0 && (
-                    <div className="mt-4 space-y-2.5">
-                      <div>
-                        <div className="mb-1 flex justify-between text-xs text-zinc-400">
-                          <span>תוכנית עד היום</span>
-                          <span>{Math.round(expected).toLocaleString()} ₪</span>
-                        </div>
-                        <div className="h-2.5 overflow-hidden rounded-full bg-black/10">
-                          <div className="h-full rounded-full bg-zinc-400/50 transition-all duration-700"
-                            style={{ width: `${expectedW}%` }} />
-                        </div>
-                      </div>
-                      <div>
-                        <div className="mb-1 flex justify-between text-xs">
-                          <span className="text-zinc-400">בפועל</span>
-                          <span className={`font-semibold ${isOver ? dfsiCfg.color : "text-emerald-700"}`}>
-                            {Math.round(actual).toLocaleString()} ₪
-                          </span>
-                        </div>
-                        <div className="h-2.5 overflow-hidden rounded-full bg-black/10">
-                          <div className={`h-full rounded-full transition-all duration-700 ${isOver ? dfsiCfg.bar : "bg-gradient-to-r from-emerald-400 to-teal-500"}`}
-                            style={{ width: `${actualW}%` }} />
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* ── Days progress ── */}
-                <div>
-                  <div className="mb-1.5 flex items-center justify-between text-xs text-zinc-400">
-                    <span>יום {dfsi.daysElapsed} מתוך {dfsi.daysInMonth}</span>
-                    <span>נותרו {dfsi.daysRemaining} ימים</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-zinc-100">
-                    <div className="h-full rounded-full bg-zinc-300 transition-all"
-                      style={{ width: `${(dfsi.daysElapsed / dfsi.daysInMonth) * 100}%` }} />
-                  </div>
-                </div>
-
-                {/* Wizard tip */}
-                {!dfsi.budgetFromWizard && (
-                  <div className="flex items-start gap-3 rounded-xl border border-dashed border-indigo-200 bg-indigo-50/40 p-3 text-xs text-indigo-600">
-                    <span className="mt-0.5 shrink-0 text-base">🎯</span>
-                    <span>
-                      עשה{" "}
-                      <Link href="/budget" className="font-semibold underline">צ׳ק-אפ פיננסי</Link>
-                      {" "}כדי לקבוע תקציב יומי מחושב לפי ההכנסות וההוצאות שלך.
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-        </div>
-      </div>
     </div>
   );
 }

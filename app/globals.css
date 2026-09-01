@@ -66,10 +66,21 @@ body.nf-chat-active {
   pointer-events: none;
 }
 
-/* Hide underlay — no longer needed but keep the class so no React error. */
+/* Hide underlay, no longer needed but keep the class so no React error. */
 
 @layer base {
-  html, body { height: 100%; }
+  html, body {
+    height: 100%;
+    overscroll-behavior: none;
+  }
+
+  .auth-page {
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
 }
 
 @layer components {
@@ -78,6 +89,8 @@ body.nf-chat-active {
   .app-shell {
     min-height: 100dvh;
     background: var(--bg);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
   }
 
   /* ─── Top bar ─────────────────────────────── */
@@ -85,9 +98,49 @@ body.nf-chat-active {
     position: sticky;
     top: 0;
     z-index: 40;
-    background: color-mix(in srgb, #ffffff 85%, transparent);
+    background: color-mix(in srgb, #ffffff 92%, transparent);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--border);
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .app-topbar-inner {
+    display: flex;
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 3.25rem;
+    padding: 0.5rem 1rem 0.625rem;
+  }
+
+  .btn-topbar {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0.5rem;
+    border-radius: 0.85rem;
+  }
+
+  .app-main-wrap {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding: 1rem 1rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    .app-main-wrap {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      gap: 1.5rem;
+      padding-top: 1.5rem;
+    }
+  }
+
+  .app-mobile-drawer {
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   /* ─── Sidebar ─────────────────────────────── */
@@ -96,7 +149,7 @@ body.nf-chat-active {
     border-radius: 1.25rem;
     overflow: hidden;
     position: sticky;
-    top: 6rem;
+    top: calc(5.5rem + env(safe-area-inset-top, 0px));
     height: fit-content;
   }
 
@@ -199,6 +252,48 @@ body.nf-chat-active {
     backdrop-filter: blur(10px);
   }
 
+  .business-hub-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.15rem 1.2rem;
+    border-radius: 1.1rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 10px 28px rgba(15, 23, 42, 0.06);
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+  }
+  .business-hub-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(99, 102, 241, 0.22);
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 16px 40px rgba(99, 102, 241, 0.08);
+  }
+  .business-hub-icon {
+    display: grid;
+    place-items: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.95rem;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  }
+  .business-hub-arrow {
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 9999px;
+    background: #f4f4f5;
+    color: #71717a;
+    transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+  }
+  .business-hub-card:hover .business-hub-arrow {
+    background: #eef2ff;
+    color: #4f46e5;
+    transform: translateX(-2px);
+  }
+
   /* Stat card number */
   .stat-value {
     font-size: 1.875rem;
@@ -230,6 +325,7 @@ body.nf-chat-active {
     color: var(--foreground);
     transition: background 120ms, box-shadow 120ms, transform 80ms;
     cursor: pointer;
+    min-height: 2.75rem;
   }
   .btn:hover {
     background: #f1f3f6;
@@ -408,6 +504,7 @@ body.nf-chat-active {
     --nf-accent: #2dd4bf;
     --nf-accent-2: #38bdf8;
     --composer-h: 4.25rem;
+    --chat-bottom-reserve: calc(1rem + env(safe-area-inset-bottom, 0px));
     position: fixed;
     inset: 0;
     display: flex;
@@ -418,7 +515,7 @@ body.nf-chat-active {
     box-sizing: border-box;
   }
 
-  /* Top bar — flex child, never moves independently. */
+  /* Top bar, flex child, never moves independently. */
   .nf-chat-topbar {
     flex-shrink: 0;
     z-index: 40;
@@ -451,7 +548,7 @@ body.nf-chat-active {
     margin: 0;
   }
 
-  /* Chat thread — fills space between header and composer. */
+  /* Chat thread, fills space between header and composer. */
   .nf-chat-thread {
     flex: 1 1 auto;
     min-height: 0;
@@ -542,7 +639,7 @@ body.nf-chat-active {
     display: flex;
     flex-direction: column;
     gap: 0.7rem;
-    padding: 0.35rem 0.1rem calc(var(--composer-h) + 0.5rem);
+    padding: 0.35rem 0.1rem var(--chat-bottom-reserve);
     -webkit-overflow-scrolling: touch;
   }
   .nf-bubble-row {
@@ -552,11 +649,12 @@ body.nf-chat-active {
     max-width: 92%;
   }
   .nf-bubble-row.is-user {
-    align-self: flex-start;
-    flex-direction: row-reverse;
+    align-self: flex-end;
   }
   .nf-bubble-row.is-bot {
-    align-self: flex-end;
+    align-self: flex-start;
+    align-items: flex-start;
+    flex-direction: row;
   }
   .nf-bubble-avatar {
     border-radius: 9999px;
@@ -667,25 +765,80 @@ body.nf-chat-active {
     font-weight: 600;
     padding: 0.62rem 0.8rem;
   }
-  .nf-chat-composer {
+  .nf-chat-composer-shell {
     position: fixed;
     z-index: 30;
-    left: max(0.75rem, env(safe-area-inset-left, 0px));
-    right: max(0.75rem, env(safe-area-inset-right, 0px));
-    bottom: max(0.65rem, env(safe-area-inset-bottom, 0px));
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.55rem max(0.75rem, env(safe-area-inset-right, 0px))
+      max(0.65rem, env(safe-area-inset-bottom, 0px)) max(0.75rem, env(safe-area-inset-left, 0px));
+    background: var(--nf-blue);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.55);
+  }
+  .nf-chat-page[data-kb-open="true"] .nf-chat-composer-shell {
+    bottom: var(--kb-inset, 0px);
+  }
+  .nf-chat-composer-shell--hidden {
+    visibility: hidden;
+    pointer-events: none;
+    height: 0;
+    padding: 0;
+    border: 0;
+    box-shadow: none;
+    overflow: hidden;
+  }
+  .nf-inline-input-form {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.75rem;
+  }
+  [data-inline-msg] {
+    scroll-margin-top: 1rem;
+    scroll-margin-bottom: calc(var(--kb-inset, 0px) + 2rem);
+  }
+  .nf-inline-input {
+    flex: 1;
+    min-width: 0;
+    border-radius: 0.85rem;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.1);
+    color: #f8fbff;
+    font-size: max(16px, 0.9rem);
+    padding: 0.62rem 0.75rem;
+    outline: none;
+  }
+  .nf-inline-input::placeholder {
+    color: rgba(232, 244, 255, 0.42);
+  }
+  .nf-inline-submit {
+    display: grid;
+    place-items: center;
+    width: 2.35rem;
+    height: 2.35rem;
+    border-radius: 9999px;
+    background: linear-gradient(145deg, var(--nf-accent), var(--nf-accent-2));
+    color: #041018;
+    flex-shrink: 0;
+  }
+  .nf-inline-submit:disabled {
+    opacity: 0.35;
+  }
+  .nf-chat-composer {
+    position: relative;
+    left: auto;
+    right: auto;
+    bottom: auto;
     display: flex;
     align-items: center;
     gap: 0.55rem;
     min-height: 3.6rem;
     padding: 0.45rem;
     border-radius: 1.25rem;
-    background: rgba(11, 28, 42, 0.98);
+    background: rgba(255, 255, 255, 0.07);
     border: 1px solid rgba(255, 255, 255, 0.12);
-    backdrop-filter: blur(12px);
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.25);
-  }
-  .nf-chat-page[data-kb-open="true"] .nf-chat-composer {
-    bottom: calc(var(--kb-inset, 0px) + 0.5rem);
   }
   .nf-chat-input {
     flex: 1;

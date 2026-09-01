@@ -280,7 +280,7 @@ export default function ReceiptFolderClient(props: {
             : `${documents.length} מסמכים בתיקייה`}
         </div>
         {documents.length === 0 && !loading ? (
-          <div className="px-4 py-12 text-center text-sm text-zinc-400">אין מסמכים עדיין — גרור קבצים למעלה</div>
+          <div className="px-4 py-12 text-center text-sm text-zinc-400">אין מסמכים עדיין, גרור קבצים למעלה</div>
         ) : (
           <ul className="divide-y divide-zinc-100">
             {documents.map((d) => (

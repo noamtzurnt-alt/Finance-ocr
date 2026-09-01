@@ -125,7 +125,7 @@ function formatLocalYmd(dt: Date) {
 
 function excelSerialToDate(serial: number): Date | null {
   if (!Number.isFinite(serial) || serial < 20000 || serial > 80000) return null;
-  // Excel serial date (1900 system) — interpret as local calendar day
+  // Excel serial date (1900 system), interpret as local calendar day
   const utc = Date.UTC(1899, 11, 30) + Math.round(serial) * 86400000;
   const d = new Date(utc);
   if (Number.isNaN(d.getTime())) return null;
@@ -323,7 +323,7 @@ function colLettersToIndex(letters: string) {
 }
 
 function stripXmlNs(xml: string) {
-  // CAL uses prefixed elements like <x:workbook>, <x:c> — strip prefixes/default xmlns for regex parse
+  // CAL uses prefixed elements like <x:workbook>, <x:c>, strip prefixes/default xmlns for regex parse
   return xml
     .replace(/xmlns(:\w+)?="[^"]*"/g, "")
     .replace(/<\/?[a-zA-Z0-9]+:/g, (m) => m.replace(/[a-zA-Z0-9]+:/, ""));
@@ -396,7 +396,7 @@ function parseSheetRows(sheetXml: string, shared: string[]): string[][] {
   return matrix;
 }
 
-/** Native OOXML reader — works with CAL's namespaced x:workbook / x:sheet XML. */
+/** Native OOXML reader, works with CAL's namespaced x:workbook / x:sheet XML. */
 async function parseXlsxOoxml(buffer: Buffer): Promise<string[][]> {
   const zip = await JSZip.loadAsync(buffer);
   const sheetFiles = Object.keys(zip.files)
@@ -466,7 +466,7 @@ function matrixFromBuffer(buffer: Buffer, fileName: string, mimeType?: string): 
   if (name.endsWith(".xls") && !looksLikeZip(buffer)) {
     // Old binary .xls or HTML-as-xls
     if (looksLikeCsvText(buffer)) return parseCsv(buffer.toString("utf8"));
-    throw new Error("קובץ .xls ישן לא נתמך — בכאל שמור/ייצא כ-CSV או Excel (.xlsx)");
+    throw new Error("קובץ .xls ישן לא נתמך, בכאל שמור/ייצא כ-CSV או Excel (.xlsx)");
   }
 
   if (looksLikeZip(buffer) || name.endsWith(".xlsx") || name.endsWith(".xlsm") || mime.includes("spreadsheet")) {
@@ -475,7 +475,7 @@ function matrixFromBuffer(buffer: Buffer, fileName: string, mimeType?: string): 
 
   // Last resorts
   if (looksLikeCsvText(buffer)) return parseCsv(buffer.toString("utf8"));
-  throw new Error("פורמט קובץ לא מזוהה — נסה CSV או Excel (.xlsx) מכאל");
+  throw new Error("פורמט קובץ לא מזוהה, נסה CSV או Excel (.xlsx) מכאל");
 }
 
 export async function parseStatementFile(params: {
@@ -487,7 +487,7 @@ export async function parseStatementFile(params: {
   const mime = (params.mimeType ?? "").toLowerCase();
 
   if (name.endsWith(".pdf") || mime.includes("pdf")) {
-    throw new Error("קובץ PDF לא נתמך כרגע — הורד מאפליקציית כאל ייצוא ל-Excel או CSV");
+    throw new Error("קובץ PDF לא נתמך כרגע, הורד מאפליקציית כאל ייצוא ל-Excel או CSV");
   }
 
   if (!params.buffer.length) {
@@ -499,7 +499,7 @@ export async function parseStatementFile(params: {
     const result = matrixFromBuffer(params.buffer, params.fileName, params.mimeType);
     matrix = result instanceof Promise ? await result : result;
   } catch (e) {
-    // If xlsx failed but content looks like text/csv — retry
+    // If xlsx failed but content looks like text/csv, retry
     if (looksLikeCsvText(params.buffer)) {
       matrix = parseCsv(params.buffer.toString("utf8"));
     } else if (looksLikeHtml(params.buffer)) {

@@ -1,19 +1,51 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   CHAT_PAYMENT_OTHER_PROMPT,
   CHAT_WELCOME,
   formatChatFailure,
 } from "@/app/lib/transactions/parse-quick";
+import type { ChatEditField } from "@/app/lib/transactions/chat-commands";
+import { parseTransactionIndex } from "@/app/lib/transactions/chat-commands";
+import {
+  CHAT_ADD_PLACEHOLDER,
+  CHAT_ADD_PROMPT,
+  CHAT_DELETE_PLACEHOLDER,
+  CHAT_DELETE_PROMPT,
+  CHAT_EDIT_INDEX_PLACEHOLDER,
+  CHAT_EDIT_INDEX_PROMPT,
+  CHAT_EDIT_PROMPT,
+  CHAT_FLOW_IDLE,
+  CHAT_MENU_FOLLOWUP,
+  BACK_TO_MENU_OPTION,
+  EDIT_FIELD_MENU_OPTIONS,
+  MAIN_MENU_OPTIONS,
+  editFieldToCommand,
+  inlineInputKindForEditField,
+  inlinePlaceholderForEditField,
+  menuIdToEditField,
+  type ChatFlow,
+  type InlineInputKind,
+  type MenuOption,
+} from "@/app/lib/transactions/chat-menu";
+import ChatInlineInput from "./ChatInlineInput";
 import {
   CHAT_PAYMENT_OPTIONS,
   isOtherPaymentOption,
 } from "@/app/lib/transactions/chat-payment";
+import { isEmptyTransactionListReply } from "@/app/lib/transactions/chat-list";
+import ChatMenuButtons from "./ChatMenuButtons";
 import ChatTopBar from "./ChatTopBar";
 
 type PaymentPick = { id: string; label: string; value: string };
+
+type PendingEdit = {
+  transactionId: string;
+  field: Exclude<ChatEditField, "payment">;
+  index: number;
+};
 
 type Msg = {
   id: string;
@@ -22,37 +54,75 @@ type Msg = {
   status?: "sending" | "ok" | "error";
   paymentOptions?: boolean;
   paymentDisabled?: boolean;
+  menuOptions?: MenuOption[];
+  menuDisabled?: boolean;
+  inlineInput?: InlineInputKind;
+  inlinePlaceholder?: string;
+  inlineDisabled?: boolean;
 };
 
 function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function botErrorFields(text: string): Pick<Msg, "text" | "status" | "menuOptions" | "menuDisabled"> {
+  return {
+    text,
+    status: "error",
+    menuOptions: [BACK_TO_MENU_OPTION],
+    menuDisabled: false,
+  };
+}
+
 function applyKeyboardInset(page: HTMLElement, rawKb: number) {
   const kb = rawKb > 80 ? rawKb : 0;
   const open = kb > 0;
   page.dataset.kbOpen = open ? "true" : "false";
-  // Nudge composer closer to the keyboard (iOS leaves extra visualViewport slack).
   const inset = open ? Math.max(0, kb - 12) : 0;
   page.style.setProperty("--kb-inset", `${inset}px`);
+  return kb;
+}
+
+function syncBottomReserve(page: HTMLElement, inlineActive: boolean, kb: number) {
+  if (inlineActive) {
+    page.style.setProperty("--chat-bottom-reserve", `${kb > 0 ? kb + 36 : 36}px`);
+    return;
+  }
+  page.style.setProperty(
+    "--chat-bottom-reserve",
+    "calc(1rem + env(safe-area-inset-bottom, 0px))",
+  );
 }
 
 export default function ChatClient() {
-  const inputId = useId();
   const pageRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const composerRef = useRef<HTMLFormElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [text, setText] = useState("");
   const [messages, setMessages] = useState<Msg[]>([
-    { id: "welcome", role: "bot", text: CHAT_WELCOME, status: "ok" },
+    {
+      id: "welcome",
+      role: "bot",
+      text: CHAT_WELCOME,
+      status: "ok",
+      menuOptions: MAIN_MENU_OPTIONS,
+    },
   ]);
+  const [flow, setFlow] = useState<ChatFlow>(CHAT_FLOW_IDLE);
+  const [activeMenuMsgId, setActiveMenuMsgId] = useState<string | null>("welcome");
   const [pendingPaymentTxId, setPendingPaymentTxId] = useState<string | null>(null);
   const [activePaymentMsgId, setActivePaymentMsgId] = useState<string | null>(null);
+  const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentPick | null>(null);
   const [paymentCustomMode, setPaymentCustomMode] = useState(false);
+  const [activeInlineMsgId, setActiveInlineMsgId] = useState<string | null>(null);
+  const [inlineDraft, setInlineDraft] = useState("");
   const [, startTransition] = useTransition();
   const busy = messages.some((m) => m.status === "sending");
+  const stickToBottomRef = useRef(true);
+  const layoutStateRef = useRef({ inlineMode: false, activeInlineId: null as string | null });
+  layoutStateRef.current = {
+    inlineMode: Boolean(activeInlineMsgId),
+    activeInlineId: activeInlineMsgId,
+  };
 
   useEffect(() => {
     const html = document.documentElement;
@@ -76,9 +146,40 @@ export default function ChatClient() {
   useEffect(() => {
     const page = pageRef.current;
     if (!page) return;
+    const kb = Number.parseFloat(page.style.getPropertyValue("--kb-inset")) || 0;
+    syncBottomReserve(page, Boolean(activeInlineMsgId), kb);
+  }, [activeInlineMsgId]);
+
+  const scrollInlineInputIntoView = useCallback((msgId: string, behavior: ScrollBehavior = "smooth") => {
+    const list = listRef.current;
+    const page = pageRef.current;
+    if (!list || !page) return;
+
+    const target = list.querySelector<HTMLElement>(`[data-inline-msg="${msgId}"]`);
+    if (!target) return;
+
+    const vv = window.visualViewport;
+    const kb = Number.parseFloat(page.style.getPropertyValue("--kb-inset")) || 0;
+    const padding = 24;
+    const visibleBottom = vv ? vv.offsetTop + vv.height - padding : window.innerHeight - kb - padding;
+    const listRect = list.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+
+    if (targetRect.bottom > visibleBottom) {
+      list.scrollBy({ top: targetRect.bottom - visibleBottom, behavior });
+    } else if (targetRect.top < listRect.top + padding) {
+      list.scrollBy({ top: targetRect.top - (listRect.top + padding), behavior });
+    }
+  }, []);
+
+  const scrollInlineRef = useRef(scrollInlineInputIntoView);
+  scrollInlineRef.current = scrollInlineInputIntoView;
+
+  useEffect(() => {
+    const page = pageRef.current;
+    if (!page) return;
 
     let raf = 0;
-    let lastKb = -1;
 
     const sync = () => {
       cancelAnimationFrame(raf);
@@ -86,191 +187,564 @@ export default function ChatClient() {
         const vv = window.visualViewport;
         if (!vv) return;
 
-        if (vv.offsetTop > 0) {
-          window.scrollTo(0, 0);
-        }
-
         const rawKb = Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height));
         const kb = rawKb > 80 ? rawKb : 0;
-        if (kb === lastKb) return;
-        lastKb = kb;
 
         applyKeyboardInset(page, rawKb);
+        syncBottomReserve(page, layoutStateRef.current.inlineMode, kb);
+
+        const inlineId = layoutStateRef.current.activeInlineId;
+        if (inlineId) {
+          scrollInlineRef.current(inlineId, "auto");
+        }
       });
     };
 
     const scheduleSync = () => {
       sync();
-      [50, 150, 300].forEach((ms) => window.setTimeout(sync, ms));
+      [50, 150, 300, 500].forEach((ms) => window.setTimeout(sync, ms));
     };
 
     sync();
     const vv = window.visualViewport;
     vv?.addEventListener("resize", scheduleSync);
-    vv?.addEventListener("scroll", sync);
     window.addEventListener("resize", sync);
 
     return () => {
       cancelAnimationFrame(raf);
       vv?.removeEventListener("resize", scheduleSync);
-      vv?.removeEventListener("scroll", sync);
       window.removeEventListener("resize", sync);
       page.style.removeProperty("--kb-inset");
       delete page.dataset.kbOpen;
     };
   }, []);
 
-  useEffect(() => {
+  const scrollToBottom = useCallback((behavior: ScrollBehavior = "smooth", force = false) => {
+    if (!force && !stickToBottomRef.current) return;
     const el = listRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, selectedPayment, paymentCustomMode, text]);
+    if (!el) return;
+    const run = () => {
+      el.scrollTo({ top: el.scrollHeight, behavior });
+    };
+    run();
+    requestAnimationFrame(() => requestAnimationFrame(run));
+  }, []);
 
-  function resetPaymentFlow() {
+  const handleMessagesScroll = useCallback(() => {
+    const el = listRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    stickToBottomRef.current = distanceFromBottom < 96;
+  }, []);
+
+  useEffect(() => {
+    if (layoutStateRef.current.activeInlineId) return;
+    scrollToBottom(messages.length <= 2 ? "auto" : "smooth");
+  }, [messages, selectedPayment, paymentCustomMode, activeMenuMsgId, activePaymentMsgId, scrollToBottom]);
+
+  useEffect(() => {
+    if (!activeInlineMsgId) return;
+    stickToBottomRef.current = false;
+    const focusAndScroll = () => {
+      document
+        .querySelector<HTMLInputElement>(`[data-inline-msg="${activeInlineMsgId}"] .nf-inline-input`)
+        ?.focus({ preventScroll: true });
+      scrollInlineInputIntoView(activeInlineMsgId, "auto");
+    };
+    const timers = [80, 200, 400].map((ms) => window.setTimeout(focusAndScroll, ms));
+    return () => timers.forEach(clearTimeout);
+  }, [activeInlineMsgId, scrollInlineInputIntoView]);
+
+  const disableActiveMenus = useCallback(() => {
+    setMessages((prev) =>
+      prev.map((m) => (m.menuOptions ? { ...m, menuDisabled: true } : m)),
+    );
+    setActiveMenuMsgId(null);
+  }, []);
+
+  const disableActiveInlines = useCallback(() => {
+    setMessages((prev) =>
+      prev.map((m) => (m.inlineInput ? { ...m, inlineDisabled: true } : m)),
+    );
+    setActiveInlineMsgId(null);
+    setInlineDraft("");
+  }, []);
+
+  const activateInline = useCallback((msgId: string) => {
+    setActiveInlineMsgId(msgId);
+    setInlineDraft("");
+  }, []);
+
+  const appendBotMessage = useCallback(
+    (botMsg: Omit<Msg, "role">) => {
+      setMessages((prev) => [...prev, { ...botMsg, role: "bot" }]);
+      if (botMsg.menuOptions?.length) {
+        setActiveMenuMsgId(botMsg.id);
+      }
+      return botMsg.id;
+    },
+    [],
+  );
+
+  const showFollowUpMenu = useCallback(() => {
+    setFlow(CHAT_FLOW_IDLE);
+    appendBotMessage({
+      id: uid(),
+      text: CHAT_MENU_FOLLOWUP,
+      status: "ok",
+      menuOptions: MAIN_MENU_OPTIONS,
+    });
+  }, [appendBotMessage]);
+
+  const activateErrorMenu = useCallback((pendingId: string) => {
+    setFlow(CHAT_FLOW_IDLE);
+    setActiveMenuMsgId(pendingId);
+  }, []);
+
+  const resetPaymentFlow = useCallback(() => {
     setPendingPaymentTxId(null);
     setActivePaymentMsgId(null);
     setSelectedPayment(null);
     setPaymentCustomMode(false);
-  }
+  }, []);
 
-  function disablePaymentOptions() {
+  const resetEditFlow = useCallback(() => {
+    setPendingEdit(null);
+  }, []);
+
+  const resetPendingFlows = useCallback(() => {
+    resetPaymentFlow();
+    resetEditFlow();
+  }, [resetPaymentFlow, resetEditFlow]);
+
+  const disablePaymentOptions = useCallback(() => {
     setMessages((prev) =>
       prev.map((m) => (m.paymentOptions ? { ...m, paymentDisabled: true } : m)),
     );
     resetPaymentFlow();
-  }
+  }, [resetPaymentFlow]);
 
-  async function submitPayment(transactionId: string, paymentMethod: string, userLabel: string) {
-    const pendingId = uid();
-    setMessages((prev) => [
-      ...prev,
-      { id: uid(), role: "user", text: userLabel, status: "ok" },
-      { id: pendingId, role: "bot", text: "…", status: "sending" },
-    ]);
-    disablePaymentOptions();
-    setText("");
-
-    try {
-      const res = await fetch("/api/chat/payment", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transactionId, paymentMethod }),
-      });
-      const data = (await res.json().catch(() => null)) as
-        | { ok?: boolean; reply?: string }
-        | null;
-
-      const reply =
+  const fetchListReply = useCallback(async () => {
+    const res = await fetch("/api/chat/quick", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: "הצג את כל התנועות שלי" }),
+    });
+    const data = (await res.json().catch(() => null)) as { ok?: boolean; reply?: string } | null;
+    if (!data?.ok || !data.reply) {
+      return (
         data?.reply ||
         (res.status === 401
-          ? "לא עודכן\nצריך להתחבר מחדש."
-          : `לא עודכן\nשגיאת שרת (${res.status})`);
-
-      startTransition(() => {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === pendingId
-              ? { ...m, text: reply, status: data?.ok ? "ok" : "error" }
-              : m,
-          ),
-        );
-      });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
-      startTransition(() => {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === pendingId
-              ? { ...m, text: `לא עודכן\n${msg}`, status: "error" }
-              : m,
-          ),
-        );
-      });
-    } finally {
-      inputRef.current?.focus({ preventScroll: true });
+          ? formatChatFailure("צריך להתחבר מחדש.")
+          : formatChatFailure(`שגיאת שרת (${res.status})`))
+      );
     }
-  }
+    return data.reply;
+  }, []);
 
-  function pickPaymentOption(option: PaymentPick) {
+  const runQuickCommand = useCallback(
+    async (
+      command: string,
+      opts?: { showMenuOnComplete?: boolean },
+    ): Promise<{ ok: boolean; needsPayment?: boolean; transactionId?: string; pendingId?: string; edit?: PendingEdit }> => {
+      const pendingId = uid();
+      setMessages((prev) => [
+        ...prev,
+        { id: pendingId, role: "bot", text: "…", status: "sending" },
+      ]);
+      resetPendingFlows();
+
+      try {
+        const res = await fetch("/api/chat/quick", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: command }),
+        });
+        const data = (await res.json().catch(() => null)) as
+          | {
+              ok?: boolean;
+              reply?: string;
+              step?: string;
+              transaction?: { id: string };
+              edit?: PendingEdit;
+            }
+          | null;
+
+        const reply =
+          data?.reply ||
+          (res.status === 401
+            ? formatChatFailure("צריך להתחבר מחדש.")
+            : formatChatFailure(`שגיאת שרת (${res.status})`));
+
+        const needsPayment = Boolean(
+          data?.ok &&
+            (data.step === "payment" || data.step === "edit_payment") &&
+            data.transaction?.id,
+        );
+        const isOk = Boolean(data?.ok);
+
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId
+                ? {
+                    ...m,
+                    text: reply,
+                    status: isOk ? "ok" : "error",
+                    paymentOptions: needsPayment,
+                    paymentDisabled: false,
+                    ...(isOk ? {} : { menuOptions: [BACK_TO_MENU_OPTION], menuDisabled: false }),
+                  }
+                : m,
+            ),
+          );
+        });
+
+        if (!isOk) {
+          activateErrorMenu(pendingId);
+        } else if (needsPayment && data?.transaction?.id) {
+          setPendingPaymentTxId(data.transaction.id);
+          setActivePaymentMsgId(pendingId);
+          setSelectedPayment(null);
+          setPaymentCustomMode(false);
+        } else if (data?.ok && data.step === "edit_input" && data.edit) {
+          setPendingEdit(data.edit);
+          const kind = inlineInputKindForEditField(data.edit.field);
+          const placeholder = inlinePlaceholderForEditField(data.edit.field);
+          startTransition(() => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === pendingId
+                  ? {
+                      ...m,
+                      inlineInput: kind,
+                      inlinePlaceholder: placeholder,
+                    }
+                  : m,
+              ),
+            );
+          });
+          setActiveInlineMsgId(pendingId);
+          setInlineDraft("");
+        } else if (data?.ok && opts?.showMenuOnComplete !== false && !needsPayment && !data.edit) {
+          showFollowUpMenu();
+        }
+
+        return {
+          ok: isOk,
+          needsPayment,
+          transactionId: data?.transaction?.id,
+          pendingId,
+          edit: data?.edit,
+        };
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId ? { ...m, ...botErrorFields(formatChatFailure(msg)) } : m,
+            ),
+          );
+        });
+        activateErrorMenu(pendingId);
+        return { ok: false };
+      }
+    },
+    [activateErrorMenu, resetPendingFlows, showFollowUpMenu],
+  );
+
+  const submitFieldUpdate = useCallback(
+    async (edit: PendingEdit, value: string) => {
+      const userMsg: Msg = { id: uid(), role: "user", text: value, status: "ok" };
+      const pendingId = uid();
+
+      setMessages((prev) => [
+        ...prev,
+        userMsg,
+        { id: pendingId, role: "bot", text: "…", status: "sending" },
+      ]);
+      resetEditFlow();
+      disableActiveInlines();
+      setFlow(CHAT_FLOW_IDLE);
+
+      try {
+        const res = await fetch("/api/chat/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            transactionId: edit.transactionId,
+            field: edit.field,
+            value,
+          }),
+        });
+        const data = (await res.json().catch(() => null)) as
+          | { ok?: boolean; reply?: string }
+          | null;
+
+        const reply =
+          data?.reply ||
+          (res.status === 401
+            ? formatChatFailure("צריך להתחבר מחדש.")
+            : formatChatFailure(`שגיאת שרת (${res.status})`));
+        const isOk = Boolean(data?.ok);
+
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId
+                ? {
+                    ...m,
+                    text: reply,
+                    status: isOk ? "ok" : "error",
+                    ...(isOk ? {} : { menuOptions: [BACK_TO_MENU_OPTION], menuDisabled: false }),
+                  }
+                : m,
+            ),
+          );
+        });
+
+        if (isOk) showFollowUpMenu();
+        else activateErrorMenu(pendingId);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId ? { ...m, ...botErrorFields(formatChatFailure(msg)) } : m,
+            ),
+          );
+        });
+        activateErrorMenu(pendingId);
+      }
+    },
+    [activateErrorMenu, disableActiveInlines, resetEditFlow, showFollowUpMenu],
+  );
+
+  const submitPayment = useCallback(
+    async (transactionId: string, paymentMethod: string, userLabel: string) => {
+      const pendingId = uid();
+      setMessages((prev) => [
+        ...prev,
+        { id: uid(), role: "user", text: userLabel, status: "ok" },
+        { id: pendingId, role: "bot", text: "…", status: "sending" },
+      ]);
+      disablePaymentOptions();
+      setPaymentCustomMode(false);
+      setActiveInlineMsgId(null);
+      setInlineDraft("");
+      setFlow(CHAT_FLOW_IDLE);
+
+      try {
+        const res = await fetch("/api/chat/payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transactionId, paymentMethod }),
+        });
+        const data = (await res.json().catch(() => null)) as
+          | { ok?: boolean; reply?: string }
+          | null;
+
+        const reply =
+          data?.reply ||
+          (res.status === 401
+            ? "לא עודכן\nצריך להתחבר מחדש."
+            : `לא עודכן\nשגיאת שרת (${res.status})`);
+        const isOk = Boolean(data?.ok);
+
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId
+                ? {
+                    ...m,
+                    text: reply,
+                    status: isOk ? "ok" : "error",
+                    ...(isOk ? {} : { menuOptions: [BACK_TO_MENU_OPTION], menuDisabled: false }),
+                  }
+                : m,
+            ),
+          );
+        });
+
+        if (isOk) showFollowUpMenu();
+        else activateErrorMenu(pendingId);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId
+                ? { ...m, ...botErrorFields(`לא עודכן\n${msg}`) }
+                : m,
+            ),
+          );
+        });
+        activateErrorMenu(pendingId);
+      }
+    },
+    [activateErrorMenu, disablePaymentOptions, showFollowUpMenu],
+  );
+
+  const pickPaymentOption = (option: PaymentPick) => {
     if (!pendingPaymentTxId || busy) return;
 
     if (isOtherPaymentOption(option.id)) {
       setSelectedPayment(option);
       setPaymentCustomMode(true);
-      setText("");
-      inputRef.current?.focus({ preventScroll: true });
+      setInlineDraft("");
+      if (activePaymentMsgId) setActiveInlineMsgId(activePaymentMsgId);
       return;
     }
 
     setPaymentCustomMode(false);
+    setActiveInlineMsgId(null);
     setSelectedPayment(option);
-    setText("");
-  }
+    setInlineDraft("");
+  };
 
-  function backToPaymentOptions() {
+  const backToPaymentOptions = () => {
     setPaymentCustomMode(false);
     setSelectedPayment(null);
-    setText("");
-    inputRef.current?.focus({ preventScroll: true });
-  }
+    setInlineDraft("");
+    setActiveInlineMsgId(null);
+  };
 
-  function clearPaymentSelection() {
+  const clearPaymentSelection = () => {
     setSelectedPayment(null);
     setPaymentCustomMode(false);
-    setText("");
-  }
+    setInlineDraft("");
+    setActiveInlineMsgId(null);
+  };
 
-  function confirmPaymentSelection() {
+  const confirmPaymentSelection = () => {
     if (!pendingPaymentTxId || busy) return;
-
-    if (paymentCustomMode) {
-      const custom = text.trim();
-      if (!custom) return;
-      void submitPayment(pendingPaymentTxId, custom, custom);
-      return;
-    }
-
     if (!selectedPayment || isOtherPaymentOption(selectedPayment.id)) return;
     void submitPayment(pendingPaymentTxId, selectedPayment.value, selectedPayment.label);
-  }
+  };
 
-  async function sendExpense(raw: string) {
-    const value = raw.trim();
-    if (!value || busy) return;
+  const sendExpense = useCallback(
+    async (raw: string, opts?: { showMenuOnComplete?: boolean; skipUserMessage?: boolean }) => {
+      const value = raw.trim();
+      if (!value || busy) return;
 
-    const userMsg: Msg = { id: uid(), role: "user", text: value, status: "ok" };
+      const userMsg: Msg = { id: uid(), role: "user", text: value, status: "ok" };
+      const pendingId = uid();
+
+      setMessages((prev) => [
+        ...prev,
+        ...(opts?.skipUserMessage ? [] : [userMsg]),
+        { id: pendingId, role: "bot", text: "…", status: "sending" },
+      ]);
+      resetPendingFlows();
+
+      try {
+        const res = await fetch("/api/chat/quick", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: value }),
+        });
+        const data = (await res.json().catch(() => null)) as
+          | {
+              ok?: boolean;
+              reply?: string;
+              step?: string;
+              transaction?: { id: string };
+              edit?: PendingEdit;
+            }
+          | null;
+
+        const reply =
+          data?.reply ||
+          (res.status === 401
+            ? formatChatFailure("צריך להתחבר מחדש כדי להוסיף תנועה.")
+            : formatChatFailure(`שגיאת שרת (${res.status})`));
+
+        const needsPayment = Boolean(
+          data?.ok &&
+            (data.step === "payment" || data.step === "edit_payment") &&
+            data.transaction?.id,
+        );
+        const isOk = Boolean(data?.ok);
+
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId
+                ? {
+                    ...m,
+                    text: reply,
+                    status: isOk ? "ok" : "error",
+                    paymentOptions: needsPayment,
+                    paymentDisabled: false,
+                    ...(isOk ? {} : { menuOptions: [BACK_TO_MENU_OPTION], menuDisabled: false }),
+                  }
+                : m,
+            ),
+          );
+        });
+
+        if (!isOk) {
+          activateErrorMenu(pendingId);
+        } else if (needsPayment && data?.transaction?.id) {
+          setPendingPaymentTxId(data.transaction.id);
+          setActivePaymentMsgId(pendingId);
+          setSelectedPayment(null);
+          setPaymentCustomMode(false);
+        } else if (data?.ok && data.step === "edit_input" && data.edit) {
+          setPendingEdit(data.edit);
+          const kind = inlineInputKindForEditField(data.edit.field);
+          const placeholder = inlinePlaceholderForEditField(data.edit.field);
+          startTransition(() => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === pendingId
+                  ? {
+                      ...m,
+                      inlineInput: kind,
+                      inlinePlaceholder: placeholder,
+                    }
+                  : m,
+              ),
+            );
+          });
+          setActiveInlineMsgId(pendingId);
+          setInlineDraft("");
+        } else if (
+          data?.ok &&
+          opts?.showMenuOnComplete !== false &&
+          !needsPayment &&
+          data.step !== "edit_input"
+        ) {
+          showFollowUpMenu();
+        }
+
+        return isOk;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId ? { ...m, ...botErrorFields(formatChatFailure(msg)) } : m,
+            ),
+          );
+        });
+        activateErrorMenu(pendingId);
+        return false;
+      }
+    },
+    [activateErrorMenu, busy, resetPendingFlows, showFollowUpMenu],
+  );
+
+  const runListFromMenu = useCallback(async () => {
     const pendingId = uid();
-
     setMessages((prev) => [
       ...prev,
-      userMsg,
       { id: pendingId, role: "bot", text: "…", status: "sending" },
     ]);
-    setText("");
-    disablePaymentOptions();
 
     try {
-      const res = await fetch("/api/chat/quick", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: value }),
-      });
-      const data = (await res.json().catch(() => null)) as
-        | {
-            ok?: boolean;
-            reply?: string;
-            step?: string;
-            transaction?: { id: string };
-          }
-        | null;
-
-      const reply =
-        data?.reply ||
-        (res.status === 401
-          ? formatChatFailure("צריך להתחבר מחדש כדי להוסיף תנועה.")
-          : formatChatFailure(`שגיאת שרת (${res.status})`));
-
-      const needsPayment = Boolean(data?.ok && data.step === "payment" && data.transaction?.id);
-
+      const reply = await fetchListReply();
+      const isError = reply.startsWith("התהליך לא הצליח");
       startTransition(() => {
         setMessages((prev) =>
           prev.map((m) =>
@@ -278,64 +752,318 @@ export default function ChatClient() {
               ? {
                   ...m,
                   text: reply,
-                  status: data?.ok ? "ok" : "error",
-                  paymentOptions: needsPayment,
-                  paymentDisabled: false,
+                  status: isError ? "error" : "ok",
+                  ...(isError ? { menuOptions: [BACK_TO_MENU_OPTION], menuDisabled: false } : {}),
                 }
               : m,
           ),
         );
       });
+      if (isError) activateErrorMenu(pendingId);
+      else showFollowUpMenu();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId ? { ...m, ...botErrorFields(formatChatFailure(msg)) } : m,
+          ),
+        );
+      });
+      activateErrorMenu(pendingId);
+    }
+  }, [activateErrorMenu, fetchListReply, showFollowUpMenu]);
 
-      if (needsPayment && data?.transaction?.id) {
-        setPendingPaymentTxId(data.transaction.id);
-        setActivePaymentMsgId(pendingId);
-        setSelectedPayment(null);
-        setPaymentCustomMode(false);
+  const runDeleteStart = useCallback(async () => {
+    setFlow({ kind: "delete" });
+    const pendingId = uid();
+    setMessages((prev) => [
+      ...prev,
+      { id: pendingId, role: "bot", text: "…", status: "sending" },
+    ]);
+
+    try {
+      const listReply = await fetchListReply();
+      const isEmpty = isEmptyTransactionListReply(listReply);
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId
+              ? {
+                  ...m,
+                  text: isEmpty ? listReply : `${listReply}\n\n${CHAT_DELETE_PROMPT}`,
+                  status: "ok",
+                  menuOptions: [BACK_TO_MENU_OPTION],
+                  inlineInput: isEmpty ? undefined : "number",
+                  inlinePlaceholder: CHAT_DELETE_PLACEHOLDER,
+                }
+              : m,
+          ),
+        );
+      });
+      setActiveMenuMsgId(pendingId);
+      if (isEmpty) {
+        setFlow(CHAT_FLOW_IDLE);
+      } else {
+        activateInline(pendingId);
       }
     } catch (e) {
       const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
       startTransition(() => {
         setMessages((prev) =>
           prev.map((m) =>
+            m.id === pendingId ? { ...m, ...botErrorFields(formatChatFailure(msg)) } : m,
+          ),
+        );
+      });
+      activateErrorMenu(pendingId);
+    }
+  }, [activateErrorMenu, activateInline, fetchListReply, showFollowUpMenu]);
+
+  const runEditStart = useCallback(async () => {
+    const pendingId = uid();
+    setMessages((prev) => [
+      ...prev,
+      { id: pendingId, role: "bot", text: "…", status: "sending" },
+    ]);
+
+    try {
+      const listReply = await fetchListReply();
+      const isEmpty = isEmptyTransactionListReply(listReply);
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
             m.id === pendingId
-              ? { ...m, text: formatChatFailure(msg), status: "error" }
+              ? {
+                  ...m,
+                  text: isEmpty ? listReply : `${listReply}\n\n${CHAT_EDIT_PROMPT}`,
+                  status: "ok",
+                  menuOptions: isEmpty
+                    ? [BACK_TO_MENU_OPTION]
+                    : [...EDIT_FIELD_MENU_OPTIONS, BACK_TO_MENU_OPTION],
+                }
               : m,
           ),
         );
       });
-    } finally {
-      inputRef.current?.focus({ preventScroll: true });
+      setActiveMenuMsgId(pendingId);
+      setFlow(isEmpty ? CHAT_FLOW_IDLE : { kind: "edit_field" });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId ? { ...m, ...botErrorFields(formatChatFailure(msg)) } : m,
+          ),
+        );
+      });
+      activateErrorMenu(pendingId);
     }
-  }
+  }, [activateErrorMenu, fetchListReply, showFollowUpMenu]);
 
-  async function send(raw: string) {
-    const value = raw.trim();
-    if (!value || busy) return;
+  const handleMenuPick = useCallback(
+    async (option: MenuOption) => {
+      if (busy) return;
+      disableActiveMenus();
+      setMessages((prev) => [
+        ...prev,
+        { id: uid(), role: "user", text: option.label, status: "ok" },
+      ]);
 
-    if (paymentCustomMode && pendingPaymentTxId) {
-      await submitPayment(pendingPaymentTxId, value, value);
-      return;
-    }
+      if (option.id === "back_menu") {
+        setFlow(CHAT_FLOW_IDLE);
+        disableActiveInlines();
+        showFollowUpMenu();
+        return;
+      }
 
-    await sendExpense(value);
-  }
+      if (option.id === "add") {
+        const msgId = uid();
+        setFlow({ kind: "add" });
+        appendBotMessage({
+          id: msgId,
+          text: CHAT_ADD_PROMPT,
+          status: "ok",
+          menuOptions: [BACK_TO_MENU_OPTION],
+          inlineInput: "expense",
+          inlinePlaceholder: CHAT_ADD_PLACEHOLDER,
+        });
+        activateInline(msgId);
+        return;
+      }
 
-  const inputPlaceholder = paymentCustomMode ? "הקלד אמצעי תשלום…" : "הקלד הודעה…";
+      if (option.id === "list") {
+        setFlow(CHAT_FLOW_IDLE);
+        disableActiveInlines();
+        await runListFromMenu();
+        return;
+      }
+
+      if (option.id === "delete") {
+        disableActiveInlines();
+        await runDeleteStart();
+        return;
+      }
+
+      if (option.id === "edit") {
+        disableActiveInlines();
+        await runEditStart();
+        return;
+      }
+
+      const field = menuIdToEditField(option.id);
+      if (field && flow.kind === "edit_field") {
+        setFlow({ kind: "edit_index", field });
+        const msgId = uid();
+        appendBotMessage({
+          id: msgId,
+          text: CHAT_EDIT_INDEX_PROMPT,
+          status: "ok",
+          menuOptions: [BACK_TO_MENU_OPTION],
+          inlineInput: "number",
+          inlinePlaceholder: CHAT_EDIT_INDEX_PLACEHOLDER,
+        });
+        activateInline(msgId);
+      }
+    },
+    [
+      activateInline,
+      appendBotMessage,
+      busy,
+      disableActiveInlines,
+      disableActiveMenus,
+      flow.kind,
+      runDeleteStart,
+      runEditStart,
+      runListFromMenu,
+      showFollowUpMenu,
+    ],
+  );
+
+  const processUserInput = useCallback(
+    async (raw: string) => {
+      const value = raw.trim();
+      if (!value || busy) return;
+      stickToBottomRef.current = true;
+
+      const appendUser = () => {
+        setMessages((prev) => [
+          ...prev,
+          { id: uid(), role: "user", text: value, status: "ok" as const },
+        ]);
+      };
+
+      if (paymentCustomMode && pendingPaymentTxId) {
+        await submitPayment(pendingPaymentTxId, value, value);
+        return;
+      }
+
+      if (pendingEdit) {
+        disableActiveInlines();
+        appendUser();
+        await submitFieldUpdate(pendingEdit, value);
+        return;
+      }
+
+      if (flow.kind === "delete") {
+        disableActiveMenus();
+        disableActiveInlines();
+        const index = parseTransactionIndex(value);
+        if (!index) {
+          const errId = appendBotMessage({
+            id: uid(),
+            text: formatChatFailure("כתוב מספר תנועה תקין, למשל: 1"),
+            status: "error",
+            menuOptions: [BACK_TO_MENU_OPTION],
+          });
+          activateErrorMenu(errId);
+          return;
+        }
+        appendUser();
+        setFlow(CHAT_FLOW_IDLE);
+        await runQuickCommand(`תמחק תנועה מספר ${index}`);
+        return;
+      }
+
+      if (flow.kind === "edit_index") {
+        disableActiveMenus();
+        disableActiveInlines();
+        const index = parseTransactionIndex(value);
+        if (!index) {
+          const errId = appendBotMessage({
+            id: uid(),
+            text: formatChatFailure("כתוב מספר תנועה תקין, למשל: 2"),
+            status: "error",
+            menuOptions: [BACK_TO_MENU_OPTION],
+          });
+          activateErrorMenu(errId);
+          return;
+        }
+        const field = flow.field;
+        appendUser();
+        setFlow(CHAT_FLOW_IDLE);
+        await runQuickCommand(editFieldToCommand(field, index), {
+          showMenuOnComplete: field !== "payment",
+        });
+        return;
+      }
+
+      if (flow.kind === "add") {
+        disableActiveMenus();
+        disableActiveInlines();
+        appendUser();
+        setFlow(CHAT_FLOW_IDLE);
+        await sendExpense(value, { skipUserMessage: true });
+        return;
+      }
+    },
+    [
+      activateErrorMenu,
+      appendBotMessage,
+      busy,
+      disableActiveInlines,
+      disableActiveMenus,
+      flow,
+      pendingEdit,
+      paymentCustomMode,
+      pendingPaymentTxId,
+      runQuickCommand,
+      sendExpense,
+      submitFieldUpdate,
+      submitPayment,
+    ],
+  );
+
+  const handleInlineSubmit = () => {
+    if (!inlineDraft.trim() || busy) return;
+    const draft = inlineDraft;
+    setInlineDraft("");
+    void processUserInput(draft);
+  };
+
   const canConfirmPreset = Boolean(
     selectedPayment && !paymentCustomMode && !isOtherPaymentOption(selectedPayment.id),
   );
-  const canConfirmCustom = Boolean(paymentCustomMode && text.trim());
 
   return (
     <div ref={pageRef} className="nf-chat-page">
       <ChatTopBar />
 
       <div className="nf-chat-thread">
-        <div ref={listRef} className="nf-chat-messages" role="log" aria-live="polite">
+        <div
+          ref={listRef}
+          className="nf-chat-messages"
+          role="log"
+          aria-live="polite"
+          onScroll={handleMessagesScroll}
+        >
           {messages.map((m) => {
             const isActivePayment =
               m.paymentOptions && m.id === activePaymentMsgId && !m.paymentDisabled;
+            const isActiveMenu =
+              m.menuOptions && m.id === activeMenuMsgId && !m.menuDisabled;
+            const isActiveInline =
+              m.inlineInput && m.id === activeInlineMsgId && !m.inlineDisabled;
 
             return (
               <div key={m.id} className={`nf-bubble-row ${m.role === "user" ? "is-user" : "is-bot"}`}>
@@ -353,12 +1081,29 @@ export default function ChatClient() {
                     m.status === "sending" ? "is-sending" : ""
                   } ${m.status === "error" ? "is-error" : ""}`}
                 >
-                  {m.text}
+                  <span className="nf-bubble-text">{m.text}</span>
+                  {m.menuOptions && (
+                    <ChatMenuButtons
+                      options={m.menuOptions}
+                      disabled={busy || !isActiveMenu}
+                      onPick={handleMenuPick}
+                    />
+                  )}
+                  {isActiveInline && (
+                    <div data-inline-msg={m.id}>
+                      <ChatInlineInput
+                        value={inlineDraft}
+                        placeholder={m.inlinePlaceholder ?? ""}
+                        inputMode={m.inlineInput === "number" || m.inlineInput === "date" ? "decimal" : "text"}
+                        disabled={busy}
+                        onChange={setInlineDraft}
+                        onSubmit={handleInlineSubmit}
+                        onFocus={() => scrollInlineInputIntoView(m.id, "smooth")}
+                      />
+                    </div>
+                  )}
                   {m.paymentOptions && (
                     <>
-                      {isActivePayment && paymentCustomMode && (
-                        <p className="nf-payment-custom-hint">{CHAT_PAYMENT_OTHER_PROMPT}</p>
-                      )}
                       <div className="nf-payment-options">
                         {CHAT_PAYMENT_OPTIONS.map((option) => {
                           const isSelected = isActivePayment && selectedPayment?.id === option.id;
@@ -382,29 +1127,29 @@ export default function ChatClient() {
                           );
                         })}
                       </div>
+                      {isActivePayment && paymentCustomMode && (
+                        <div data-inline-msg={m.id}>
+                          <ChatInlineInput
+                            value={inlineDraft}
+                            placeholder={CHAT_PAYMENT_OTHER_PROMPT}
+                            disabled={busy}
+                            onChange={setInlineDraft}
+                            onSubmit={handleInlineSubmit}
+                            onFocus={() => scrollInlineInputIntoView(m.id, "smooth")}
+                          />
+                        </div>
+                      )}
                       {isActivePayment && (
                         <div className="nf-payment-actions">
                           {paymentCustomMode ? (
-                            <>
-                              <button
-                                type="button"
-                                className="nf-payment-back"
-                                disabled={busy}
-                                onClick={backToPaymentOptions}
-                              >
-                                חזרה לבחירה
-                              </button>
-                              {canConfirmCustom && (
-                                <button
-                                  type="button"
-                                  className="nf-payment-confirm"
-                                  disabled={busy}
-                                  onClick={confirmPaymentSelection}
-                                >
-                                  אישור
-                                </button>
-                              )}
-                            </>
+                            <button
+                              type="button"
+                              className="nf-payment-back"
+                              disabled={busy}
+                              onClick={backToPaymentOptions}
+                            >
+                              חזרה לבחירה
+                            </button>
                           ) : (
                             <>
                               {selectedPayment && (
@@ -439,65 +1184,6 @@ export default function ChatClient() {
           })}
         </div>
       </div>
-
-      <form
-        ref={composerRef}
-        className="nf-chat-composer"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (paymentCustomMode && canConfirmCustom) {
-            confirmPaymentSelection();
-            return;
-          }
-          void send(text);
-        }}
-      >
-        <label htmlFor={inputId} className="sr-only">
-          הודעה
-        </label>
-        <input
-          id={inputId}
-          ref={inputRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onFocus={(e) => {
-            e.target.focus({ preventScroll: true });
-            const page = pageRef.current;
-            const vv = window.visualViewport;
-            if (page && vv) {
-              const rawKb = Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height));
-              applyKeyboardInset(page, rawKb);
-            }
-          }}
-          placeholder={inputPlaceholder}
-          autoComplete="off"
-          autoCorrect="on"
-          autoCapitalize="sentences"
-          spellCheck
-          enterKeyHint={paymentCustomMode ? "done" : "send"}
-          inputMode="text"
-          className="nf-chat-input"
-        />
-        <button
-          type="submit"
-          className="nf-chat-send"
-          disabled={
-            busy ||
-            (paymentCustomMode ? !canConfirmCustom : !text.trim())
-          }
-          aria-label={paymentCustomMode ? "אישור" : "שלח"}
-        >
-          {paymentCustomMode ? (
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor">
-              <path d="M3.4 20.6 21 12 3.4 3.4l.1 6.8L15 12 3.5 13.8z" />
-            </svg>
-          )}
-        </button>
-      </form>
     </div>
   );
 }

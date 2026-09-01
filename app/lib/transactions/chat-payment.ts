@@ -26,7 +26,7 @@ export function normalizePaymentMethod(raw: string): string | null {
 }
 
 export function formatPaymentMethodLabel(cardLast4: string | null | undefined): string {
-  if (!cardLast4) return "—";
+  if (!cardLast4) return "-";
   const known = CHAT_PAYMENT_OPTIONS.find((o) => o.value === cardLast4);
   return known?.label ?? cardLast4;
 }

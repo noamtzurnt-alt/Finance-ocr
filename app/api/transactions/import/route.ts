@@ -22,7 +22,6 @@ const importSchema = z.object({
     .default([]),
   deleteIds: z.array(z.string().uuid()).max(500).default([]),
   cardLast4: z.string().max(8).nullable().optional(),
-  isFixed: z.boolean().optional(),
 });
 
 function parseDateOnly(s: string) {
@@ -142,7 +141,7 @@ export async function POST(req: Request) {
     }
   }
 
-  // Stage 2: confirm merge — create kept CAL rows + delete trashed existing
+  // Stage 2: confirm merge, create kept CAL rows + delete trashed existing
   const json = await req.json().catch(() => null);
   const parsed = importSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
@@ -216,7 +215,6 @@ export async function POST(req: Request) {
           description: row.description?.trim() || null,
           categoryId: row.categoryId && allowedCategoryIds.has(row.categoryId) ? row.categoryId : null,
           cardLast4: parsed.data.cardLast4?.trim() || null,
-          isFixed: parsed.data.isFixed ?? false,
         },
       });
       created++;

@@ -1,14 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/prisma";
-import { hashPassword } from "@/app/lib/auth/password";
 import { signSessionToken } from "@/app/lib/auth/session";
 import { setSessionCookie } from "@/app/lib/auth/cookies";
 import { DEFAULT_CATEGORIES } from "@/app/lib/categories/defaults";
 
 const bodySchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
 });
 
 export async function POST(req: Request) {
@@ -26,11 +24,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
   }
 
-  const { email, password } = parsed.data;
-  const passwordHash = await hashPassword(password);
+  const { email } = parsed.data;
 
   const user = await prisma.user.create({
-    data: { email: email.toLowerCase(), passwordHash, isAdmin: true, approved: true },
+    data: { email: email.toLowerCase() },
     select: { id: true, email: true },
   });
 
@@ -39,10 +36,9 @@ export async function POST(req: Request) {
     data: [...DEFAULT_CATEGORIES].map((name) => ({ userId: user.id, name })),
   });
 
+  // Sign the user in right away so the client can immediately register a passkey.
   const token = await signSessionToken({ sub: user.id, email: user.email }, secret);
   await setSessionCookie(token);
 
   return NextResponse.json({ ok: true });
 }
-
-

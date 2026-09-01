@@ -11,7 +11,6 @@ const createSchema = z.object({
   categoryId: z.string().optional().nullable(),
   currency: z.string().optional(),
   cardLast4: z.string().optional().nullable(),
-  isFixed: z.boolean().optional(),
 });
 
 function parseDateOnly(s: string) {
@@ -73,7 +72,6 @@ export async function GET(req: Request) {
       categoryName: t.category?.name ?? null,
       categoryScope: t.category?.budgetScope ?? null,
       cardLast4: t.cardLast4,
-      isFixed: t.isFixed,
       updatedAt: t.updatedAt.toISOString(),
     })),
   );
@@ -105,7 +103,6 @@ export async function POST(req: Request) {
       description: parsed.data.description?.trim() || null,
       categoryId: parsed.data.categoryId || null,
       cardLast4: parsed.data.cardLast4?.trim() || null,
-      isFixed: parsed.data.isFixed ?? false,
     },
     select: { id: true },
   });

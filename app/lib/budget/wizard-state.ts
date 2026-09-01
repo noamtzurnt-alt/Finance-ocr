@@ -5,7 +5,6 @@ const expenseRowSchema = z.object({
   icon: z.string(),
   label: z.string(),
   amount: z.string(),
-  isFixed: z.boolean(),
   notes: z.string().optional(),
 });
 

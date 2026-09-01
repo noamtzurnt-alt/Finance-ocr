@@ -101,7 +101,7 @@ export default function ReceiptUploadMonthModal(props: {
                   disabled={props.uploading}
                   required
                 >
-                  <option value="">— בחר חודש —</option>
+                  <option value="">בחר חודש</option>
                   {months.map((m) => (
                     <option key={m.value} value={m.value}>
                       {m.label}

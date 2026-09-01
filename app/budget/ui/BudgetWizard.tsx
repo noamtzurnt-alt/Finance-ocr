@@ -9,25 +9,24 @@ type ExpenseRow = {
   icon: string;
   label: string;
   amount: string;
-  isFixed: boolean;
   notes?: string;
 };
 
 const DEFAULT_PERSONAL_EXPENSE_ROWS: ExpenseRow[] = [
-  { id: "car",           icon: "🚗", label: "דלק/רכב",                amount: "", isFixed: true },
-  { id: "food",          icon: "🍽", label: "אוכל",                   amount: "", isFixed: false },
-  { id: "entertainment", icon: "🎉", label: "בזבוזים",                amount: "", isFixed: false },
-  { id: "events",        icon: "🎂", label: "יום הולדת/אירוע מיוחד", amount: "", isFixed: false },
-  { id: "books",         icon: "📌", label: "ספר",                    amount: "", isFixed: false },
-  { id: "train",         icon: "📌", label: "רכבת",                   amount: "", isFixed: false },
+  { id: "car",           icon: "🚗", label: "דלק/רכב",                amount: "" },
+  { id: "food",          icon: "🍽", label: "אוכל",                   amount: "" },
+  { id: "entertainment", icon: "🎉", label: "בזבוזים",                amount: "" },
+  { id: "events",        icon: "🎂", label: "יום הולדת/אירוע מיוחד", amount: "" },
+  { id: "books",         icon: "📌", label: "ספר",                    amount: "" },
+  { id: "train",         icon: "📌", label: "רכבת",                   amount: "" },
 ];
 
 const DEFAULT_BUSINESS_EXPENSE_ROWS: ExpenseRow[] = [
-  { id: "biz_software",   icon: "💻", label: "תוכנות ומנויים",       amount: "", isFixed: true,  notes: "" },
-  { id: "biz_phones",     icon: "📱", label: "מספרי טלפון",          amount: "", isFixed: true,  notes: "" },
-  { id: "biz_domain",     icon: "🌐", label: "דומיין",               amount: "", isFixed: true,  notes: "" },
-  { id: "biz_whatsapp",   icon: "💬", label: "עלות הודעות ווצאפ",    amount: "", isFixed: false, notes: "" },
-  { id: "biz_accountant", icon: "📊", label: "עלות רואה חשבון",      amount: "", isFixed: true,  notes: "" },
+  { id: "biz_software",   icon: "💻", label: "תוכנות ומנויים",       amount: "", notes: "" },
+  { id: "biz_phones",     icon: "📱", label: "מספרי טלפון",          amount: "", notes: "" },
+  { id: "biz_domain",     icon: "🌐", label: "דומיין",               amount: "", notes: "" },
+  { id: "biz_whatsapp",   icon: "💬", label: "עלות הודעות ווצאפ",    amount: "", notes: "" },
+  { id: "biz_accountant", icon: "📊", label: "עלות רואה חשבון",      amount: "", notes: "" },
 ];
 
 type IncomeSources = {
@@ -115,10 +114,8 @@ function computeBusinessDeficit(a: WizardAnswers): number {
 }
 
 function normalizeExpenseRows(rows: ExpenseRow[]): ExpenseRow[] {
-  const fixedByDefault = new Set(["car"]);
   return rows.map((r) => ({
     ...r,
-    isFixed: r.isFixed ?? fixedByDefault.has(r.id),
     notes: r.notes ?? "",
   }));
 }
@@ -223,7 +220,7 @@ function StepBanner({ step }: { step: WizardStep }) {
   const meta = STEP_META[step - 1];
   const subtitles = [
     "כמה נכנס לכיס החודש? אפשר לשלב שכיר + עצמאי",
-    "חלק לחיים, חלק לעסק — קטגוריה אחר קטגוריה",
+    "חלק לחיים, חלק לעסק, קטגוריה אחר קטגוריה",
     "התמונה המלאה: נכנס, יוצא, חיסכון ומה נשאר",
   ];
   return (
@@ -267,7 +264,6 @@ type ExpenseTableProps = {
   rows: ExpenseRow[];
   onRowsChange: (rows: ExpenseRow[]) => void;
   showNotes?: boolean;
-  showFixedToggle?: boolean;
   businessSubsidy?: number;
 };
 
@@ -282,7 +278,6 @@ function ExpenseBudgetTable({
   rows,
   onRowsChange,
   showNotes = false,
-  showFixedToggle = true,
   businessSubsidy,
 }: ExpenseTableProps) {
   const savingsAmt = savings ? Number(savings.value) || 0 : 0;
@@ -298,7 +293,7 @@ function ExpenseBudgetTable({
   }
   const remaining = bal;
 
-  function updateRow(id: string, field: keyof ExpenseRow, value: string | boolean) {
+  function updateRow(id: string, field: keyof ExpenseRow, value: string) {
     onRowsChange(rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   }
 
@@ -309,7 +304,7 @@ function ExpenseBudgetTable({
   function addRow() {
     onRowsChange([
       ...rows,
-      { id: `custom_${Date.now()}`, icon: "📌", label: "", amount: "", isFixed: false, notes: "" },
+      { id: `custom_${Date.now()}`, icon: "📌", label: "", amount: "", notes: "" },
     ]);
   }
 
@@ -328,9 +323,6 @@ function ExpenseBudgetTable({
               {showNotes && (
                 <th className="px-3 py-2 text-right text-xs font-semibold text-zinc-500">פירוט</th>
               )}
-              {showFixedToggle && (
-                <th className="px-3 py-2 text-center text-xs font-semibold text-zinc-500 w-20">סוג</th>
-              )}
               <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500 w-32">סכום חודשי ₪</th>
               <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500 w-24">יתרה</th>
               <th className="w-8"></th>
@@ -345,7 +337,6 @@ function ExpenseBudgetTable({
                 </div>
               </td>
               {showNotes && <td></td>}
-              {showFixedToggle && <td></td>}
               <td className="px-3 py-2.5 text-left">
                 <span className="text-sm font-bold text-emerald-700">+{income.toLocaleString()} ₪</span>
               </td>
@@ -369,7 +360,6 @@ function ExpenseBudgetTable({
                     </div>
                   </td>
                   {showNotes && <td></td>}
-                  {showFixedToggle && <td></td>}
                   <td className="px-3 py-1.5 text-left">
                     <input
                       type="text"
@@ -424,21 +414,6 @@ function ExpenseBudgetTable({
                         placeholder="הערות פירוט..."
                         className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 placeholder:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-violet-300"
                       />
-                    </td>
-                  )}
-                  {showFixedToggle && (
-                    <td className="px-3 py-1.5 text-center">
-                      <button
-                        type="button"
-                        onClick={() => updateRow(row.id, "isFixed", !row.isFixed)}
-                        className={`rounded-lg px-2 py-0.5 text-[0.65rem] font-semibold transition ${
-                          row.isFixed
-                            ? "bg-amber-100 text-amber-800 border border-amber-300"
-                            : "bg-zinc-100 text-zinc-500 border border-zinc-200 hover:border-zinc-300"
-                        }`}
-                      >
-                        {row.isFixed ? "קבוע" : "משתנה"}
-                      </button>
                     </td>
                   )}
                   <td className="px-3 py-1.5 text-left">
@@ -496,7 +471,6 @@ function ExpenseBudgetTable({
                     </div>
                   </td>
                   {showNotes && <td></td>}
-                  {showFixedToggle && <td></td>}
                   <td className="px-3 py-1.5 text-left">
                     <span className={`inline-block w-full rounded-lg border px-2 py-1 text-right text-sm font-semibold tabular-nums ${
                       subsidyAmt > 0
@@ -521,7 +495,6 @@ function ExpenseBudgetTable({
                 <span className="text-sm font-bold text-zinc-700">{remaining < 0 ? "⚠️ חריגה מהכנסה" : "✅ יתרה"}</span>
               </td>
               {showNotes && <td></td>}
-              {showFixedToggle && <td></td>}
               <td className="px-3 py-2.5 text-left text-xs text-zinc-400">
                 הוצאות: {sumExpenseRows(rows).toLocaleString()} ₪
                 {subsidyAmt > 0 && ` + השלמה לעסק: ${subsidyAmt.toLocaleString()} ₪`}
@@ -1059,7 +1032,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
         <div className="relative flex items-center justify-between">
           <div>
             <h2 className="text-lg font-bold tracking-tight">✨ תכנון תקציב</h2>
-            <p className="mt-1 text-sm text-white/85">הכסף שלך, בצבע ובבהירות — בלי כאבי ראש</p>
+            <p className="mt-1 text-sm text-white/85">הכסף שלך, בצבע ובבהירות, בלי כאבי ראש</p>
           </div>
           <div className="flex items-center gap-2">
             {done && (
@@ -1119,7 +1092,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
 
         {done && step < 3 && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-violet-200 bg-gradient-to-l from-violet-50 to-fuchsia-50 px-4 py-3 shadow-sm">
-            <span className="text-sm font-medium text-violet-800">✏️ מצב עריכה — שינוי נקודתי</span>
+            <span className="text-sm font-medium text-violet-800">✏️ מצב עריכה, שינוי נקודתי</span>
             <button type="button" onClick={returnToSummary} className="rounded-lg bg-violet-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98]">
               חזרה לסיכום ✨
             </button>
@@ -1214,7 +1187,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
                   )}
                   {s.businessNet > 0 && s.personalNet > 0 && (
                     <div className="text-xs text-emerald-700 pt-1 border-t border-emerald-200">
-                      בשלב 2 תבנה תקציב נפרד לכל אחד. אם העסק במינוס — תשלים מהאישי.
+                      בשלב 2 תבנה תקציב נפרד לכל אחד. אם העסק במינוס, תשלים מהאישי.
                     </div>
                   )}
                 </div>
@@ -1236,9 +1209,6 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
           const personalExpenses = sumExpenseRows(answers.expenseRows);
           const savings = Number(answers.monthlySavings) || 0;
           const personalRemaining = personalIncome - savings - personalExpenses - businessDeficit;
-          const fixedTotal = answers.expenseRows
-            .filter((r) => r.isFixed)
-            .reduce((s, r) => s + (Number(r.amount) || 0), 0);
 
           return (
             <div className="space-y-5">
@@ -1255,22 +1225,11 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
                   rows={answers.businessExpenseRows}
                   onRowsChange={(rows) => set("businessExpenseRows", rows)}
                   showNotes
-                  showFixedToggle={false}
                 />
               )}
 
               {showPersonal && (
                 <>
-                  {fixedTotal > 0 && answers.incomeSources.steady && Number(answers.salaryIncome) > 0 && (
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-                      הוצאות קבועות אישיות: <strong>{fixedTotal.toLocaleString()} ₪</strong>
-                      {" "}— משכורת: {Number(answers.salaryIncome).toLocaleString()} ₪
-                      {Number(answers.salaryIncome) < fixedTotal
-                        ? " (לא מכסה את הקבועות!)"
-                        : ` (נשארים ${(Number(answers.salaryIncome) - fixedTotal).toLocaleString()} ₪)`}
-                    </div>
-                  )}
-
                   <ExpenseBudgetTable
                     title="תקציב חיים אישיים"
                     subtitle={`הכנסה אישית: ${personalIncome.toLocaleString()} ₪`}
@@ -1332,7 +1291,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
           </div>
         )}
 
-        {/* Navigation — always visible */}
+        {/* Navigation, always visible */}
         <div className="mt-6 flex items-center justify-between border-t border-violet-100/80 pt-4">
           {step > 1 ? (
             <button
@@ -1352,7 +1311,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
             </span>
           )}
 
-          {/* Forward button — steps 1–4 only */}
+          {/* Forward button, steps 1–4 only */}
           {step < 3 ? (
             <button
               type="button"

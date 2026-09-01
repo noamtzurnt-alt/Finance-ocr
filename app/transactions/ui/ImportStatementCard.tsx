@@ -172,7 +172,7 @@ export default function ImportStatementCard(props: {
         categoryScope: r.categoryScope ?? null,
         confidence: r.confidence ?? "unclassified",
         classificationReason: r.reason ?? "לא סווג",
-        // If already exists manually — discard CAL copy by default (don't overwrite)
+        // If already exists manually, discard CAL copy by default (don't overwrite)
         discarded: Boolean(r.matchExisting),
       }));
 
@@ -207,7 +207,7 @@ export default function ImportStatementCard(props: {
     const toDelete = rows.filter((r): r is ExistingPreviewRow => r.source === "manual" && r.discarded);
 
     if (toCreate.length === 0 && toDelete.length === 0) {
-      setError("לא נבחרו שינוים — מחק תנועות או השאר תנועות מכאל");
+      setError("לא נבחרו שינוים, מחק תנועות או השאר תנועות מכאל");
       return;
     }
     setBusy(true);
@@ -226,7 +226,6 @@ export default function ImportStatementCard(props: {
           })),
           deleteIds: toDelete.map((r) => r.id),
           cardLast4: cardLast4 || null,
-          isFixed: false,
         }),
       });
       const body = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -266,7 +265,7 @@ export default function ImportStatementCard(props: {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-lg font-bold text-zinc-900">
-                    {inPreview ? "תצוגה מקדימה — מיזוג תנועות" : "ייבוא תנועות מכאל"}
+                    {inPreview ? "תצוגה מקדימה, מיזוג תנועות" : "ייבוא תנועות מכאל"}
                   </h2>
                   <p className="mt-1 text-sm text-zinc-600">
                     {inPreview

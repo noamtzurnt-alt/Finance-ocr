@@ -1,3 +1,10 @@
+import {
+  parseDeleteByIndexIntent,
+  parseEditByIndexIntent,
+  parseListIntent,
+  type ChatEditField,
+} from "@/app/lib/transactions/chat-commands";
+
 export type QuickCurrency = "ILS" | "USD" | "EUR";
 
 export type QuickTransaction = {
@@ -14,6 +21,9 @@ export type ParseQuickResult =
 export type ChatIntent =
   | { type: "create"; tx: QuickTransaction }
   | { type: "delete"; vendor: string; amount: number | null; currency: QuickCurrency | null }
+  | { type: "deleteByIndex"; index: number }
+  | { type: "list" }
+  | { type: "editByIndex"; index: number; field: ChatEditField }
   | { type: "unknown"; reason: string };
 
 const CURRENCY_RE = String.raw`₪|ש["״׳']?ח|שקל(?:ים)?|nis|ils|\$|usd|דולר(?:ים)?|€|eur`;
@@ -116,10 +126,24 @@ export function parseQuickTransactionDetailed(text: string): ParseQuickResult {
   };
 }
 
-/** Parse chat command: create expense / delete expense. */
+/** Parse chat command: create / list / edit / delete expense. */
 export function parseChatIntent(text: string): ChatIntent {
   const t = text.trim();
   if (!t) return { type: "unknown", reason: "לא התקבלה הודעה." };
+
+  if (parseListIntent(t)) {
+    return { type: "list" };
+  }
+
+  const edit = parseEditByIndexIntent(t);
+  if (edit) {
+    return { type: "editByIndex", index: edit.index, field: edit.field };
+  }
+
+  const deleteIndex = parseDeleteByIndexIntent(t);
+  if (deleteIndex != null) {
+    return { type: "deleteByIndex", index: deleteIndex };
+  }
 
   const deleteMatch = t.match(
     /^(?:ת)?מחק(?:י)?(?:\s+לי)?(?:\s+את)?(?:\s+ה)?(?:\s+תנועה)?\s*(.+)$/iu,
@@ -163,7 +187,7 @@ export function parseQuickTransaction(text: string): Omit<QuickTransaction, "des
 export function formatQuickReply(tx: Omit<QuickTransaction, "description"> & { description?: string | null }, id?: string): string {
   const money = `${tx.amount.toFixed(2)} ${currencySymbol(tx.currency)}`;
   const suffix = id ? `\nמזהה: ${id.slice(0, 8)}` : "";
-  return `אין בעיה — הוספתי לתנועות: ${tx.vendor} — ${money} (היום).${suffix}`;
+  return `אין בעיה, הוספתי לתנועות: ${tx.vendor}, ${money} (היום).${suffix}`;
 }
 
 export const CHAT_SUCCESS_REPLY = "התהליך הצליח";
@@ -188,4 +212,4 @@ export function formatChatPaymentFailure(reason: string): string {
 export const QUICK_HELP =
   "כתוב לי הוצאה כמו בוואטסאפ:\nקוטג 10 שקלים\nסרט 80\nאו: קפה סכום 12 ₪";
 
-export const CHAT_WELCOME = "היי כאן Noam Finance איזו תנועה תרצה להוסיף?";
+export const CHAT_WELCOME = "היי כאן Noam Finance, מה תרצה לעשות היום?";

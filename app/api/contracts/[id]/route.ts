@@ -147,14 +147,11 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string 
   const { id } = await ctx.params;
   const existing = await prisma.contract.findFirst({
     where: { id, userId: user.id },
-    select: { fileKey: true, emailHtmlKey: true },
+    select: { fileKey: true },
   });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await Promise.allSettled([
-    deleteObject(existing.fileKey),
-    ...(existing.emailHtmlKey ? [deleteObject(existing.emailHtmlKey)] : []),
-  ]);
+  await deleteObject(existing.fileKey);
   await prisma.contract.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }
