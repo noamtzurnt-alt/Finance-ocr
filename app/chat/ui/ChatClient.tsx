@@ -61,14 +61,13 @@ export default function ChatClient() {
       body.classList.remove("nf-chat-active");
       document.querySelectorAll('meta[data-nf-chat-theme="1"]').forEach((n) => n.remove());
       html.style.removeProperty("--kb-inset");
-      html.style.removeProperty("--nf-topbar-h");
     };
   }, []);
 
   useEffect(() => {
     const root = document.documentElement;
     let raf = 0;
-    let lastKey = "";
+    let lastKb = -1;
 
     const sync = () => {
       cancelAnimationFrame(raf);
@@ -80,14 +79,13 @@ export default function ChatClient() {
           window.scrollTo(0, 0);
         }
 
-        const composerH = composerRef.current?.offsetHeight ?? 58;
-        const kb = Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height));
-        const key = `${kb}`;
-        if (key === lastKey) return;
-        lastKey = key;
+        const rawKb = Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height));
+        // Ignore small iOS viewport deltas (home indicator) — only real keyboard.
+        const kb = rawKb > 100 ? rawKb : 0;
+        if (kb === lastKb) return;
+        lastKb = kb;
 
         root.style.setProperty("--kb-inset", `${kb}px`);
-        root.style.setProperty("--composer-h", `${composerH}px`);
       });
     };
 

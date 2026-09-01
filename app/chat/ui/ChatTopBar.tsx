@@ -2,27 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useRef } from "react";
 
 export default function ChatTopBar() {
-  const barRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const el = barRef.current;
-    if (!el) return;
-
-    const setHeight = () => {
-      document.documentElement.style.setProperty("--nf-topbar-h", `${el.offsetHeight}px`);
-    };
-
-    setHeight();
-    const ro = new ResizeObserver(setHeight);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-
   return (
-    <header ref={barRef} className="nf-chat-topbar">
+    <header className="nf-chat-topbar">
       <div className="nf-chat-topbar-inner">
         <div className="nf-chat-identity">
           <Image
