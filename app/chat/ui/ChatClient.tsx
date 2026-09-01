@@ -28,6 +28,15 @@ function uid() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function applyKeyboardInset(page: HTMLElement, rawKb: number) {
+  const kb = rawKb > 80 ? rawKb : 0;
+  const open = kb > 0;
+  page.dataset.kbOpen = open ? "true" : "false";
+  // Nudge composer closer to the keyboard (iOS leaves extra visualViewport slack).
+  const inset = open ? Math.max(0, kb - 32) : 0;
+  page.style.setProperty("--kb-inset", `${inset}px`);
+}
+
 export default function ChatClient() {
   const inputId = useId();
   const pageRef = useRef<HTMLDivElement>(null);
@@ -86,7 +95,7 @@ export default function ChatClient() {
         if (kb === lastKb) return;
         lastKb = kb;
 
-        page.style.setProperty("--kb-inset", `${kb}px`);
+        applyKeyboardInset(page, rawKb);
       });
     };
 
@@ -107,6 +116,7 @@ export default function ChatClient() {
       vv?.removeEventListener("scroll", sync);
       window.removeEventListener("resize", sync);
       page.style.removeProperty("--kb-inset");
+      delete page.dataset.kbOpen;
     };
   }, []);
 
@@ -456,8 +466,7 @@ export default function ChatClient() {
             const vv = window.visualViewport;
             if (page && vv) {
               const rawKb = Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height));
-              const kb = rawKb > 80 ? rawKb : 0;
-              page.style.setProperty("--kb-inset", `${kb}px`);
+              applyKeyboardInset(page, rawKb);
             }
           }}
           placeholder={inputPlaceholder}
