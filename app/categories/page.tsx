@@ -19,8 +19,8 @@ export default async function CategoriesPage() {
       <LiveRefresh />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">קטגוריות</h1>
-          <p className="mt-1 text-sm text-zinc-600">נהל קטגוריות להוצאות (משמש גם לייצוא).</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">קטגוריות</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">נהל קטגוריות להוצאות (משמש גם לייצוא).</p>
         </div>
         <a className="btn" href="/dashboard">
           חזרה לדשבורד

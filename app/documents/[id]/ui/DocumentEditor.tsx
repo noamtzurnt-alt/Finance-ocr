@@ -90,7 +90,7 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
       <div className="space-y-6 order-2 lg:order-1">
         <div className="card p-6 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-zinc-900">פרטי {doc.type === "expense" ? "הוצאה" : "הכנסה"}</h2>
+            <h2 className="text-lg font-semibold text-[var(--foreground)]">פרטי {doc.type === "expense" ? "הוצאה" : "הכנסה"}</h2>
             <button
               onClick={remove}
               disabled={deleting || saving}
@@ -130,7 +130,7 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
             />
           </div>
 
-          <div className="border-t border-zinc-100 pt-4 mt-4">
+          <div className="border-t border-[var(--border)] pt-4 mt-4">
             <label className="text-sm font-medium text-emerald-700 font-bold">סה&quot;כ (₪)</label>
             <input
               type="number"
@@ -171,7 +171,7 @@ export default function DocumentEditor({ doc, categories, defaultBackHref, vatPe
       </div>
 
       <div className="order-1 lg:order-2">
-        <div className="sticky top-6 rounded-2xl border border-zinc-200 overflow-hidden bg-zinc-100 shadow-inner min-h-[600px] flex items-center justify-center">
+        <div className="sticky top-6 rounded-2xl border border-[var(--border)] overflow-hidden bg-[var(--surface2)] shadow-inner min-h-[600px] flex items-center justify-center">
           {previewFailed ? (
             <div className="text-center p-8 text-zinc-500 max-w-sm" dir="rtl">
               <p className="font-medium">אין תמונה זמינה למסמך זה</p>

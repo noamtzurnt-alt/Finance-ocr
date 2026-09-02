@@ -330,7 +330,7 @@ export default function TransactionsClient(props: {
                   if (isEditing && editState) {
                     const editCats = categoriesByScope[editState.scope];
                     out.push(
-                      <tr key={`edit-${t.id}`} ref={editRef} className="border-t-2" style={{ borderColor: "var(--gold)", background: "var(--gold-soft)" }}>
+                      <tr key={`edit-${t.id}`} ref={editRef} className="border-t-2" style={{ borderColor: "var(--brand)", background: "var(--brand-soft)" }}>
                         <td className="px-2 py-2">
                           <input className="field w-28" type="date" value={editState.date}
                             onChange={(e) => setEditState({ ...editState, date: e.target.value })} />
@@ -432,7 +432,7 @@ export default function TransactionsClient(props: {
       <div className="card p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: "var(--gold)" }}>
+            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: "var(--brand)" }}>
               <svg viewBox="0 0 20 20" className="h-4 w-4 text-white" fill="currentColor">
                 <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
               </svg>
@@ -458,7 +458,7 @@ export default function TransactionsClient(props: {
                   className="rounded-xl border px-3 py-2 text-sm font-semibold transition"
                   style={
                     active
-                      ? { borderColor: "var(--gold)", background: "var(--gold-soft)", color: "var(--gold)" }
+                      ? { borderColor: "var(--brand)", background: "var(--brand-soft)", color: "var(--brand)" }
                       : { borderColor: "var(--border)", background: "var(--surface)", color: "var(--muted)" }
                   }
                 >
@@ -533,7 +533,7 @@ export default function TransactionsClient(props: {
             <button className="btn" type="button" onClick={reload} disabled={loading}>החל</button>
           </div>
           <div className="flex items-end">
-            <span className="rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: "var(--gold-soft)", color: "var(--gold)" }}>
+            <span className="rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: "var(--brand-soft)", color: "var(--brand)" }}>
               {filtered.length} תנועות
             </span>
           </div>
@@ -545,7 +545,7 @@ export default function TransactionsClient(props: {
       ) : null}
       {loading ? (
         <div className="flex items-center gap-2 text-sm" style={{ color: "var(--muted)" }}>
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: "var(--gold)", borderTopColor: "transparent" }} />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: "var(--brand)", borderTopColor: "transparent" }} />
           טוען תנועות…
         </div>
       ) : null}

@@ -60,7 +60,7 @@ export default async function ReceiptsTable(props: { userId: string; showAll: bo
               <tr>
                 <td className="py-14 text-center text-zinc-400" colSpan={5}>
                   אין הוצאות עדיין.{" "}
-                  <Link className="font-semibold text-gold-600 underline" href="/receipts">העלה לתיקייה</Link>
+                  <Link className="font-semibold text-brand-600 underline" href="/receipts">העלה לתיקייה</Link>
                 </td>
               </tr>
             ) : (
@@ -81,7 +81,7 @@ export default async function ReceiptsTable(props: { userId: string; showAll: bo
                   out.push(
                     <tr key={d.id}>
                       <td className="text-zinc-500 text-xs">{d.date.toISOString().slice(0, 10)}</td>
-                      <td className="font-medium text-zinc-900">{d.vendor}</td>
+                      <td className="font-medium text-[var(--foreground)]">{d.vendor}</td>
                       <td className="text-zinc-500">{d.description ?? ""}</td>
                       <td>
                         <span className="font-semibold text-red-600">{d.amount.toString()}</span>

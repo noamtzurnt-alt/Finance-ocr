@@ -79,8 +79,8 @@ export default function PasskeysClient() {
         ) : (
           <ul className="space-y-2">
             {rows.map((r) => (
-              <li key={r.id} className="flex items-center justify-between rounded-lg border border-zinc-100 px-3 py-2 text-sm">
-                <span className="font-medium text-zinc-800">{r.deviceName ?? "מכשיר ללא שם"}</span>
+              <li key={r.id} className="flex items-center justify-between rounded-lg border border-[var(--border)] px-3 py-2 text-sm">
+                <span className="font-medium text-[var(--foreground)]">{r.deviceName ?? "מכשיר ללא שם"}</span>
                 <span className="text-xs text-zinc-400">{new Date(r.createdAt).toLocaleDateString("he-IL")}</span>
               </li>
             ))}

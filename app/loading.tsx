@@ -6,10 +6,10 @@ export default function Loading() {
         <div className="h-4 w-72 rounded bg-zinc-200" />
         <div className="mt-6 grid gap-4 sm:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 rounded-2xl border border-zinc-200/70 bg-white" />
+            <div key={i} className="h-24 rounded-2xl border border-[var(--border)]/70 bg-[var(--surface)]" />
           ))}
         </div>
-        <div className="mt-6 h-64 rounded-2xl border border-zinc-200/70 bg-white" />
+        <div className="mt-6 h-64 rounded-2xl border border-[var(--border)]/70 bg-[var(--surface)]" />
       </div>
     </div>
   );

@@ -96,7 +96,7 @@ function SidebarContent({ active, onClose }: { active: string; onClose?: () => v
       </nav>
 
       <div className="px-3 pb-4 pt-1 space-y-2">
-        <div className="rounded-xl bg-white/5 px-3 py-2.5 text-[0.72rem] leading-relaxed text-white/35">
+        <div className="rounded-xl bg-[var(--surface)]/5 px-3 py-2.5 text-[0.72rem] leading-relaxed text-white/35">
           תנועות → תקציב → עסקי → ייצוא לרו״ח
         </div>
         <Link href="/passkeys" onClick={onClose} className="block text-center text-[0.7rem] text-white/30 hover:text-white/60">
@@ -146,7 +146,7 @@ export default function AppFrame(props: { children: React.ReactNode }) {
 
           <Link href="/dashboard" className="flex min-h-11 min-w-0 items-center gap-2 py-1">
             <span className="brand-badge" aria-hidden />
-            <span className="text-sm font-semibold tracking-tight text-zinc-900">Finance</span>
+            <span className="text-sm font-semibold tracking-tight" style={{ color: "var(--foreground)" }}>Finance</span>
           </Link>
 
           <div className="flex-1" />
@@ -162,7 +162,7 @@ export default function AppFrame(props: { children: React.ReactNode }) {
 
         <main className="min-w-0">
           {props.children}
-          <footer className="mt-10 border-t border-zinc-200/60 pt-4 pb-2 text-center text-xs text-zinc-400">
+          <footer className="mt-10 pt-4 pb-2 text-center text-xs" style={{ borderTop: "1px solid var(--border)", color: "var(--muted)" }}>
             כלי עזר לניהול בלבד, האחריות על הדיווח לרשויות המס עליך ועל רואה החשבון שלך.
           </footer>
         </main>

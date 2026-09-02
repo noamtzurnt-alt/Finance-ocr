@@ -17,8 +17,8 @@ export default async function PaymentReceiptUploadPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">קבלה חדשה (הכנסה)</h1>
-          <p className="mt-1 text-sm text-zinc-600">העלה קבלה שהוצאת ללקוח לאחר ששילם (תמונה/‏PDF).</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">קבלה חדשה (הכנסה)</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">העלה קבלה שהוצאת ללקוח לאחר ששילם (תמונה/‏PDF).</p>
         </div>
         <div className="flex items-center gap-2">
           <a className="btn" href="/payment-receipts">

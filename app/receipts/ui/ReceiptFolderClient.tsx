@@ -201,7 +201,7 @@ export default function ReceiptFolderClient(props: {
           "rounded-2xl border-2 border-dashed p-8 text-center transition",
           dragOver
             ? "border-amber-500 bg-amber-50"
-            : "border-zinc-300 bg-zinc-50/80 hover:border-amber-400 hover:bg-amber-50/40",
+            : "border-zinc-300 bg-[var(--surface)]/80 hover:border-amber-400 hover:bg-amber-50/40",
           uploading ? "pointer-events-none opacity-70" : "cursor-pointer",
         ].join(" ")}
         onClick={() => !uploading && !pendingUpload && inputRef.current?.click()}
@@ -223,7 +223,7 @@ export default function ReceiptFolderClient(props: {
           }}
         />
         <div className="text-4xl">📥</div>
-        <p className="mt-3 text-base font-semibold text-zinc-800">גרור לכאן תמונות או PDF</p>
+        <p className="mt-3 text-base font-semibold text-[var(--foreground)]">גרור לכאן תמונות או PDF</p>
         <p className="mt-1 text-sm text-zinc-500">
           לאחר בחירת קבצים תתבקש לציין חודש לכל קבלה · ניתן להעלות כמה במקביל
         </p>
@@ -274,7 +274,7 @@ export default function ReceiptFolderClient(props: {
       ) : null}
 
       <div className="card overflow-hidden">
-        <div className="border-b border-zinc-100 px-4 py-3 text-sm font-medium text-zinc-600">
+        <div className="border-b border-[var(--border)] px-4 py-3 text-sm font-medium text-[var(--muted)]">
           {loading && documents.length === 0
             ? "טוען..."
             : `${documents.length} מסמכים בתיקייה`}
@@ -375,10 +375,10 @@ function ReceiptPreviewModal(props: {
         aria-label="סגור תצוגה מקדימה"
         onClick={props.onClose}
       />
-      <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex items-center gap-3 border-b border-zinc-200 px-4 py-3">
+      <div className="relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl">
+        <div className="flex items-center gap-3 border-b border-[var(--border)] px-4 py-3">
           <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold text-zinc-900">{props.doc.fileName}</div>
+            <div className="truncate text-sm font-semibold text-[var(--foreground)]">{props.doc.fileName}</div>
             <div className="text-xs text-zinc-500">תצוגה מקדימה</div>
           </div>
           <button type="button" className="btn text-sm" onClick={() => void download()} disabled={downloading}>
@@ -386,14 +386,14 @@ function ReceiptPreviewModal(props: {
           </button>
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 text-lg text-zinc-600 transition hover:bg-zinc-100"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--border)] text-lg text-[var(--muted)] transition hover:bg-[var(--surface2)]"
             onClick={props.onClose}
             aria-label="סגור"
           >
             ✕
           </button>
         </div>
-        <div className="flex min-h-[50vh] flex-1 items-center justify-center overflow-auto bg-zinc-100 p-4">
+        <div className="flex min-h-[50vh] flex-1 items-center justify-center overflow-auto bg-[var(--surface2)] p-4">
           {isImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -405,7 +405,7 @@ function ReceiptPreviewModal(props: {
             <iframe
               title={props.doc.fileName}
               src={previewSrc}
-              className="h-[75vh] w-full rounded-lg border-0 bg-white shadow-md"
+              className="h-[75vh] w-full rounded-lg border-0 bg-[var(--surface)] shadow-md"
             />
           ) : (
             <div className="text-center text-sm text-zinc-500">
@@ -472,7 +472,7 @@ function DocumentRow(props: {
   }
 
   return (
-    <li className="flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-zinc-50">
+    <li className="flex flex-wrap items-center gap-3 px-4 py-3 transition hover:bg-[var(--surface)]">
       <button
         type="button"
         className="flex min-w-0 flex-1 items-center gap-3 text-right"
@@ -499,7 +499,7 @@ function DocumentRow(props: {
               }}
             />
           ) : (
-            <div className="truncate font-medium text-zinc-900 group-hover:text-amber-800">
+            <div className="truncate font-medium text-[var(--foreground)] group-hover:text-amber-800">
               {props.doc.fileName}
             </div>
           )}

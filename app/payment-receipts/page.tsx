@@ -34,7 +34,7 @@ export default async function PaymentReceiptsPage(props: { searchParams?: Promis
         fallback={
           <div className="card p-4">
             <div className="h-5 w-60 animate-pulse rounded bg-zinc-200" />
-            <div className="mt-4 h-64 animate-pulse rounded-2xl border border-zinc-200/70 bg-white" />
+            <div className="mt-4 h-64 animate-pulse rounded-2xl border border-[var(--border)]/70 bg-[var(--surface)]" />
           </div>
         }
       >

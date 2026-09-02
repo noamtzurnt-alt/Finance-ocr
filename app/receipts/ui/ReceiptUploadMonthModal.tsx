@@ -54,20 +54,20 @@ export default function ReceiptUploadMonthModal(props: {
         disabled={props.uploading}
       />
       <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl">
-        <div className="border-b border-zinc-200 px-5 py-4">
-          <h2 className="text-lg font-bold text-zinc-900">בחר חודש לכל קבלה</h2>
-          <p className="mt-1 text-sm text-zinc-600">
+        <div className="border-b border-[var(--border)] px-5 py-4">
+          <h2 className="text-lg font-bold text-[var(--foreground)]">בחר חודש לכל קבלה</h2>
+          <p className="mt-1 text-sm text-[var(--muted)]">
             שנה {props.year} · חובה לציין חודש לכל קובץ לפני ההעלאה
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2 border-b border-zinc-100 bg-amber-50/60 px-5 py-3">
-          <span className="text-xs text-zinc-600">החל על הכל:</span>
+        <div className="flex flex-wrap gap-2 border-b border-[var(--border)] bg-amber-50/60 px-5 py-3">
+          <span className="text-xs text-[var(--muted)]">החל על הכל:</span>
           {months.map((m) => (
             <button
               key={m.value}
               type="button"
-              className="rounded-lg border border-amber-200 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 transition hover:bg-amber-100"
+              className="rounded-lg border border-amber-200 bg-[var(--surface)] px-2.5 py-1 text-xs font-medium text-amber-900 transition hover:bg-amber-100"
               onClick={() => applyMonthToAll(m.value)}
               disabled={props.uploading}
             >
@@ -81,7 +81,7 @@ export default function ReceiptUploadMonthModal(props: {
             <li key={`${row.file.name}-${index}`} className="flex flex-wrap items-center gap-3 px-5 py-3">
               <span className="text-xl">{fileIcon(row.file)}</span>
               <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-zinc-900">{row.file.name}</div>
+                <div className="truncate text-sm font-medium text-[var(--foreground)]">{row.file.name}</div>
               </div>
               <div className="flex items-center gap-2">
                 <label className="text-xs text-zinc-500" htmlFor={`upload-month-${index}`}>
@@ -113,7 +113,7 @@ export default function ReceiptUploadMonthModal(props: {
           ))}
         </ul>
 
-        <div className="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4">
+        <div className="flex justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
           <button type="button" className="btn" onClick={props.onCancel} disabled={props.uploading}>
             ביטול
           </button>

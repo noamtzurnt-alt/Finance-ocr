@@ -162,7 +162,7 @@ export default function ReceiptsExpensesClient(props: {
       <div className="card p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-9 items-center rounded-xl bg-gold-50 px-3 text-sm font-bold text-gold-700">
+            <span className="inline-flex h-9 items-center rounded-xl bg-brand-50 px-3 text-sm font-bold text-brand-700">
               {periodLabel} · {docs.length} מסמכים
             </span>
           </div>
@@ -190,7 +190,7 @@ export default function ReceiptsExpensesClient(props: {
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-zinc-100 pt-3">
+        <div className="mt-3 flex flex-wrap items-end gap-3 border-t border-[var(--border)] pt-3">
           <div className="min-w-[220px] flex-1">
             <label className="text-xs text-zinc-500" htmlFor="expense-search">
               חיפוש
@@ -318,7 +318,7 @@ export default function ReceiptsExpensesClient(props: {
           onClick={() => setPreviewId(null)}
         >
           <div className="card flex h-[85vh] w-full max-w-4xl flex-col overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between gap-3 border-b border-zinc-100 px-4 py-3">
+            <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
               <span className="min-w-0 truncate font-semibold" title={previewDoc.fileName}>
                 {fileIcon(previewDoc.fileName)} {previewDoc.fileName}
               </span>
@@ -326,7 +326,7 @@ export default function ReceiptsExpensesClient(props: {
                 ✕ סגור
               </button>
             </div>
-            <iframe title="preview" className="flex-1 w-full bg-white" src={`/api/documents/${previewDoc.id}/preview`} />
+            <iframe title="preview" className="flex-1 w-full bg-[var(--surface)]" src={`/api/documents/${previewDoc.id}/preview`} />
           </div>
         </div>
       ) : null}

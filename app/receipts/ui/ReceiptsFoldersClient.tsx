@@ -130,7 +130,7 @@ export default function ReceiptsFoldersClient(props: {
       {loading && folders.length === 0 ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="card h-32 animate-pulse bg-zinc-100" />
+            <div key={i} className="card h-32 animate-pulse bg-[var(--surface2)]" />
           ))}
         </div>
       ) : (
@@ -150,7 +150,7 @@ export default function ReceiptsFoldersClient(props: {
                 </span>
               </div>
               <div>
-                <div className="font-semibold text-zinc-900 group-hover:text-amber-800">{f.name}</div>
+                <div className="font-semibold text-[var(--foreground)] group-hover:text-amber-800">{f.name}</div>
                 <div className="mt-1 text-xs text-zinc-500">לחץ לפתיחה · גרור קבצים לתוך התיקייה</div>
               </div>
             </Link>

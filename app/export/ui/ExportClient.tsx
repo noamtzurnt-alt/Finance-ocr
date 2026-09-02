@@ -64,9 +64,9 @@ export default function ExportClient(props: { defaultYear: number }) {
         </div>
       </div>
 
-      <div className="rounded-xl border border-gold-100 bg-gold-50/70 px-4 py-3 text-sm text-gold-950">
+      <div className="rounded-xl border border-brand-100 bg-brand-50/70 px-4 py-3 text-sm text-brand-950">
         <p className="font-semibold">מה יוצא לרו״ח לשנה שנבחרה</p>
-        <ul className="mt-2 list-disc space-y-1 pr-5 text-gold-800">
+        <ul className="mt-2 list-disc space-y-1 pr-5 text-brand-800">
           <li>
             <strong>מסמך 1, הוצאות מוכרות:</strong> כל ההוצאות של השנה
           </li>
@@ -95,7 +95,7 @@ export default function ExportClient(props: { defaultYear: number }) {
         </button>
       </div>
 
-      <p className="text-sm text-zinc-600">
+      <p className="text-sm text-[var(--muted)]">
         ה־XLSX כולל שני גיליונות: הוצאות מוכרות וקבלות הכנסות. ה־ZIP כולל שני קבצי Excel נפרדים
         (אחד להוצאות ואחד לקבלות) ואת כל קבצי ה־PDF/תמונה המקוריים, מסודרים לפי חודש.
       </p>

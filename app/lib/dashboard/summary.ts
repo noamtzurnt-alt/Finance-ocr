@@ -1,6 +1,7 @@
 import { prisma } from "@/app/lib/prisma";
 
 export type CategoryBreakdownItem = { category: string; amount: number };
+export type DailySpendPoint = { day: number; amount: number; cumulative: number };
 
 export type DashboardSummary = {
   income: string;
@@ -12,6 +13,9 @@ export type DashboardSummary = {
   budgetLimit: string;
   pct: number;
   categoryBreakdown: CategoryBreakdownItem[];
+  dailySpend: DailySpendPoint[];
+  daysInMonth: number;
+  todayDay: number;
 };
 
 export async function getDashboardSummary(userId: string): Promise<DashboardSummary> {
@@ -22,7 +26,7 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
   const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-  const [budget, docSums, txAgg, todayTxSums, todayDocSums, categoryBreakdown] = await Promise.all([
+  const [budget, docSums, txAgg, todayTxSums, todayDocSums, categoryBreakdown, monthTx, monthExpenseDocs] = await Promise.all([
     prisma.budget.findUnique({
       where: { userId_month: { userId, month } },
       select: { expenseLimit: true, manualIncome: true },
@@ -50,6 +54,14 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
       where: { userId, date: { gte: start, lt: end } },
       _sum: { amount: true },
       orderBy: { _sum: { amount: "desc" } },
+    }),
+    prisma.transaction.findMany({
+      where: { userId, date: { gte: start, lt: end } },
+      select: { date: true, amount: true },
+    }),
+    prisma.document.findMany({
+      where: { userId, type: "expense", date: { gte: start, lt: end } },
+      select: { date: true, amount: true },
     }),
   ]);
 
@@ -87,6 +99,19 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
     }))
     .filter((c) => c.amount > 0);
 
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const perDay = new Array<number>(daysInMonth + 1).fill(0);
+  for (const t of monthTx) perDay[t.date.getUTCDate()] = (perDay[t.date.getUTCDate()] ?? 0) + Number(t.amount);
+  for (const d of monthExpenseDocs) perDay[d.date.getUTCDate()] = (perDay[d.date.getUTCDate()] ?? 0) + Number(d.amount);
+
+  let running = 0;
+  const dailySpend: DailySpendPoint[] = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const amount = perDay[day] ?? 0;
+    running += amount;
+    dailySpend.push({ day, amount, cumulative: running });
+  }
+
   return {
     income,
     manualIncome: manualIncome !== null ? manualIncome.toFixed(2) : null,
@@ -97,5 +122,8 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
     budgetLimit,
     pct,
     categoryBreakdown: categoryBreakdownFormatted,
+    dailySpend,
+    daysInMonth,
+    todayDay: now.getDate(),
   };
 }

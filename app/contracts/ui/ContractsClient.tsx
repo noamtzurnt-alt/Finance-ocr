@@ -107,7 +107,7 @@ export default function ContractsClient(props: { initial: ContractRow[] }) {
     <div className="space-y-6">
       <form
         onSubmit={create}
-        className="grid gap-4 rounded-2xl border border-gold-200/70 bg-gradient-to-l from-gold-50/80 to-purple-50/50 p-5 sm:grid-cols-2"
+        className="grid gap-4 rounded-2xl border border-brand-200/70 bg-gradient-to-l from-brand-50/80 to-purple-50/50 p-5 sm:grid-cols-2"
       >
         <div>
           <label className="text-sm font-medium">שם לקוח</label>
@@ -174,7 +174,7 @@ export default function ContractsClient(props: { initial: ContractRow[] }) {
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       {loading ? (
-        <p className="text-sm text-zinc-600">טוען...</p>
+        <p className="text-sm text-[var(--muted)]">טוען...</p>
       ) : filtered.length === 0 ? (
         <div className="card py-14 text-center text-zinc-400">
           אין חוזים עדיין, הוסף לקוח וצרף את קובץ החוזה למעלה
@@ -228,7 +228,7 @@ function ContractCard(props: {
           {editing ? (
             <input className="field" value={clientName} onChange={(e) => setClientName(e.target.value)} />
           ) : (
-            <h3 className="truncate text-base font-semibold text-zinc-900">{props.item.clientName}</h3>
+            <h3 className="truncate text-base font-semibold text-[var(--foreground)]">{props.item.clientName}</h3>
           )}
           <p className="mt-1 text-xs text-zinc-500">
             {props.item.contractDate
@@ -264,10 +264,10 @@ function ContractCard(props: {
           />
         </div>
       ) : props.item.details ? (
-        <p className="line-clamp-3 text-sm text-zinc-600">{props.item.details}</p>
+        <p className="line-clamp-3 text-sm text-[var(--muted)]">{props.item.details}</p>
       ) : null}
 
-      <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-zinc-100 pt-3">
+      <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-[var(--border)] pt-3">
         <a
           className="btn text-sm"
           href={`/api/contracts/${props.item.id}/view`}

@@ -43,8 +43,8 @@ export default async function DocumentsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">מסמכים</h1>
-          <p className="mt-1 text-sm text-zinc-600">חיפוש, פילטרים וניהול כל המסמכים במקום אחד.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">מסמכים</h1>
+          <p className="mt-1 text-sm text-[var(--muted)]">חיפוש, פילטרים וניהול כל המסמכים במקום אחד.</p>
         </div>
         <div className="flex items-center gap-2">
           <a className="btn" href="/upload">

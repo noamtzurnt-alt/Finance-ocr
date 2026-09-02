@@ -96,7 +96,7 @@ export default function PaymentReceiptUploadForm(props: { categories: Category[]
             העלאה מהטלפון (מצלמה)
           </button>
         </div>
-        <div className="mt-2 text-xs text-zinc-600">
+        <div className="mt-2 text-xs text-[var(--muted)]">
           {file ? `נבחר: ${file.name}` : "לא נבחר קובץ"}
         </div>
 

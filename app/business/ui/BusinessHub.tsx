@@ -15,7 +15,7 @@ const items: HubItem[] = [
     href: "/contracts",
     title: "חוזים",
     description: "חוזי לקוחות, PDF חתום ועותקי מייל",
-    color: "from-gold-500 to-gold-700",
+    color: "var(--chart-1), var(--chart-7)",
     icon: (
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M7 3h7l3 3v15a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
@@ -27,7 +27,7 @@ const items: HubItem[] = [
     href: "/receipts",
     title: "הוצאות מוכרות",
     description: "קבלות והוצאות לדיווח, לפי תיקיות וחודשים",
-    color: "from-gold-400 to-gold-600",
+    color: "var(--chart-2), var(--chart-4)",
     icon: (
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M12 16V4m0 0 4 4m-4-4-4 4" strokeLinecap="round" strokeLinejoin="round" />
@@ -39,7 +39,7 @@ const items: HubItem[] = [
     href: "/payment-receipts",
     title: "קבלות הכנסות",
     description: "מסמכי הכנסה, חשבוניות וקבלות מלקוחות",
-    color: "from-gold-500 to-gold-700",
+    color: "var(--chart-6), var(--chart-3)",
     icon: (
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
@@ -51,7 +51,7 @@ const items: HubItem[] = [
     href: "/export",
     title: "ייצוא",
     description: "ייצוא שנתי לרו״ח – Excel ו-ZIP",
-    color: "from-gold-400 to-gold-700",
+    color: "var(--chart-5), var(--chart-7)",
     icon: (
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M12 3v12M8 11l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />
@@ -70,12 +70,12 @@ export default function BusinessHub() {
           href={item.href}
           className="business-hub-card group"
         >
-          <div className={`business-hub-icon bg-gradient-to-br ${item.color}`}>
+          <div className="business-hub-icon" style={{ background: `linear-gradient(135deg, ${item.color})` }}>
             {item.icon}
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center justify-between gap-2">
-              <h2 className="text-base font-bold text-zinc-900">{item.title}</h2>
+              <h2 className="text-base font-bold text-[var(--foreground)]">{item.title}</h2>
               <span className="business-hub-arrow" aria-hidden>
                 <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />

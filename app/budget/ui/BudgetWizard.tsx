@@ -206,14 +206,14 @@ const stepTitles = ["הכנסה", "הוצאות", "סיכום"];
 
 const STEP_META = [
   { emoji: "💵", gradient: "from-emerald-500 to-teal-500", ring: "ring-emerald-400", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  { emoji: "🛒", gradient: "from-gold-500 to-gold-600", ring: "ring-gold-400", text: "text-gold-700", bg: "bg-gold-50", border: "border-gold-200" },
+  { emoji: "🛒", gradient: "from-brand-500 to-brand-600", ring: "ring-brand-400", text: "text-brand-700", bg: "bg-brand-50", border: "border-brand-200" },
   { emoji: "✨", gradient: "from-amber-500 to-orange-500", ring: "ring-amber-400", text: "text-amber-800", bg: "bg-amber-50", border: "border-amber-200" },
 ] as const;
 
 const INCOME_SOURCE_STYLE = {
   steady: { emoji: "💼", active: "border-emerald-400 bg-gradient-to-l from-emerald-50 to-teal-50 shadow-sm shadow-emerald-100", accent: "accent-emerald-600" },
-  variable: { emoji: "🚀", active: "border-gold-400 bg-gradient-to-l from-gold-50 to-gold-50 shadow-sm shadow-gold-100", accent: "accent-gold-600" },
-  other: { emoji: "🎁", active: "border-sky-400 bg-gradient-to-l from-sky-50 to-gold-50 shadow-sm shadow-sky-100", accent: "accent-sky-600" },
+  variable: { emoji: "🚀", active: "border-brand-400 bg-gradient-to-l from-brand-50 to-brand-50 shadow-sm shadow-brand-100", accent: "accent-brand-600" },
+  other: { emoji: "🎁", active: "border-sky-400 bg-gradient-to-l from-sky-50 to-brand-50 shadow-sm shadow-sky-100", accent: "accent-sky-600" },
 } as const;
 
 function StepBanner({ step }: { step: WizardStep }) {
@@ -226,12 +226,12 @@ function StepBanner({ step }: { step: WizardStep }) {
   return (
     <div className={`rounded-2xl border ${meta.border} ${meta.bg} p-4 shadow-sm`}>
       <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/80 text-2xl shadow-sm">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--surface)]/80 text-2xl shadow-sm">
           {meta.emoji}
         </span>
         <div>
           <p className={`text-sm font-bold ${meta.text}`}>שלב {step} מתוך 3: {stepTitles[step - 1]}</p>
-          <p className="mt-1 text-xs text-zinc-600">{subtitles[step - 1]}</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">{subtitles[step - 1]}</p>
         </div>
       </div>
     </div>
@@ -240,8 +240,8 @@ function StepBanner({ step }: { step: WizardStep }) {
 
 function NumField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
-    <div className="rounded-2xl border border-zinc-200/80 bg-white/80 p-4 shadow-sm">
-      <label className="text-sm font-semibold text-zinc-700">{label}</label>
+    <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface)]/80 p-4 shadow-sm">
+      <label className="text-sm font-semibold text-[var(--foreground)]">{label}</label>
       <input
         className="field mt-2 border-emerald-200 bg-emerald-50/40 focus:border-emerald-400 focus:ring-emerald-300/50"
         value={value}
@@ -315,10 +315,10 @@ function ExpenseBudgetTable({
         {subtitle && <p className="mt-0.5 text-xs opacity-75">{subtitle}</p>}
       </div>
 
-      <div className="rounded-2xl overflow-hidden border border-zinc-200/80 bg-white/70 shadow-sm backdrop-blur-sm">
+      <div className="rounded-2xl overflow-hidden border border-[var(--border)]/80 bg-[var(--surface)]/70 shadow-sm backdrop-blur-sm">
         <table className="w-full text-sm" style={{ direction: "rtl" }}>
           <thead>
-            <tr className="bg-zinc-50 border-b border-zinc-200">
+            <tr className="bg-[var(--surface)] border-b border-[var(--border)]">
               <th className="px-3 py-2 text-right text-xs font-semibold text-zinc-500">קטגוריה</th>
               {showNotes && (
                 <th className="px-3 py-2 text-right text-xs font-semibold text-zinc-500">פירוט</th>
@@ -329,7 +329,7 @@ function ExpenseBudgetTable({
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-zinc-100 bg-emerald-50/50">
+            <tr className="border-b border-[var(--border)] bg-emerald-50/50">
               <td className="px-3 py-2.5">
                 <div className="flex items-center gap-2">
                   <span>{incomeIcon}</span>
@@ -349,13 +349,13 @@ function ExpenseBudgetTable({
             {savings && (() => {
               const savBal = income - savingsAmt;
               return (
-                <tr className="border-b border-gold-100 bg-gold-50/60">
+                <tr className="border-b border-brand-100 bg-brand-50/60">
                   <td className="px-3 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className="text-base leading-none w-6 text-center">💰</span>
                       <div>
-                        <span className="text-sm font-semibold text-gold-800">חיסכון</span>
-                        <p className="text-[0.6rem] text-gold-400 leading-tight">יוצא ביום קבלת שכר, לפני הוצאות</p>
+                        <span className="text-sm font-semibold text-brand-800">חיסכון</span>
+                        <p className="text-[0.6rem] text-brand-400 leading-tight">יוצא ביום קבלת שכר, לפני הוצאות</p>
                       </div>
                     </div>
                   </td>
@@ -370,8 +370,8 @@ function ExpenseBudgetTable({
                       placeholder="0"
                       className={`w-full rounded-lg border px-2 py-1 text-right text-sm font-semibold focus:outline-none focus:ring-1 ${
                         savingsAmt > 0
-                          ? "border-gold-300 bg-gold-100 text-gold-800 focus:ring-gold-400"
-                          : "border-zinc-200 bg-zinc-50 text-zinc-500 focus:ring-zinc-300"
+                          ? "border-brand-300 bg-brand-100 text-brand-800 focus:ring-brand-400"
+                          : "border-[var(--border)] bg-[var(--surface)] text-zinc-500 focus:ring-zinc-300"
                       }`}
                     />
                   </td>
@@ -389,7 +389,7 @@ function ExpenseBudgetTable({
               const rowBal = rowBalances[idx] ?? 0;
               const amt = Number(row.amount) || 0;
               return (
-                <tr key={row.id} className="border-b border-zinc-100 hover:bg-zinc-50/50 transition">
+                <tr key={row.id} className="border-b border-[var(--border)] hover:bg-[var(--surface)]/50 transition">
                   <td className="px-3 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className="text-base leading-none w-6 text-center">{row.icon}</span>
@@ -400,7 +400,7 @@ function ExpenseBudgetTable({
                         value={row.label}
                         onChange={(e) => updateRow(row.id, "label", e.target.value)}
                         placeholder="שם קטגוריה"
-                        className="w-full bg-transparent text-sm font-medium text-zinc-800 placeholder:text-zinc-300 focus:outline-none focus:bg-white focus:rounded px-1"
+                        className="w-full bg-transparent text-sm font-medium text-[var(--foreground)] placeholder:text-zinc-300 focus:outline-none focus:bg-[var(--surface)] focus:rounded px-1"
                       />
                     </div>
                   </td>
@@ -412,7 +412,7 @@ function ExpenseBudgetTable({
                         value={row.notes ?? ""}
                         onChange={(e) => updateRow(row.id, "notes", e.target.value)}
                         placeholder="הערות פירוט..."
-                        className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 placeholder:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-gold-300"
+                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[var(--foreground)] placeholder:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-brand-300"
                       />
                     </td>
                   )}
@@ -426,8 +426,8 @@ function ExpenseBudgetTable({
                       placeholder="0"
                       className={`w-full rounded-lg border px-2 py-1 text-right text-sm font-semibold focus:outline-none focus:ring-1 ${
                         amt > 0
-                          ? "border-gold-200 bg-gold-50 text-gold-800 focus:ring-gold-400"
-                          : "border-zinc-200 bg-zinc-50 text-zinc-500 focus:ring-zinc-300"
+                          ? "border-brand-200 bg-brand-50 text-brand-800 focus:ring-brand-400"
+                          : "border-[var(--border)] bg-[var(--surface)] text-zinc-500 focus:ring-zinc-300"
                       }`}
                     />
                   </td>
@@ -456,7 +456,7 @@ function ExpenseBudgetTable({
             {businessSubsidy !== undefined && (() => {
               const subsidyBal = (rowBalances[rowBalances.length - 1] ?? income - savingsAmt) - subsidyAmt;
               return (
-                <tr className={`border-b ${subsidyAmt > 0 ? "border-amber-200 bg-amber-50/70" : "border-zinc-100 bg-zinc-50/40"}`}>
+                <tr className={`border-b ${subsidyAmt > 0 ? "border-amber-200 bg-amber-50/70" : "border-[var(--border)] bg-[var(--surface)]/40"}`}>
                   <td className="px-3 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className="text-base leading-none w-6 text-center">🏢</span>
@@ -475,7 +475,7 @@ function ExpenseBudgetTable({
                     <span className={`inline-block w-full rounded-lg border px-2 py-1 text-right text-sm font-semibold tabular-nums ${
                       subsidyAmt > 0
                         ? "border-amber-300 bg-amber-100 text-amber-900"
-                        : "border-zinc-200 bg-zinc-100 text-zinc-400"
+                        : "border-[var(--border)] bg-[var(--surface2)] text-zinc-400"
                     }`}>
                       {subsidyAmt.toLocaleString()}
                     </span>
@@ -490,9 +490,9 @@ function ExpenseBudgetTable({
               );
             })()}
 
-            <tr className={`border-t-2 ${remaining < 0 ? "border-red-200 bg-red-50/50" : "border-zinc-200 bg-zinc-50"}`}>
+            <tr className={`border-t-2 ${remaining < 0 ? "border-red-200 bg-red-50/50" : "border-[var(--border)] bg-[var(--surface)]"}`}>
               <td className="px-3 py-2.5">
-                <span className="text-sm font-bold text-zinc-700">{remaining < 0 ? "⚠️ חריגה מהכנסה" : "✅ יתרה"}</span>
+                <span className="text-sm font-bold text-[var(--foreground)]">{remaining < 0 ? "⚠️ חריגה מהכנסה" : "✅ יתרה"}</span>
               </td>
               {showNotes && <td></td>}
               <td className="px-3 py-2.5 text-left text-xs text-zinc-400">
@@ -514,7 +514,7 @@ function ExpenseBudgetTable({
       <button
         type="button"
         onClick={addRow}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gold-300/60 bg-gold-50/50 py-2.5 text-sm font-medium text-gold-600 transition hover:border-gold-400 hover:bg-gold-100/60 hover:text-gold-800 active:scale-[0.99]"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand-300/60 bg-brand-50/50 py-2.5 text-sm font-medium text-brand-600 transition hover:border-brand-400 hover:bg-brand-100/60 hover:text-brand-800 active:scale-[0.99]"
       >
         <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M8 3v10M3 8h10" strokeLinecap="round" />
@@ -618,7 +618,7 @@ function BudgetSummaryCard({
 
   function amountClass(tone: LineItem["tone"], amount: number) {
     if (tone === "in") return "text-emerald-600 font-bold";
-    if (tone === "out") return amount === 0 ? "text-zinc-500" : "text-zinc-700 font-semibold";
+    if (tone === "out") return amount === 0 ? "text-zinc-500" : "text-[var(--foreground)] font-semibold";
     if (tone === "auto") return "text-amber-700 font-semibold";
     return amount < 0 ? "text-red-600 font-bold" : "text-emerald-600 font-bold";
   }
@@ -643,21 +643,21 @@ function BudgetSummaryCard({
     const themeCls =
       theme === "personal"
         ? "border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50"
-        : "border-gold-200/80 bg-gradient-to-br from-gold-50/90 via-white to-gold-50/50";
+        : "border-brand-200/80 bg-gradient-to-br from-brand-50/90 via-white to-brand-50/50";
     const headCls =
       theme === "personal"
         ? "border-emerald-100 bg-gradient-to-l from-emerald-100/80 to-teal-50"
-        : "border-gold-100 bg-gradient-to-l from-gold-100/80 to-gold-50";
+        : "border-brand-100 bg-gradient-to-l from-brand-100/80 to-brand-50";
 
     return (
       <div className={`rounded-2xl border overflow-hidden shadow-sm ${themeCls}`}>
         <div className={`border-b px-4 py-3 ${headCls}`}>
-          <h3 className="text-sm font-bold text-zinc-800">{title}</h3>
-          <p className="mt-0.5 text-xs text-zinc-600">{subtitle}</p>
+          <h3 className="text-sm font-bold text-[var(--foreground)]">{title}</h3>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">{subtitle}</p>
         </div>
         <table className="w-full text-sm" style={{ direction: "rtl" }}>
           <thead>
-            <tr className="border-b border-zinc-100/80">
+            <tr className="border-b border-[var(--border)]/80">
               <th className="px-4 py-2 text-right text-xs font-semibold text-zinc-500">פריט</th>
               <th className="px-4 py-2 text-left text-xs font-semibold text-zinc-500 w-28">סכום</th>
             </tr>
@@ -668,13 +668,13 @@ function BudgetSummaryCard({
               return (
                 <tr
                   key={i}
-                  className={`border-b border-zinc-100/60 ${isResult ? "bg-white/60" : ""}`}
+                  className={`border-b border-[var(--border)]/60 ${isResult ? "bg-[var(--surface)]/60" : ""}`}
                 >
                   <td className="px-4 py-2.5">
                     <div className="flex items-center gap-2">
                       <span className="text-base leading-none">{line.icon}</span>
                       <div>
-                        <div className={`text-sm ${isResult ? "font-bold text-zinc-800" : "font-medium text-zinc-700"}`}>
+                        <div className={`text-sm ${isResult ? "font-bold text-[var(--foreground)]" : "font-medium text-[var(--foreground)]"}`}>
                           {line.label}
                         </div>
                         {line.detail && (
@@ -698,7 +698,7 @@ function BudgetSummaryCard({
   }
 
   return (
-    <div className="space-y-4 rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/40 via-gold-50/30 to-emerald-50/40 p-4 shadow-inner">
+    <div className="space-y-4 rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/40 via-brand-50/30 to-emerald-50/40 p-4 shadow-inner">
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-100 via-emerald-50 to-teal-50 p-4 shadow-sm">
           <span className="absolute -left-1 -top-1 text-3xl opacity-20">📈</span>
@@ -722,7 +722,7 @@ function BudgetSummaryCard({
             הוצאות בלבד{budget.personalSubsidyToBusiness > 0 ? " (כולל השלמה לעסק)" : ""}
           </p>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-100 via-sky-50 to-gold-50 p-4 shadow-sm">
+        <div className="relative overflow-hidden rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-100 via-sky-50 to-brand-50 p-4 shadow-sm">
           <span className="absolute -left-1 -top-1 text-3xl opacity-20">🐷</span>
           <p className="text-xs font-bold uppercase tracking-wide text-sky-700">הולך לחיסכון</p>
           <p className="mt-2 text-2xl font-bold text-sky-800 tabular-nums">
@@ -770,13 +770,13 @@ function BudgetSummaryCard({
         <button
           type="button"
           onClick={onEditExpenses}
-          className="rounded-xl border border-gold-200 bg-gold-50 px-4 py-2.5 text-sm font-semibold text-gold-800 transition hover:bg-gold-100 hover:shadow-sm active:scale-[0.98]"
+          className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-800 transition hover:bg-brand-100 hover:shadow-sm active:scale-[0.98]"
         >
           ✏️ ערוך הוצאות
         </button>
       </div>
 
-      <div className="rounded-2xl border border-gold-200/60 bg-gradient-to-l from-gold-50 to-gold-50 p-4 shadow-sm">
+      <div className="rounded-2xl border border-brand-200/60 bg-gradient-to-l from-brand-50 to-brand-50 p-4 shadow-sm">
         {saved ? (
           <div className="flex items-center gap-2 rounded-xl bg-gradient-to-l from-emerald-400 to-teal-500 px-4 py-3 text-sm font-bold text-white shadow-md">
             <span className="text-lg">🎉</span>
@@ -787,12 +787,12 @@ function BudgetSummaryCard({
             type="button"
             onClick={onSave}
             disabled={saving}
-            className="w-full rounded-xl bg-gold-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-gold-200 transition hover:bg-gold-500 active:scale-[0.98] disabled:opacity-60"
+            className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-brand-200 transition hover:bg-brand-500 active:scale-[0.98] disabled:opacity-60"
           >
             {saving ? "שומר..." : "💾 שמור תקציב חודשי"}
           </button>
         )}
-        <p className="mt-2 text-center text-xs text-gold-700/70">
+        <p className="mt-2 text-center text-xs text-brand-700/70">
           מגבלת הוצאות אישית = הכנסה אישית פחות חיסכון ({budget.salarySavings.toLocaleString()} ₪)
           {budget.personalSubsidyToBusiness > 0 &&
             ` פחות השלמה לעסק (${budget.personalSubsidyToBusiness.toLocaleString()} ₪)`}
@@ -1024,10 +1024,10 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-gold-200/70 bg-gradient-to-br from-gold-50/80 via-white to-emerald-50/60 shadow-xl shadow-gold-100/40">
+    <div className="overflow-hidden rounded-2xl border border-brand-200/70 bg-gradient-to-br from-brand-50/80 via-white to-emerald-50/60 shadow-xl shadow-brand-100/40">
       {/* Header */}
-      <div className="relative overflow-hidden border-b border-white/20 bg-gradient-to-l from-gold-600 via-gold-600 to-teal-600 px-5 py-5 text-white">
-        <div className="pointer-events-none absolute -left-6 -top-6 h-28 w-28 rounded-full bg-white/10" />
+      <div className="relative overflow-hidden border-b border-white/20 bg-gradient-to-l from-brand-600 via-brand-600 to-teal-600 px-5 py-5 text-white">
+        <div className="pointer-events-none absolute -left-6 -top-6 h-28 w-28 rounded-full bg-[var(--surface)]/10" />
         <div className="pointer-events-none absolute -bottom-4 left-1/3 h-20 w-20 rounded-full bg-teal-400/20" />
         <div className="relative flex items-center justify-between">
           <div>
@@ -1039,7 +1039,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
               <button
                 type="button"
                 onClick={() => { if (confirm("לאפס את השאלון ולהתחיל מחדש?")) reset(); }}
-                className="flex items-center gap-1 rounded-lg border border-white/30 bg-white/10 px-2.5 py-1.5 text-xs text-white/90 backdrop-blur-sm transition hover:bg-white/20"
+                className="flex items-center gap-1 rounded-lg border border-white/30 bg-[var(--surface)]/10 px-2.5 py-1.5 text-xs text-white/90 backdrop-blur-sm transition hover:bg-[var(--surface)]/20"
                 title="אפס שאלון"
               >
                 <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1050,7 +1050,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
               </button>
             )}
             {onClose && (
-              <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-white/70 transition hover:bg-white/15 hover:text-white">
+              <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-white/70 transition hover:bg-[var(--surface)]/15 hover:text-white">
                 <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M3 3l10 10M13 3L3 13" strokeLinecap="round" />
                 </svg>
@@ -1073,9 +1073,9 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
                 onClick={() => (done || s <= step) && goToStep(s)}
                 className={`flex flex-1 flex-col items-center gap-1.5 rounded-xl px-2 py-2 transition ${
                   isActive
-                    ? "bg-white/20 ring-2 ring-white/50"
+                    ? "bg-[var(--surface)]/20 ring-2 ring-white/50"
                     : isDone
-                      ? "bg-white/10 hover:bg-white/15"
+                      ? "bg-[var(--surface)]/10 hover:bg-[var(--surface)]/15"
                       : "opacity-50"
                 } ${done ? "cursor-pointer" : s <= step ? "cursor-pointer" : "cursor-default"}`}
               >
@@ -1091,9 +1091,9 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
       <div className="p-5">
 
         {done && step < 3 && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gold-200 bg-gradient-to-l from-gold-50 to-gold-50 px-4 py-3 shadow-sm">
-            <span className="text-sm font-medium text-gold-800">✏️ מצב עריכה, שינוי נקודתי</span>
-            <button type="button" onClick={returnToSummary} className="rounded-lg bg-gold-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-gold-500 active:scale-[0.98]">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-brand-200 bg-gradient-to-l from-brand-50 to-brand-50 px-4 py-3 shadow-sm">
+            <span className="text-sm font-medium text-brand-800">✏️ מצב עריכה, שינוי נקודתי</span>
+            <button type="button" onClick={returnToSummary} className="rounded-lg bg-brand-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-brand-500 active:scale-[0.98]">
               חזרה לסיכום ✨
             </button>
           </div>
@@ -1105,7 +1105,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
             <StepBanner step={1} />
 
             <div>
-              <label className="text-sm font-bold text-zinc-800">מאילו מקורות מגיעה ההכנסה שלך?</label>
+              <label className="text-sm font-bold text-[var(--foreground)]">מאילו מקורות מגיעה ההכנסה שלך?</label>
               <div className="mt-3 space-y-2">
                 {([
                   ["steady", "שכיר (משכורת קבועה)", "אותו סכום כל חודש"],
@@ -1119,7 +1119,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
                     className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition ${
                       answers.incomeSources[key]
                         ? style.active
-                        : "border-zinc-200 bg-white/60 hover:border-zinc-300 hover:bg-white"
+                        : "border-[var(--border)] bg-[var(--surface)]/60 hover:border-zinc-300 hover:bg-[var(--surface)]"
                     }`}
                   >
                     <span className="text-2xl leading-none">{style.emoji}</span>
@@ -1130,7 +1130,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
                       className={`mt-1 h-4 w-4 rounded border-zinc-300 ${style.accent}`}
                     />
                     <div className="flex-1">
-                      <div className="font-semibold text-zinc-900">{title}</div>
+                      <div className="font-semibold text-[var(--foreground)]">{title}</div>
                       <div className="mt-0.5 text-xs text-zinc-500">{sub}</div>
                     </div>
                   </label>
@@ -1218,7 +1218,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
                 <ExpenseBudgetTable
                   title="תקציב עסקי"
                   subtitle={`הכנסה עסקית: ${businessIncome.toLocaleString()} ₪`}
-                  headerClass="border-gold-200 bg-gradient-to-l from-gold-100 to-gold-50 text-gold-900"
+                  headerClass="border-brand-200 bg-gradient-to-l from-brand-100 to-brand-50 text-brand-900"
                   income={businessIncome}
                   incomeLabel="הכנסה עסקית"
                   incomeIcon="🏢"
@@ -1292,12 +1292,12 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
         )}
 
         {/* Navigation, always visible */}
-        <div className="mt-6 flex items-center justify-between border-t border-gold-100/80 pt-4">
+        <div className="mt-6 flex items-center justify-between border-t border-brand-100/80 pt-4">
           {step > 1 ? (
             <button
               type="button"
               onClick={back}
-              className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-600 transition hover:border-gold-200 hover:bg-gold-50 hover:text-gold-700 active:scale-[0.98]"
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--muted)] transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 active:scale-[0.98]"
             >
               ← חזרה
             </button>
@@ -1306,7 +1306,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
           )}
 
           {step < 3 && (
-            <span className="rounded-full bg-gold-100/80 px-3 py-1 text-xs font-medium text-gold-700">
+            <span className="rounded-full bg-brand-100/80 px-3 py-1 text-xs font-medium text-brand-700">
               שלב {step} מתוך 3
             </span>
           )}
@@ -1317,7 +1317,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
               type="button"
               onClick={done && step === 2 ? returnToSummary : next}
               disabled={!canAdvance()}
-              className="rounded-xl bg-gold-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-gold-200 transition hover:bg-gold-500 active:scale-[0.98] disabled:opacity-40"
+              className="rounded-xl bg-brand-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-brand-200 transition hover:bg-brand-500 active:scale-[0.98] disabled:opacity-40"
             >
               {step === 2 ? (done ? "עדכן סיכום ✨" : "לסיכום ✨") : "הבא ←"}
             </button>

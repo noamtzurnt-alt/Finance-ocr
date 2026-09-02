@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, IBM_Plex_Sans_Hebrew, IBM_Plex_Mono } from "next/font/google";
+import { Inter, Rubik, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import AppFrame from "@/app/ui/AppFrame";
 import OfflineBanner from "@/app/ui/OfflineBanner";
@@ -7,20 +7,20 @@ import { Suspense } from "react";
 
 // Kept exactly as before — the chat bot inherits this as its body font and
 // must not change. New typography below is additive (exposed as CSS
-// variables only) and is opted into by the ".v2-shell" scope class, which
-// the chat screen never uses.
+// variables only) and is opted into by the ".app-shell"/".auth-page" scope
+// classes, which the chat screen never uses.
 const inter = Inter({ subsets: ["latin"] });
 
-const plexSansHebrew = IBM_Plex_Sans_Hebrew({
+const rubik = Rubik({
   subsets: ["hebrew", "latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-plex-sans",
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-ui",
 });
 
 const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-plex-mono",
+  variable: "--font-num",
 });
 
 export const metadata: Metadata = {
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#07111f",
+  themeColor: "#0a0e1a",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -60,7 +60,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="he" dir="rtl">
-      <body className={`${inter.className} ${plexSansHebrew.variable} ${plexMono.variable}`}>
+      <body className={`${inter.className} ${rubik.variable} ${plexMono.variable}`}>
         <OfflineBanner />
         <Suspense fallback={<div />}>
           <AppFrame>{children}</AppFrame>

@@ -165,8 +165,8 @@ export default function DocumentsClient(props: { categories: Category[]; initial
           <input className="field mt-1" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         <div className="sm:col-span-2 lg:col-span-2 flex items-end justify-between gap-2">
-          <div className="text-sm text-zinc-600">
-            מציג <span className="font-semibold text-zinc-900">{rows.length}</span>
+          <div className="text-sm text-[var(--muted)]">
+            מציג <span className="font-semibold text-[var(--foreground)]">{rows.length}</span>
             {page.nextCursor ? " (עוד קיימים…)" : ""}
           </div>
           <a className="btn btn-primary" href="/upload">
@@ -177,9 +177,9 @@ export default function DocumentsClient(props: { categories: Category[]; initial
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-[var(--surface)]">
+      <div className="overflow-hidden rounded-2xl border border-[var(--border)]/70 bg-[var(--surface)]">
         <table className="w-full text-sm">
-          <thead className="bg-zinc-50 text-zinc-700">
+          <thead className="bg-[var(--surface)] text-[var(--foreground)]">
             <tr>
               <th className="px-3 py-2 text-right font-medium">תאריך</th>
               <th className="px-3 py-2 text-right font-medium">ספק</th>
@@ -191,17 +191,17 @@ export default function DocumentsClient(props: { categories: Category[]; initial
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td className="px-3 py-12 text-center text-zinc-600" colSpan={5}>
+                <td className="px-3 py-12 text-center text-[var(--muted)]" colSpan={5}>
                   אין מסמכים לתצוגה. <a className="underline" href="/upload">העלה מסמך ראשון</a>
                 </td>
               </tr>
             ) : (
               rows.map((d) => (
-                <tr key={d.id} className="border-t border-zinc-100 hover:bg-zinc-50/60">
+                <tr key={d.id} className="border-t border-[var(--border)] hover:bg-[var(--surface)]/60">
                   <td className="px-3 py-2">{d.date}</td>
                   <td className="px-3 py-2">
                     <a
-                      className="font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2"
+                      className="font-medium text-[var(--foreground)] underline decoration-zinc-300 underline-offset-2"
                       href={
                         d.type === "expense"
                           ? "/receipts"
@@ -211,12 +211,12 @@ export default function DocumentsClient(props: { categories: Category[]; initial
                     >
                       {d.vendor}
                     </a>
-                    {d.docNumber ? <div className="mt-0.5 text-xs text-zinc-600">#{d.docNumber}</div> : null}
+                    {d.docNumber ? <div className="mt-0.5 text-xs text-[var(--muted)]">#{d.docNumber}</div> : null}
                   </td>
                   <td className="px-3 py-2">{d.type === "expense" ? "הוצאה" : "קבלה (הכנסה)"}</td>
                   <td className="px-3 py-2">{d.categoryName ?? ""}</td>
                   <td className="px-3 py-2">
-                    {d.amount} <span className="text-xs text-zinc-600">{d.currency}</span>
+                    {d.amount} <span className="text-xs text-[var(--muted)]">{d.currency}</span>
                   </td>
                 </tr>
               ))

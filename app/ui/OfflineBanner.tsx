@@ -61,7 +61,7 @@ export default function OfflineBanner() {
         className="fixed left-1/2 z-[9999] flex -translate-x-1/2 items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm text-white shadow-lg"
         style={{ top: "max(1rem, calc(0.5rem + env(safe-area-inset-top)))" }}
       >
-        <span className="inline-block w-2 h-2 rounded-full bg-white" aria-hidden />
+        <span className="inline-block w-2 h-2 rounded-full bg-[var(--surface)]" aria-hidden />
         <span>חיבור חודש – הנתונים מעודכנים</span>
       </div>
     );

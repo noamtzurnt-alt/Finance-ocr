@@ -260,14 +260,14 @@ export default function ImportStatementCard(props: {
             aria-label="סגור"
             onClick={closeModal}
           />
-          <div className="relative flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl">
-            <div className="border-b border-zinc-200 px-5 py-4">
+          <div className="relative flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-[var(--surface)] shadow-2xl sm:rounded-2xl">
+            <div className="border-b border-[var(--border)] px-5 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-bold text-zinc-900">
+                  <h2 className="text-lg font-bold text-[var(--foreground)]">
                     {inPreview ? "תצוגה מקדימה, מיזוג תנועות" : "ייבוא תנועות מכאל"}
                   </h2>
-                  <p className="mt-1 text-sm text-zinc-600">
+                  <p className="mt-1 text-sm text-[var(--muted)]">
                     {inPreview
                       ? "עבור על הרשימה: 🗑 מסמן תנועה לוויתור. תנועות ידניות נשמרות אלא אם תמחק אותן. בסיום לחץ שמור."
                       : "העלה קובץ Excel/CSV מכאל. אחר כך תראה תצוגה מקדימה מול התנועות הקיימות."}
@@ -282,7 +282,7 @@ export default function ImportStatementCard(props: {
             <div className="space-y-4 overflow-y-auto px-5 py-4">
               {!inPreview ? (
                 <div
-                  className="cursor-pointer rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-4 py-8 text-center transition hover:border-[var(--gold)] hover:bg-[var(--gold-soft)]"
+                  className="cursor-pointer rounded-2xl border-2 border-dashed border-zinc-300 bg-[var(--surface)] px-4 py-8 text-center transition hover:border-[var(--brand)] hover:bg-[var(--brand-soft)]"
                   onClick={() => !busy && inputRef.current?.click()}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
@@ -305,18 +305,18 @@ export default function ImportStatementCard(props: {
                     onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
                   />
                   <div className="text-3xl">💳</div>
-                  <p className="mt-2 font-semibold text-zinc-800">
+                  <p className="mt-2 font-semibold text-[var(--foreground)]">
                     {busy ? "קורא קובץ..." : "גרור קובץ לכאן או לחץ לבחירה"}
                   </p>
                   <p className="mt-1 text-xs text-zinc-500">Excel (.xlsx) או CSV · לא PDF</p>
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm" style={{ borderColor: "var(--gold-soft)", background: "var(--gold-soft)" }}>
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm" style={{ borderColor: "var(--brand-soft)", background: "var(--brand-soft)" }}>
                     <div>
-                      <span className="font-semibold" style={{ color: "var(--gold)" }}>{fileName}</span>
+                      <span className="font-semibold" style={{ color: "var(--brand)" }}>{fileName}</span>
                       {range ? (
-                        <span className="mr-2" style={{ color: "var(--gold)" }}>
+                        <span className="mr-2" style={{ color: "var(--brand)" }}>
                           · {range.from} עד {range.to}
                         </span>
                       ) : null}
@@ -336,16 +336,16 @@ export default function ImportStatementCard(props: {
                     </button>
                   </div>
 
-                  <div className="flex flex-wrap items-end justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--gold-soft)", background: "var(--gold-soft)" }}>
+                  <div className="flex flex-wrap items-end justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--brand-soft)", background: "var(--brand-soft)" }}>
                     <div className="max-w-xl">
-                      <p className="text-sm font-semibold" style={{ color: "var(--gold)" }}>סיווג חכם לכל תנועה בנפרד</p>
-                      <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--gold)" }}>
+                      <p className="text-sm font-semibold" style={{ color: "var(--brand)" }}>סיווג חכם לכל תנועה בנפרד</p>
+                      <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--brand)" }}>
                         המערכת לומדת מהסיווגים הקודמים שלך ומזהה בתי עסק מוכרים. כשאין ודאות,
                         התנועה נשמרת כ״לא סווג״ במקום לקבל קטגוריה שגויה.
                       </p>
                     </div>
                     <div className="w-36">
-                      <label className="text-xs font-medium text-zinc-600">4 ספרות כרטיס</label>
+                      <label className="text-xs font-medium text-[var(--muted)]">4 ספרות כרטיס</label>
                       <input
                         className="field mt-1"
                         value={cardLast4}
@@ -364,7 +364,7 @@ export default function ImportStatementCard(props: {
                       ידני יישארו: {keptManual}
                     </span>
                     {trashCal > 0 ? (
-                      <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-zinc-600">
+                      <span className="rounded-full bg-[var(--surface2)] px-2.5 py-1 text-[var(--muted)]">
                         כאל בוטלו: {trashCal}
                       </span>
                     ) : null}
@@ -375,9 +375,9 @@ export default function ImportStatementCard(props: {
                     ) : null}
                   </div>
 
-                  <div className="max-h-[48vh] overflow-auto rounded-xl border border-zinc-200">
+                  <div className="max-h-[48vh] overflow-auto rounded-xl border border-[var(--border)]">
                     <table className="w-full text-sm">
-                      <thead className="sticky top-0 z-10 bg-zinc-100 text-zinc-600">
+                      <thead className="sticky top-0 z-10 bg-[var(--surface2)] text-[var(--muted)]">
                         <tr>
                           <th className="px-3 py-2 text-right font-medium">מקור</th>
                           <th className="px-3 py-2 text-right font-medium">תאריך</th>
@@ -395,7 +395,7 @@ export default function ImportStatementCard(props: {
                               key={r.key}
                               className={[
                                 "border-t transition",
-                                r.discarded ? "bg-red-50/60 text-zinc-400 line-through" : "hover:bg-zinc-50",
+                                r.discarded ? "bg-red-50/60 text-zinc-400 line-through" : "hover:bg-[var(--surface)]",
                                 isCal && !r.discarded && r.matchExisting ? "bg-amber-50/50" : "",
                               ].join(" ")}
                             >
@@ -456,7 +456,7 @@ export default function ImportStatementCard(props: {
                                         r.confidence === "high"
                                           ? "text-emerald-700"
                                           : r.confidence === "medium"
-                                            ? "text-[var(--gold)]"
+                                            ? "text-[var(--brand)]"
                                             : "text-amber-700",
                                       ].join(" ")}
                                     >
@@ -515,7 +515,7 @@ export default function ImportStatementCard(props: {
               {error ? <p className="text-sm text-red-600">{error}</p> : null}
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4">
+            <div className="flex justify-end gap-2 border-t border-[var(--border)] px-5 py-4">
               <button type="button" className="btn" onClick={closeModal} disabled={busy}>
                 ביטול
               </button>
