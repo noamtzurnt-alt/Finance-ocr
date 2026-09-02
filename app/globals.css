@@ -1,59 +1,60 @@
 @import "tailwindcss";
 
 :root {
-  /* "Fintech Pulse" design system — deep-space navy, glassmorphism, vivid
-     violet/cyan brand gradient, real data-viz color roles.
+  /* "Yanz" design system — flat near-black cards, a single vivid green
+     accent, bold pill shapes, monochrome-green charts. Matches the
+     reference the user provided: no glass/blur, no glow, crisp flat
+     surfaces with generous rounding.
      NOTE: none of these tokens are read by the Noam Finance chat screen
      (app/chat/**, and the .nf-* rules at the bottom of this file) — verified
      by grep before this redesign. Chat uses only its own local values. */
-  --bg: #0a0e1a;
-  --bg-2: #0d1226;
-  --surface: rgba(255, 255, 255, 0.045);
-  --surface2: rgba(255, 255, 255, 0.08);
-  --surface-solid: #131a2e;
-  --border: rgba(255, 255, 255, 0.10);
-  --foreground: #f4f6ff;
-  --muted: #8993b8;
+  --bg: #0b0d0c;
+  --surface: #161917;
+  --surface2: #1e2220;
+  --border: rgba(255, 255, 255, 0.07);
+  --foreground: #f5f7f5;
+  --muted: #8b938f;
 
-  /* Sidebar — solid, darker than the glass cards, anchors the layout */
-  --sidebar-bg: #070a14;
-  --sidebar-border: rgba(255,255,255,0.07);
-  --sidebar-text: rgba(244,246,255,0.62);
+  /* Sidebar — same flat black as the page, no separate panel */
+  --sidebar-bg: #0b0d0c;
+  --sidebar-border: rgba(255,255,255,0.06);
+  --sidebar-text: rgba(245,247,245,0.6);
   --sidebar-text-active: #ffffff;
-  --sidebar-active-bg: rgba(124, 92, 252, 0.18);
-  --sidebar-hover-bg: rgba(255,255,255,0.06);
+  --sidebar-active-bg: linear-gradient(135deg, #16a34a, #22c55e);
+  --sidebar-hover-bg: rgba(255,255,255,0.05);
 
-  /* Brand: a vivid violet -> cyan gradient, used deliberately as the one
-     signature identity (buttons, active states, glows) instead of a rainbow
-     of unrelated hues per element. */
-  --brand: #7c5cfc;
-  --brand-2: #22d3ee;
-  --brand-soft: rgba(124, 92, 252, 0.18);
-  --ring: rgba(124, 92, 252, 0.45);
-  --glow-brand: 0 0 1px rgba(124,92,252,0.6), 0 8px 24px rgba(124,92,252,0.35);
+  /* Brand: a single vivid green, used deliberately as the one signature
+     identity (buttons, active states, hero tiles) instead of a rainbow of
+     unrelated hues per element. */
+  --brand: #22c55e;
+  --brand-2: #16a34a;
+  --brand-soft: rgba(34, 197, 94, 0.15);
+  --ring: rgba(34, 197, 94, 0.4);
+  --glow-brand: 0 6px 16px rgba(34, 197, 94, 0.25);
 
-  /* Semantic amount colors — vivid on purpose */
-  --positive: #34d399;
-  --positive-soft: rgba(52, 211, 153, 0.16);
-  --negative: #fb7185;
-  --negative-soft: rgba(251, 113, 133, 0.16);
+  /* Semantic amount colors */
+  --positive: #4ade80;
+  --positive-soft: rgba(74, 222, 128, 0.14);
+  --negative: #f87171;
+  --negative-soft: rgba(248, 113, 113, 0.14);
   --danger: #ef4444;
 
-  /* Categorical data-viz palette (validated adjacent-pair order, dark mode) —
-     used for the category donut chart and category dots consistently. */
-  --chart-1: #3987e5;
-  --chart-2: #d97a2b;
-  --chart-3: #22d3ee;
-  --chart-4: #eab308;
-  --chart-5: #ec4899;
-  --chart-6: #34d399;
-  --chart-7: #a78bfa;
-  --chart-8: #f87171;
-  --chart-other: #5b6478;
+  /* Monochrome-green categorical ramp (dark -> pale), matching the
+     reference's expense-breakdown donut. A neutral closes the ramp for an
+     "Other" bucket so it never gets mistaken for a real category. */
+  --chart-1: #14532d;
+  --chart-2: #16a34a;
+  --chart-3: #22c55e;
+  --chart-4: #4ade80;
+  --chart-5: #86efac;
+  --chart-6: #bbf7d0;
+  --chart-7: #d9f99d;
+  --chart-8: #ecfccb;
+  --chart-other: #9ca3af;
 
-  /* Shared shape language */
-  --radius-card: 1.5rem;
-  --shadow-card: 0 1px 0 rgba(255,255,255,0.06) inset, 0 20px 50px -24px rgba(0,0,0,0.7);
+  /* Shared shape language: bold rounding, flat shadows, no glow/blur */
+  --radius-card: 1.75rem;
+  --shadow-card: 0 4px 16px rgba(0,0,0,0.4);
   --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
 
   /* Dark by default; chat also forces dark via .nf-chat-active + layout style. */
@@ -66,22 +67,21 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* "Fintech Pulse" brand ramp — registered as a real Tailwind color so
-     per-page components can use normal utilities (bg-brand-50, text-brand-700,
+  /* "Yanz" brand ramp — registered as a real Tailwind color so per-page
+     components can use normal utilities (bg-brand-50, text-brand-700,
      hover:bg-brand-100, etc.) instead of one-off inline styles. This is the
-     single vivid violet accent replacing the old indigo/violet/cyan/blue
-     palette across every non-chat page. */
-  --color-brand-50: #f2efff;
-  --color-brand-100: #e5e0ff;
-  --color-brand-200: #cabeff;
-  --color-brand-300: #ac97ff;
-  --color-brand-400: #9370fd;
-  --color-brand-500: #7c5cfc;
-  --color-brand-600: #6842f0;
-  --color-brand-700: #5731d1;
-  --color-brand-800: #4527a8;
-  --color-brand-900: #351f80;
-  --color-brand-950: #1f1354;
+     single vivid green accent used across every non-chat page. */
+  --color-brand-50: #f0fdf4;
+  --color-brand-100: #dcfce7;
+  --color-brand-200: #bbf7d0;
+  --color-brand-300: #86efac;
+  --color-brand-400: #4ade80;
+  --color-brand-500: #22c55e;
+  --color-brand-600: #16a34a;
+  --color-brand-700: #15803d;
+  --color-brand-800: #166534;
+  --color-brand-900: #14532d;
+  --color-brand-950: #052e16;
 }
 
 * { box-sizing: border-box; }
@@ -172,10 +172,11 @@ body.nf-chat-active {
     inset: 0;
     z-index: -1;
     pointer-events: none;
+    /* One quiet green glow on the edge opposite the sidebar (sidebar sits on
+       the right in this RTL layout) — flat black everywhere else, no
+       atmosphere/orb effect. */
     background:
-      radial-gradient(700px circle at 8% -5%, rgba(124, 92, 252, 0.20), transparent 60%),
-      radial-gradient(600px circle at 100% 12%, rgba(34, 211, 238, 0.14), transparent 55%),
-      radial-gradient(800px circle at 50% 110%, rgba(124, 92, 252, 0.10), transparent 60%),
+      radial-gradient(900px circle at -5% 8%, rgba(34, 197, 94, 0.10), transparent 55%),
       var(--bg);
   }
 
@@ -184,8 +185,7 @@ body.nf-chat-active {
     position: sticky;
     top: 0;
     z-index: 40;
-    background: color-mix(in srgb, var(--bg) 72%, transparent);
-    backdrop-filter: blur(16px) saturate(140%);
+    background: var(--bg);
     border-bottom: 1px solid var(--border);
     padding-top: env(safe-area-inset-top, 0px);
   }
@@ -230,15 +230,14 @@ body.nf-chat-active {
   }
 
   /* ─── Sidebar ─────────────────────────────── */
+  /* Flat, seamless with the page background (same --sidebar-bg === --bg) —
+     no panel edge, no glass. Matches the reference: the nav simply lives on
+     the page, its items are the only thing that reads as "sidebar". */
   .sidebar {
     background: var(--sidebar-bg);
-    border: 1px solid var(--sidebar-border);
-    border-radius: 1.25rem;
-    overflow: hidden;
     position: sticky;
     top: calc(5.5rem + env(safe-area-inset-top, 0px));
     height: fit-content;
-    box-shadow: 0 20px 50px -24px rgba(0,0,0,0.8);
   }
 
   .sidebar-logo {
@@ -252,11 +251,10 @@ body.nf-chat-active {
     width: 2rem;
     height: 2rem;
     border-radius: 0.625rem;
-    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    background: linear-gradient(135deg, var(--brand-2), var(--brand));
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: var(--glow-brand);
     flex-shrink: 0;
   }
 
@@ -276,12 +274,14 @@ body.nf-chat-active {
     gap: 0.125rem;
   }
 
+  /* Pill-shaped nav items — the active item is a full solid green pill,
+     matching the reference exactly (not a rounded-square highlight). */
   .nav-link {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    border-radius: 0.75rem;
-    padding: 0.6rem 0.75rem;
+    border-radius: 9999px;
+    padding: 0.7rem 1rem;
     color: var(--sidebar-text);
     font-size: 0.875rem;
     font-weight: 500;
@@ -294,28 +294,27 @@ body.nf-chat-active {
   .nav-link-active {
     background: var(--sidebar-active-bg);
     color: var(--sidebar-text-active);
+    font-weight: 600;
   }
 
   .nav-icon {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 0.6rem;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 9999px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    background: rgba(255,255,255,0.07);
-    color: rgba(255,255,255,0.6);
-    transition: background 120ms, color 120ms;
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    transition: color 120ms;
   }
   .nav-link:hover .nav-icon {
-    background: rgba(255,255,255,0.12);
     color: #fff;
   }
   .nav-icon-active {
-    background: linear-gradient(135deg, var(--brand), var(--brand-2)) !important;
+    background: transparent !important;
     color: #fff !important;
-    box-shadow: var(--glow-brand);
   }
 
   /* brand badge (topbar) */
@@ -323,37 +322,22 @@ body.nf-chat-active {
     width: 10px;
     height: 10px;
     border-radius: 9999px;
-    background: linear-gradient(135deg, var(--brand), var(--brand-2));
-    box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.2), 0 0 12px rgba(124, 92, 252, 0.5);
+    background: var(--brand);
   }
 
   /* ─── Cards ───────────────────────────────── */
-  /* Glass surface: translucent fill + blur so the atmosphere behind shows
-     through, with a bright top edge to sell the "glass" read. */
+  /* Flat, solid dark surface — no glass, no blur, no gradient edge. Identity
+     comes from generous rounding and a single-hue accent, not translucency. */
   .card {
     position: relative;
     border-radius: var(--radius-card);
     border: 1px solid var(--border);
     background: var(--surface);
-    backdrop-filter: blur(20px) saturate(140%);
     box-shadow: var(--shadow-card);
-  }
-  .card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(160deg, rgba(255,255,255,0.14), rgba(255,255,255,0) 40%);
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    pointer-events: none;
   }
 
   .card-soft {
-    background: rgba(255,255,255,0.03);
-    backdrop-filter: blur(10px);
+    background: var(--surface2);
   }
 
   .business-hub-card {
@@ -361,17 +345,15 @@ body.nf-chat-active {
     align-items: flex-start;
     gap: 1rem;
     padding: 1.15rem 1.2rem;
-    border-radius: 1.25rem;
+    border-radius: 1.5rem;
     border: 1px solid var(--border);
     background: var(--surface);
-    backdrop-filter: blur(20px) saturate(140%);
     box-shadow: var(--shadow-card);
-    transition: transform 200ms var(--ease-out-strong), box-shadow 200ms var(--ease-out-strong), border-color 200ms var(--ease-out-strong);
+    transition: transform 200ms var(--ease-out-strong), border-color 200ms var(--ease-out-strong);
   }
   .business-hub-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(124, 92, 252, 0.4);
-    box-shadow: var(--shadow-card), var(--glow-brand);
+    border-color: var(--brand-soft);
   }
   .business-hub-icon {
     display: grid;
@@ -455,13 +437,11 @@ body.nf-chat-active {
 
   .btn-primary {
     border-color: transparent;
-    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    background: linear-gradient(135deg, var(--brand-2), var(--brand));
     color: white;
-    box-shadow: var(--glow-brand);
   }
   .btn-primary:hover {
     filter: brightness(1.1);
-    box-shadow: 0 0 1px rgba(124,92,252,0.7), 0 10px 32px rgba(124,92,252,0.45);
   }
 
   .btn-ghost {
@@ -558,7 +538,6 @@ body.nf-chat-active {
     height: 0.5rem;
     border-radius: 9999px;
     flex-shrink: 0;
-    box-shadow: 0 0 6px currentColor;
   }
 
   /* ─── Section header ──────────────────────── */
