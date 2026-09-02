@@ -60,7 +60,7 @@ export default async function ReceiptsTable(props: { userId: string; showAll: bo
               <tr>
                 <td className="py-14 text-center text-zinc-400" colSpan={5}>
                   אין הוצאות עדיין.{" "}
-                  <Link className="font-semibold text-indigo-600 underline" href="/receipts">העלה לתיקייה</Link>
+                  <Link className="font-semibold text-gold-600 underline" href="/receipts">העלה לתיקייה</Link>
                 </td>
               </tr>
             ) : (

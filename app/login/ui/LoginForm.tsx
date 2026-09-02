@@ -73,7 +73,7 @@ export default function LoginForm() {
         type="button"
         onClick={() => void loginWithPasskey()}
         disabled={busy}
-        className="w-full rounded-xl bg-black py-3 text-white disabled:opacity-60"
+        className="btn btn-primary w-full py-3 disabled:opacity-60"
       >
         {busy ? `פותח ${label}…` : label === "ביומטרי" ? "התחבר עם ביומטרי" : `התחבר עם ${label}`}
       </button>

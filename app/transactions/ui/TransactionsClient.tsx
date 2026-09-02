@@ -39,41 +39,10 @@ type EditState = {
   scope: BudgetScope;
 };
 
-const SECTION_META: Record<BudgetScope, { title: string; emoji: string; headerClass: string; badgeClass: string }> = {
-  personal: {
-    title: "חיים אישיים",
-    emoji: "🏠",
-    headerClass: "border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50",
-    badgeClass: "bg-emerald-100 text-emerald-800",
-  },
-  business: {
-    title: "עסק",
-    emoji: "🏢",
-    headerClass: "border-violet-200 bg-gradient-to-l from-violet-50 to-fuchsia-50",
-    badgeClass: "bg-violet-100 text-violet-800",
-  },
+const SECTION_META: Record<BudgetScope, { title: string; emoji: string }> = {
+  personal: { title: "חיים אישיים", emoji: "🏠" },
+  business: { title: "עסק", emoji: "🏢" },
 };
-
-const CAT_COLORS: Record<string, string> = {
-  "אוכל": "bg-orange-100 text-orange-700",
-  "דלק/רכב": "bg-blue-100 text-blue-700",
-  "תוכנות ומנויים": "bg-violet-100 text-violet-700",
-  "תוכנות/מנויים": "bg-violet-100 text-violet-700",
-  "בגדים": "bg-pink-100 text-pink-700",
-  "שכירות": "bg-emerald-100 text-emerald-700",
-  "יום הולדת/אירוע מיוחד": "bg-yellow-100 text-yellow-700",
-  "בזבוזים": "bg-rose-100 text-rose-700",
-  "ספר": "bg-sky-100 text-sky-700",
-  "רכבת": "bg-cyan-100 text-cyan-700",
-  "מספרי טלפון": "bg-indigo-100 text-indigo-700",
-  "דומיין": "bg-fuchsia-100 text-fuchsia-700",
-  "עלות הודעות ווצאפ": "bg-green-100 text-green-700",
-  "עלות רואה חשבון": "bg-amber-100 text-amber-700",
-};
-
-function catColor(name: string | null) {
-  return name ? (CAT_COLORS[name] ?? "bg-teal-100 text-teal-700") : "bg-zinc-100 text-zinc-400";
-}
 
 function sumAmount(rows: Row[]) {
   return rows.reduce((s, r) => s + (Number(r.amount) || 0), 0);
@@ -310,15 +279,15 @@ export default function TransactionsClient(props: {
 
     return (
       <div key={scopeKey} className="card overflow-hidden">
-        <div className={`flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 ${meta.headerClass}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3" style={{ borderColor: "var(--border)", background: "var(--surface2)" }}>
           <div className="flex items-center gap-2">
             <span className="text-xl">{meta.emoji}</span>
             <div>
-              <h3 className="font-bold text-zinc-900">{meta.title}</h3>
-              <p className="text-xs text-zinc-600">{rows.length} תנועות · סה״כ {total.toLocaleString()} ₪</p>
+              <h3 className="font-bold" style={{ color: "var(--foreground)" }}>{meta.title}</h3>
+              <p className="text-xs" style={{ color: "var(--muted)" }}>{rows.length} תנועות · <span className="amount">{total.toLocaleString()} ₪</span></p>
             </div>
           </div>
-          <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${meta.badgeClass}`}>
+          <span className="cat-badge">
             {categoriesByScope[scopeKey].length} קטגוריות מתקציב
           </span>
         </div>
@@ -361,7 +330,7 @@ export default function TransactionsClient(props: {
                   if (isEditing && editState) {
                     const editCats = categoriesByScope[editState.scope];
                     out.push(
-                      <tr key={`edit-${t.id}`} ref={editRef} className="border-t-2 border-indigo-200 bg-indigo-50/40">
+                      <tr key={`edit-${t.id}`} ref={editRef} className="border-t-2" style={{ borderColor: "var(--gold)", background: "var(--gold-soft)" }}>
                         <td className="px-2 py-2">
                           <input className="field w-28" type="date" value={editState.date}
                             onChange={(e) => setEditState({ ...editState, date: e.target.value })} />
@@ -408,33 +377,33 @@ export default function TransactionsClient(props: {
                   } else {
                     out.push(
                       <tr key={t.id}>
-                        <td className="text-zinc-500 text-xs whitespace-nowrap">{t.date}</td>
+                        <td className="text-xs whitespace-nowrap" style={{ color: "var(--muted)" }}>{t.date}</td>
                         <td>
-                          <div className="font-medium text-zinc-900">{t.vendor}</div>
+                          <div className="font-medium" style={{ color: "var(--foreground)" }}>{t.vendor}</div>
                         </td>
                         <td>
-                          <span className={`cat-badge ${catColor(t.categoryName)}`}>
+                          <span className="cat-badge">
                             {t.categoryName ?? "ללא קטגוריה"}
                           </span>
                         </td>
                         <td className="whitespace-nowrap">
-                          <span className="font-semibold text-zinc-900">{t.amount}</span>
-                          <span className="mr-1 text-xs text-zinc-400">{t.currency}</span>
+                          <span className="amount">{t.amount}</span>
+                          <span className="mr-1 text-xs" style={{ color: "var(--muted)" }}>{t.currency}</span>
                         </td>
-                        <td className="text-xs text-zinc-500 max-w-[14rem]">
-                          {t.description || <span className="text-zinc-300"></span>}
+                        <td className="text-xs max-w-[14rem]" style={{ color: "var(--muted)" }}>
+                          {t.description || <span></span>}
                         </td>
                         <td>
                           <div className="flex gap-1">
                             <button
-                              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-indigo-50 hover:text-indigo-600"
+                              className="row-action-btn"
                               type="button" onClick={() => startEdit(t)} title="ערוך">
                               <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
                                 <path d="M11.013 2.513a1.75 1.75 0 0 1 2.475 2.474L5.5 12.974l-3 .527.527-3 7.986-7.988Z" strokeLinecap="round" strokeLinejoin="round" />
                               </svg>
                             </button>
                             <button
-                              className="flex h-7 w-7 items-center justify-center rounded-lg text-zinc-400 transition hover:bg-red-50 hover:text-red-600"
+                              className="row-action-btn row-action-btn--danger"
                               type="button" onClick={() => void remove(t.id)} title="מחק">
                               <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.8">
                                 <path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 9a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-9" strokeLinecap="round" strokeLinejoin="round" />
@@ -463,12 +432,12 @@ export default function TransactionsClient(props: {
       <div className="card p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
+            <div className="h-8 w-8 rounded-xl flex items-center justify-center" style={{ background: "var(--gold)" }}>
               <svg viewBox="0 0 20 20" className="h-4 w-4 text-white" fill="currentColor">
                 <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
               </svg>
             </div>
-            <span className="font-semibold text-zinc-900">הוספת תנועה חדשה</span>
+            <span className="font-semibold" style={{ color: "var(--foreground)" }}>הוספת תנועה חדשה</span>
           </div>
           <ImportStatementCard
             categories={props.categories}
@@ -486,11 +455,12 @@ export default function TransactionsClient(props: {
                   key={s}
                   type="button"
                   onClick={() => setScope(s)}
-                  className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${
+                  className="rounded-xl border px-3 py-2 text-sm font-semibold transition"
+                  style={
                     active
-                      ? `${m.badgeClass} border-current shadow-sm`
-                      : "border-zinc-200 bg-white text-zinc-600 hover:border-zinc-300"
-                  }`}
+                      ? { borderColor: "var(--gold)", background: "var(--gold-soft)", color: "var(--gold)" }
+                      : { borderColor: "var(--border)", background: "var(--surface)", color: "var(--muted)" }
+                  }
                 >
                   {m.emoji} {m.title}
                 </button>
@@ -563,7 +533,7 @@ export default function TransactionsClient(props: {
             <button className="btn" type="button" onClick={reload} disabled={loading}>החל</button>
           </div>
           <div className="flex items-end">
-            <span className="rounded-xl bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-700">
+            <span className="rounded-xl px-3 py-2 text-sm font-semibold" style={{ background: "var(--gold-soft)", color: "var(--gold)" }}>
               {filtered.length} תנועות
             </span>
           </div>
@@ -574,8 +544,8 @@ export default function TransactionsClient(props: {
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{error}</div>
       ) : null}
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-zinc-500">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-indigo-400 border-t-transparent" />
+        <div className="flex items-center gap-2 text-sm" style={{ color: "var(--muted)" }}>
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: "var(--gold)", borderTopColor: "transparent" }} />
           טוען תנועות…
         </div>
       ) : null}

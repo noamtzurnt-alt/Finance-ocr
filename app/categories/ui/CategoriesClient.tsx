@@ -98,7 +98,7 @@ export default function CategoriesClient(props: { initial: Category[] }) {
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <ul className="divide-y rounded-xl border border-zinc-200/70 bg-white">
+      <ul className="divide-y rounded-xl border border-zinc-200/70 bg-[var(--surface)]">
         {items.map((c) => (
           <li key={c.id} className="flex items-center justify-between px-3 py-2">
             <span className="text-sm">{c.name}</span>

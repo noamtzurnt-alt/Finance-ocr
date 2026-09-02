@@ -1,26 +1,39 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #f4f5f7;
+  /* "Quiet Ledger" design system — warm paper, single gold accent.
+     NOTE: none of these tokens are read by the Noam Finance chat screen
+     (app/chat/**, and the .nf-* rules at the bottom of this file) — verified
+     by grep before this redesign. Chat uses only its own local values. */
+  --bg: #faf8f4;
   --surface: #ffffff;
-  --surface2: #f8f9fb;
-  --border: rgba(15, 23, 42, 0.09);
-  --foreground: #0f172a;
-  --muted: #64748b;
+  --surface2: #f2efe8;
+  --border: rgba(23, 20, 15, 0.08);
+  --foreground: #171310;
+  --muted: #736b60;
 
   /* Sidebar */
-  --sidebar-bg: #0f172a;
+  --sidebar-bg: #161b22;
   --sidebar-border: rgba(255,255,255,0.07);
-  --sidebar-text: rgba(255,255,255,0.72);
+  --sidebar-text: rgba(255,255,255,0.68);
   --sidebar-text-active: #ffffff;
   --sidebar-active-bg: rgba(255,255,255,0.1);
   --sidebar-hover-bg: rgba(255,255,255,0.06);
 
-  /* Accents */
-  --indigo: #6366f1;
-  --indigo-dark: #4f46e5;
-  --cyan: #06b6d4;
-  --ring: rgba(99,102,241,0.3);
+  /* Single accent, used deliberately instead of a rainbow of hues */
+  --gold: #8a5a22;
+  --gold-soft: #f3e7d3;
+  --ring: rgba(138, 90, 34, 0.28);
+
+  /* Semantic amount colors — muted on purpose, not "bright green/red" */
+  --positive: #2e5d45;
+  --negative: #9a4a2e;
+  --danger: #b3261e;
+
+  /* Shared shape language */
+  --radius-card: 1.25rem;
+  --shadow-card: 0 1px 2px rgba(23,20,15,0.04), 0 12px 32px -8px rgba(23,20,15,0.07);
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
 
   /* Default light; /chat forces dark via .nf-chat-active + layout style. */
   color-scheme: light;
@@ -31,6 +44,23 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* "Quiet Ledger" gold ramp — registered as a real Tailwind color so
+     per-page components can use normal utilities (bg-gold-50, text-gold-700,
+     hover:bg-gold-100, etc.) instead of one-off inline styles. This is the
+     single accent color replacing the old indigo/violet/cyan/blue palette
+     across every non-chat page. */
+  --color-gold-50: #fbf3e7;
+  --color-gold-100: #f3e7d3;
+  --color-gold-200: #e8d2ac;
+  --color-gold-300: #d9b87d;
+  --color-gold-400: #c89f57;
+  --color-gold-500: #ad7f3a;
+  --color-gold-600: #8a5a22;
+  --color-gold-700: #714a1c;
+  --color-gold-800: #5c3c17;
+  --color-gold-900: #4a3013;
+  --color-gold-950: #2e1d0c;
 }
 
 * { box-sizing: border-box; }
@@ -81,6 +111,25 @@ body.nf-chat-active {
     padding-left: env(safe-area-inset-left, 0px);
     padding-right: env(safe-area-inset-right, 0px);
   }
+
+  /* Typography scope: applies the new IBM Plex Sans Hebrew face only to the
+     redesigned app shell and the standalone auth pages. The <body> element
+     itself keeps loading Inter untouched (see app/layout.tsx), so the Noam
+     Finance chat screen — which renders outside both .app-shell and
+     .auth-page — keeps its exact current font. */
+  .app-shell,
+  .auth-page {
+    font-family: var(--font-plex-sans), ui-sans-serif, system-ui, "Segoe UI", Arial, sans-serif;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .app-shell *,
+    .auth-page * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 @layer components {
@@ -98,7 +147,7 @@ body.nf-chat-active {
     position: sticky;
     top: 0;
     z-index: 40;
-    background: color-mix(in srgb, #ffffff 92%, transparent);
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--border);
     padding-top: env(safe-area-inset-top, 0px);
@@ -164,11 +213,11 @@ body.nf-chat-active {
     width: 2rem;
     height: 2rem;
     border-radius: 0.625rem;
-    background: linear-gradient(135deg, var(--indigo), var(--cyan));
+    background: var(--gold);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 12px rgba(99,102,241,0.4);
+    box-shadow: 0 4px 12px rgba(138, 90, 34, 0.4);
     flex-shrink: 0;
   }
 
@@ -225,9 +274,9 @@ body.nf-chat-active {
     color: #fff;
   }
   .nav-icon-active {
-    background: linear-gradient(135deg, var(--indigo), var(--cyan)) !important;
+    background: var(--gold) !important;
     color: #fff !important;
-    box-shadow: 0 3px 8px rgba(99,102,241,0.35);
+    box-shadow: 0 3px 8px rgba(138, 90, 34, 0.35);
   }
 
   /* brand badge (topbar) */
@@ -235,16 +284,16 @@ body.nf-chat-active {
     width: 10px;
     height: 10px;
     border-radius: 9999px;
-    background: linear-gradient(135deg, var(--indigo), var(--cyan));
-    box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+    background: var(--gold);
+    box-shadow: 0 0 0 3px rgba(138, 90, 34, 0.2);
   }
 
   /* ─── Cards ───────────────────────────────── */
   .card {
-    border-radius: 1rem;
+    border-radius: var(--radius-card);
     border: 1px solid var(--border);
     background: var(--surface);
-    box-shadow: 0 1px 3px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.05);
+    box-shadow: var(--shadow-card);
   }
 
   .card-soft {
@@ -265,8 +314,8 @@ body.nf-chat-active {
   }
   .business-hub-card:hover {
     transform: translateY(-2px);
-    border-color: rgba(99, 102, 241, 0.22);
-    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08), 0 16px 40px rgba(99, 102, 241, 0.08);
+    border-color: rgba(138, 90, 34, 0.25);
+    box-shadow: 0 4px 16px rgba(23, 20, 15, 0.08), 0 16px 40px rgba(138, 90, 34, 0.1);
   }
   .business-hub-icon {
     display: grid;
@@ -284,24 +333,35 @@ body.nf-chat-active {
     width: 1.75rem;
     height: 1.75rem;
     border-radius: 9999px;
-    background: #f4f4f5;
-    color: #71717a;
+    background: var(--surface2);
+    color: var(--muted);
     transition: background 160ms ease, color 160ms ease, transform 160ms ease;
   }
   .business-hub-card:hover .business-hub-arrow {
-    background: #eef2ff;
-    color: #4f46e5;
+    background: var(--gold-soft);
+    color: var(--gold);
     transform: translateX(-2px);
   }
 
-  /* Stat card number */
+  /* Stat card number — always the monospaced "amount" face */
   .stat-value {
-    font-size: 1.875rem;
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 2.25rem;
     font-weight: 700;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
     line-height: 1;
     margin-top: 0.625rem;
   }
+
+  /* Shared numeric/amount styling for tables and inline figures */
+  .amount {
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+  .amount-positive { color: var(--positive); }
+  .amount-negative { color: var(--negative); }
 
   .stat-label {
     font-size: 0.8rem;
@@ -323,15 +383,15 @@ body.nf-chat-active {
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--foreground);
-    transition: background 120ms, box-shadow 120ms, transform 80ms;
+    transition: background 160ms var(--ease-out-strong), box-shadow 160ms var(--ease-out-strong), transform 160ms var(--ease-out-strong);
     cursor: pointer;
     min-height: 2.75rem;
   }
   .btn:hover {
-    background: #f1f3f6;
-    box-shadow: 0 2px 8px rgba(15,23,42,0.07);
+    background: var(--surface2);
+    box-shadow: 0 2px 8px rgba(23,20,15,0.06);
   }
-  .btn:active { transform: translateY(1px); }
+  .btn:active { transform: scale(0.97); }
   .btn:focus-visible {
     outline: none;
     box-shadow: 0 0 0 3px var(--ring);
@@ -339,27 +399,27 @@ body.nf-chat-active {
 
   .btn-primary {
     border-color: transparent;
-    background: linear-gradient(135deg, var(--indigo-dark), var(--indigo));
+    background: var(--gold);
     color: white;
-    box-shadow: 0 4px 14px rgba(99,102,241,0.3);
+    box-shadow: 0 4px 14px rgba(138, 90, 34, 0.3);
   }
   .btn-primary:hover {
-    background: linear-gradient(135deg, var(--indigo), #818cf8);
-    box-shadow: 0 6px 18px rgba(99,102,241,0.38);
+    background: #9c6626;
+    box-shadow: 0 6px 18px rgba(138, 90, 34, 0.38);
   }
 
   .btn-ghost {
     background: transparent;
     border-color: transparent;
   }
-  .btn-ghost:hover { background: rgba(15,23,42,0.05); }
+  .btn-ghost:hover { background: rgba(23,20,15,0.05); }
 
   .btn-danger {
     border-color: transparent;
-    background: #fee2e2;
-    color: #dc2626;
+    background: #fbe2df;
+    color: var(--danger);
   }
-  .btn-danger:hover { background: #fecaca; }
+  .btn-danger:hover { background: #f6cec9; }
 
   /* ─── Inputs ──────────────────────────────── */
   .field {
@@ -370,14 +430,14 @@ body.nf-chat-active {
     padding: 0.575rem 0.75rem;
     font-size: 0.9rem;
     color: var(--foreground);
-    transition: box-shadow 120ms, border-color 120ms;
+    transition: box-shadow 160ms, border-color 160ms;
   }
-  .field::placeholder { color: #94a3b8; }
+  .field::placeholder { color: #a39a8c; }
   .field:focus {
     outline: none;
     background: #fff;
     box-shadow: 0 0 0 3px var(--ring);
-    border-color: var(--indigo);
+    border-color: var(--gold);
   }
 
   /* ─── Table ───────────────────────────────── */
@@ -412,13 +472,15 @@ body.nf-chat-active {
     border-top: 1px solid var(--border);
     transition: background 80ms;
   }
-  .data-table tbody tr:hover { background: #f8f9fb; }
+  .data-table tbody tr:hover { background: var(--surface2); }
   .data-table tbody td {
     padding: 0.7rem 0.875rem;
     vertical-align: middle;
   }
 
   /* ─── Category badge ──────────────────────── */
+  /* Neutral by default — color is reserved for meaning (over-budget/on-track),
+     not used to decorate every category with its own hue. */
   .cat-badge {
     display: inline-flex;
     align-items: center;
@@ -427,6 +489,8 @@ body.nf-chat-active {
     font-size: 0.72rem;
     font-weight: 600;
     white-space: nowrap;
+    background: var(--surface2);
+    color: var(--muted);
   }
 
   /* ─── Section header ──────────────────────── */
@@ -439,15 +503,36 @@ body.nf-chat-active {
     margin-bottom: 1.25rem;
   }
   .section-title {
-    font-size: 1.375rem;
+    font-size: 1.5rem;
     font-weight: 700;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.02em;
     color: var(--foreground);
   }
   .section-sub {
     font-size: 0.825rem;
     color: var(--muted);
     margin-top: 0.2rem;
+  }
+
+  /* ─── Row action icon buttons (table edit/delete) ── */
+  .row-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.5rem;
+    color: var(--muted);
+    background: transparent;
+    transition: background 160ms var(--ease-out-strong), color 160ms var(--ease-out-strong);
+  }
+  .row-action-btn:hover {
+    background: var(--gold-soft);
+    color: var(--gold);
+  }
+  .row-action-btn--danger:hover {
+    background: #fbe2df;
+    color: var(--danger);
   }
 
   /* ─── Divider month row ───────────────────── */
@@ -459,6 +544,28 @@ body.nf-chat-active {
     text-transform: uppercase;
     color: var(--muted);
     background: var(--surface2);
+  }
+
+  /* ─── Entrance / popover motion ───────────────
+     Purpose: state indication on first paint (dash-enter, plays once — CSS
+     animations don't replay on data updates, only on DOM mount) and
+     preventing a popover from "popping" into existence (popover-in). Both
+     are scoped under .app-shell/.auth-page only, same as the reduced-motion
+     rule above — chat is unaffected either way. */
+  .app-shell .dash-enter {
+    animation: dash-enter-kf 260ms var(--ease-out-strong) both;
+  }
+  @keyframes dash-enter-kf {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .app-shell .popover-in {
+    animation: popover-in-kf 160ms var(--ease-out-strong) both;
+  }
+  @keyframes popover-in-kf {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
   }
 
   /* ─── iPhone device frame ─────────────────── */

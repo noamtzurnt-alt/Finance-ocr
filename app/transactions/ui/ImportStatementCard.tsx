@@ -282,7 +282,7 @@ export default function ImportStatementCard(props: {
             <div className="space-y-4 overflow-y-auto px-5 py-4">
               {!inPreview ? (
                 <div
-                  className="cursor-pointer rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-4 py-8 text-center transition hover:border-blue-400 hover:bg-blue-50/40"
+                  className="cursor-pointer rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50 px-4 py-8 text-center transition hover:border-[var(--gold)] hover:bg-[var(--gold-soft)]"
                   onClick={() => !busy && inputRef.current?.click()}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={(e) => {
@@ -312,11 +312,11 @@ export default function ImportStatementCard(props: {
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm" style={{ borderColor: "var(--gold-soft)", background: "var(--gold-soft)" }}>
                     <div>
-                      <span className="font-semibold text-blue-900">{fileName}</span>
+                      <span className="font-semibold" style={{ color: "var(--gold)" }}>{fileName}</span>
                       {range ? (
-                        <span className="mr-2 text-blue-700">
+                        <span className="mr-2" style={{ color: "var(--gold)" }}>
                           · {range.from} עד {range.to}
                         </span>
                       ) : null}
@@ -336,10 +336,10 @@ export default function ImportStatementCard(props: {
                     </button>
                   </div>
 
-                  <div className="flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
+                  <div className="flex flex-wrap items-end justify-between gap-3 rounded-2xl border p-4" style={{ borderColor: "var(--gold-soft)", background: "var(--gold-soft)" }}>
                     <div className="max-w-xl">
-                      <p className="text-sm font-semibold text-indigo-950">סיווג חכם לכל תנועה בנפרד</p>
-                      <p className="mt-1 text-xs leading-relaxed text-indigo-700">
+                      <p className="text-sm font-semibold" style={{ color: "var(--gold)" }}>סיווג חכם לכל תנועה בנפרד</p>
+                      <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--gold)" }}>
                         המערכת לומדת מהסיווגים הקודמים שלך ומזהה בתי עסק מוכרים. כשאין ודאות,
                         התנועה נשמרת כ״לא סווג״ במקום לקבל קטגוריה שגויה.
                       </p>
@@ -456,7 +456,7 @@ export default function ImportStatementCard(props: {
                                         r.confidence === "high"
                                           ? "text-emerald-700"
                                           : r.confidence === "medium"
-                                            ? "text-indigo-600"
+                                            ? "text-[var(--gold)]"
                                             : "text-amber-700",
                                       ].join(" ")}
                                     >

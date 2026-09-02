@@ -63,13 +63,13 @@ export default function SetupForm() {
   if (step === "passkey") {
     return (
       <div className="space-y-3">
-        <p className="text-sm text-zinc-600">
+        <p className="text-sm" style={{ color: "var(--muted)" }}>
           עכשיו נרשום את המכשיר הזה כ־Passkey (Face ID / Touch ID), זו תהיה הדרך היחידה להתחבר.
         </p>
         <button
           disabled={loading}
           onClick={() => void onRegisterPasskey()}
-          className="w-full rounded-xl bg-black py-2 text-white disabled:opacity-60"
+          className="btn btn-primary w-full py-2"
           type="button"
         >
           {loading ? "נרשם..." : "הוסף Face ID / Passkey"}
@@ -82,10 +82,10 @@ export default function SetupForm() {
   return (
     <form onSubmit={onCreateAccount} className="space-y-3">
       <div>
-        <label className="text-sm font-medium text-zinc-950">אימייל</label>
+        <label className="text-sm font-medium" style={{ color: "var(--foreground)" }}>אימייל</label>
         <input
           dir="auto"
-          className="mt-1 w-full rounded-xl border bg-white px-3 py-2 font-medium text-black caret-black placeholder:font-normal placeholder:text-zinc-400 outline-none focus:ring-2 focus:ring-black/10"
+          className="field mt-1"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
@@ -97,7 +97,7 @@ export default function SetupForm() {
 
       <button
         disabled={loading}
-        className="w-full rounded-xl bg-black py-2 text-white disabled:opacity-60"
+        className="btn btn-primary w-full py-2"
         type="submit"
       >
         {loading ? "יוצר..." : "המשך"}

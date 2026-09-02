@@ -206,14 +206,14 @@ const stepTitles = ["הכנסה", "הוצאות", "סיכום"];
 
 const STEP_META = [
   { emoji: "💵", gradient: "from-emerald-500 to-teal-500", ring: "ring-emerald-400", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  { emoji: "🛒", gradient: "from-violet-500 to-fuchsia-500", ring: "ring-violet-400", text: "text-violet-700", bg: "bg-violet-50", border: "border-violet-200" },
+  { emoji: "🛒", gradient: "from-gold-500 to-gold-600", ring: "ring-gold-400", text: "text-gold-700", bg: "bg-gold-50", border: "border-gold-200" },
   { emoji: "✨", gradient: "from-amber-500 to-orange-500", ring: "ring-amber-400", text: "text-amber-800", bg: "bg-amber-50", border: "border-amber-200" },
 ] as const;
 
 const INCOME_SOURCE_STYLE = {
   steady: { emoji: "💼", active: "border-emerald-400 bg-gradient-to-l from-emerald-50 to-teal-50 shadow-sm shadow-emerald-100", accent: "accent-emerald-600" },
-  variable: { emoji: "🚀", active: "border-violet-400 bg-gradient-to-l from-violet-50 to-fuchsia-50 shadow-sm shadow-violet-100", accent: "accent-violet-600" },
-  other: { emoji: "🎁", active: "border-sky-400 bg-gradient-to-l from-sky-50 to-cyan-50 shadow-sm shadow-sky-100", accent: "accent-sky-600" },
+  variable: { emoji: "🚀", active: "border-gold-400 bg-gradient-to-l from-gold-50 to-gold-50 shadow-sm shadow-gold-100", accent: "accent-gold-600" },
+  other: { emoji: "🎁", active: "border-sky-400 bg-gradient-to-l from-sky-50 to-gold-50 shadow-sm shadow-sky-100", accent: "accent-sky-600" },
 } as const;
 
 function StepBanner({ step }: { step: WizardStep }) {
@@ -349,13 +349,13 @@ function ExpenseBudgetTable({
             {savings && (() => {
               const savBal = income - savingsAmt;
               return (
-                <tr className="border-b border-blue-100 bg-blue-50/60">
+                <tr className="border-b border-gold-100 bg-gold-50/60">
                   <td className="px-3 py-1.5">
                     <div className="flex items-center gap-1.5">
                       <span className="text-base leading-none w-6 text-center">💰</span>
                       <div>
-                        <span className="text-sm font-semibold text-blue-800">חיסכון</span>
-                        <p className="text-[0.6rem] text-blue-400 leading-tight">יוצא ביום קבלת שכר, לפני הוצאות</p>
+                        <span className="text-sm font-semibold text-gold-800">חיסכון</span>
+                        <p className="text-[0.6rem] text-gold-400 leading-tight">יוצא ביום קבלת שכר, לפני הוצאות</p>
                       </div>
                     </div>
                   </td>
@@ -370,7 +370,7 @@ function ExpenseBudgetTable({
                       placeholder="0"
                       className={`w-full rounded-lg border px-2 py-1 text-right text-sm font-semibold focus:outline-none focus:ring-1 ${
                         savingsAmt > 0
-                          ? "border-blue-300 bg-blue-100 text-blue-800 focus:ring-blue-400"
+                          ? "border-gold-300 bg-gold-100 text-gold-800 focus:ring-gold-400"
                           : "border-zinc-200 bg-zinc-50 text-zinc-500 focus:ring-zinc-300"
                       }`}
                     />
@@ -412,7 +412,7 @@ function ExpenseBudgetTable({
                         value={row.notes ?? ""}
                         onChange={(e) => updateRow(row.id, "notes", e.target.value)}
                         placeholder="הערות פירוט..."
-                        className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 placeholder:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-violet-300"
+                        className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1 text-xs text-zinc-700 placeholder:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-gold-300"
                       />
                     </td>
                   )}
@@ -426,7 +426,7 @@ function ExpenseBudgetTable({
                       placeholder="0"
                       className={`w-full rounded-lg border px-2 py-1 text-right text-sm font-semibold focus:outline-none focus:ring-1 ${
                         amt > 0
-                          ? "border-indigo-200 bg-indigo-50 text-indigo-800 focus:ring-indigo-400"
+                          ? "border-gold-200 bg-gold-50 text-gold-800 focus:ring-gold-400"
                           : "border-zinc-200 bg-zinc-50 text-zinc-500 focus:ring-zinc-300"
                       }`}
                     />
@@ -514,7 +514,7 @@ function ExpenseBudgetTable({
       <button
         type="button"
         onClick={addRow}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-violet-300/60 bg-violet-50/50 py-2.5 text-sm font-medium text-violet-600 transition hover:border-violet-400 hover:bg-violet-100/60 hover:text-violet-800 active:scale-[0.99]"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gold-300/60 bg-gold-50/50 py-2.5 text-sm font-medium text-gold-600 transition hover:border-gold-400 hover:bg-gold-100/60 hover:text-gold-800 active:scale-[0.99]"
       >
         <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M8 3v10M3 8h10" strokeLinecap="round" />
@@ -643,11 +643,11 @@ function BudgetSummaryCard({
     const themeCls =
       theme === "personal"
         ? "border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50"
-        : "border-violet-200/80 bg-gradient-to-br from-violet-50/90 via-white to-fuchsia-50/50";
+        : "border-gold-200/80 bg-gradient-to-br from-gold-50/90 via-white to-gold-50/50";
     const headCls =
       theme === "personal"
         ? "border-emerald-100 bg-gradient-to-l from-emerald-100/80 to-teal-50"
-        : "border-violet-100 bg-gradient-to-l from-violet-100/80 to-fuchsia-50";
+        : "border-gold-100 bg-gradient-to-l from-gold-100/80 to-gold-50";
 
     return (
       <div className={`rounded-2xl border overflow-hidden shadow-sm ${themeCls}`}>
@@ -698,7 +698,7 @@ function BudgetSummaryCard({
   }
 
   return (
-    <div className="space-y-4 rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/40 via-violet-50/30 to-emerald-50/40 p-4 shadow-inner">
+    <div className="space-y-4 rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/40 via-gold-50/30 to-emerald-50/40 p-4 shadow-inner">
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-100 via-emerald-50 to-teal-50 p-4 shadow-sm">
           <span className="absolute -left-1 -top-1 text-3xl opacity-20">📈</span>
@@ -722,7 +722,7 @@ function BudgetSummaryCard({
             הוצאות בלבד{budget.personalSubsidyToBusiness > 0 ? " (כולל השלמה לעסק)" : ""}
           </p>
         </div>
-        <div className="relative overflow-hidden rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-100 via-sky-50 to-indigo-50 p-4 shadow-sm">
+        <div className="relative overflow-hidden rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-100 via-sky-50 to-gold-50 p-4 shadow-sm">
           <span className="absolute -left-1 -top-1 text-3xl opacity-20">🐷</span>
           <p className="text-xs font-bold uppercase tracking-wide text-sky-700">הולך לחיסכון</p>
           <p className="mt-2 text-2xl font-bold text-sky-800 tabular-nums">
@@ -770,13 +770,13 @@ function BudgetSummaryCard({
         <button
           type="button"
           onClick={onEditExpenses}
-          className="rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-800 transition hover:bg-violet-100 hover:shadow-sm active:scale-[0.98]"
+          className="rounded-xl border border-gold-200 bg-gold-50 px-4 py-2.5 text-sm font-semibold text-gold-800 transition hover:bg-gold-100 hover:shadow-sm active:scale-[0.98]"
         >
           ✏️ ערוך הוצאות
         </button>
       </div>
 
-      <div className="rounded-2xl border border-indigo-200/60 bg-gradient-to-l from-indigo-50 to-violet-50 p-4 shadow-sm">
+      <div className="rounded-2xl border border-gold-200/60 bg-gradient-to-l from-gold-50 to-gold-50 p-4 shadow-sm">
         {saved ? (
           <div className="flex items-center gap-2 rounded-xl bg-gradient-to-l from-emerald-400 to-teal-500 px-4 py-3 text-sm font-bold text-white shadow-md">
             <span className="text-lg">🎉</span>
@@ -787,12 +787,12 @@ function BudgetSummaryCard({
             type="button"
             onClick={onSave}
             disabled={saving}
-            className="w-full rounded-xl bg-gradient-to-l from-indigo-600 to-violet-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-200 transition hover:from-indigo-500 hover:to-violet-500 active:scale-[0.98] disabled:opacity-60"
+            className="w-full rounded-xl bg-gold-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-gold-200 transition hover:bg-gold-500 active:scale-[0.98] disabled:opacity-60"
           >
             {saving ? "שומר..." : "💾 שמור תקציב חודשי"}
           </button>
         )}
-        <p className="mt-2 text-center text-xs text-indigo-700/70">
+        <p className="mt-2 text-center text-xs text-gold-700/70">
           מגבלת הוצאות אישית = הכנסה אישית פחות חיסכון ({budget.salarySavings.toLocaleString()} ₪)
           {budget.personalSubsidyToBusiness > 0 &&
             ` פחות השלמה לעסק (${budget.personalSubsidyToBusiness.toLocaleString()} ₪)`}
@@ -1024,9 +1024,9 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50/80 via-white to-emerald-50/60 shadow-xl shadow-violet-100/40">
+    <div className="overflow-hidden rounded-2xl border border-gold-200/70 bg-gradient-to-br from-gold-50/80 via-white to-emerald-50/60 shadow-xl shadow-gold-100/40">
       {/* Header */}
-      <div className="relative overflow-hidden border-b border-white/20 bg-gradient-to-l from-violet-600 via-indigo-600 to-teal-600 px-5 py-5 text-white">
+      <div className="relative overflow-hidden border-b border-white/20 bg-gradient-to-l from-gold-600 via-gold-600 to-teal-600 px-5 py-5 text-white">
         <div className="pointer-events-none absolute -left-6 -top-6 h-28 w-28 rounded-full bg-white/10" />
         <div className="pointer-events-none absolute -bottom-4 left-1/3 h-20 w-20 rounded-full bg-teal-400/20" />
         <div className="relative flex items-center justify-between">
@@ -1091,9 +1091,9 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
       <div className="p-5">
 
         {done && step < 3 && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-violet-200 bg-gradient-to-l from-violet-50 to-fuchsia-50 px-4 py-3 shadow-sm">
-            <span className="text-sm font-medium text-violet-800">✏️ מצב עריכה, שינוי נקודתי</span>
-            <button type="button" onClick={returnToSummary} className="rounded-lg bg-violet-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-violet-500 active:scale-[0.98]">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-gold-200 bg-gradient-to-l from-gold-50 to-gold-50 px-4 py-3 shadow-sm">
+            <span className="text-sm font-medium text-gold-800">✏️ מצב עריכה, שינוי נקודתי</span>
+            <button type="button" onClick={returnToSummary} className="rounded-lg bg-gold-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-gold-500 active:scale-[0.98]">
               חזרה לסיכום ✨
             </button>
           </div>
@@ -1218,7 +1218,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
                 <ExpenseBudgetTable
                   title="תקציב עסקי"
                   subtitle={`הכנסה עסקית: ${businessIncome.toLocaleString()} ₪`}
-                  headerClass="border-violet-200 bg-gradient-to-l from-violet-100 to-fuchsia-50 text-violet-900"
+                  headerClass="border-gold-200 bg-gradient-to-l from-gold-100 to-gold-50 text-gold-900"
                   income={businessIncome}
                   incomeLabel="הכנסה עסקית"
                   incomeIcon="🏢"
@@ -1292,12 +1292,12 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
         )}
 
         {/* Navigation, always visible */}
-        <div className="mt-6 flex items-center justify-between border-t border-violet-100/80 pt-4">
+        <div className="mt-6 flex items-center justify-between border-t border-gold-100/80 pt-4">
           {step > 1 ? (
             <button
               type="button"
               onClick={back}
-              className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-600 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700 active:scale-[0.98]"
+              className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-600 transition hover:border-gold-200 hover:bg-gold-50 hover:text-gold-700 active:scale-[0.98]"
             >
               ← חזרה
             </button>
@@ -1306,7 +1306,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
           )}
 
           {step < 3 && (
-            <span className="rounded-full bg-violet-100/80 px-3 py-1 text-xs font-medium text-violet-700">
+            <span className="rounded-full bg-gold-100/80 px-3 py-1 text-xs font-medium text-gold-700">
               שלב {step} מתוך 3
             </span>
           )}
@@ -1317,7 +1317,7 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
               type="button"
               onClick={done && step === 2 ? returnToSummary : next}
               disabled={!canAdvance()}
-              className="rounded-xl bg-gradient-to-l from-indigo-600 to-violet-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-indigo-200 transition hover:from-indigo-500 hover:to-violet-500 active:scale-[0.98] disabled:opacity-40"
+              className="rounded-xl bg-gold-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-gold-200 transition hover:bg-gold-500 active:scale-[0.98] disabled:opacity-40"
             >
               {step === 2 ? (done ? "עדכן סיכום ✨" : "לסיכום ✨") : "הבא ←"}
             </button>

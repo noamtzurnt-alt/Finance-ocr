@@ -12,7 +12,6 @@ function cx(...xs: Array<string | false | null | undefined>) {
 type NavItem = {
   href: string;
   label: string;
-  color: string;
   icon: (props: { className?: string }) => React.ReactNode;
 };
 
@@ -20,7 +19,6 @@ const nav: NavItem[] = [
   {
     href: "/dashboard",
     label: "דשבורד",
-    color: "from-indigo-500 to-violet-500",
     icon: ({ className }) => (
       <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
         <rect x="3" y="3" width="7" height="7" rx="1.5" />
@@ -33,7 +31,6 @@ const nav: NavItem[] = [
   {
     href: "/transactions",
     label: "כל התנועות",
-    color: "from-blue-500 to-cyan-500",
     icon: ({ className }) => (
       <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" strokeLinecap="round" />
@@ -43,7 +40,6 @@ const nav: NavItem[] = [
   {
     href: "/business",
     label: "עסקי",
-    color: "from-amber-500 to-orange-500",
     icon: ({ className }) => (
       <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V9.5Z" strokeLinejoin="round" />
@@ -54,7 +50,6 @@ const nav: NavItem[] = [
   {
     href: "/budget",
     label: "תקציב",
-    color: "from-purple-500 to-indigo-500",
     icon: ({ className }) => (
       <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7H14a3.5 3.5 0 0 1 0 7H6" strokeLinecap="round" strokeLinejoin="round" />
@@ -91,7 +86,7 @@ function SidebarContent({ active, onClose }: { active: string; onClose?: () => v
               onClick={onClose}
               className={cx("nav-link", isActive && "nav-link-active")}
             >
-              <span className={cx("nav-icon", isActive && "nav-icon-active", isActive && `bg-gradient-to-br ${item.color}`)}>
+              <span className={cx("nav-icon", isActive && "nav-icon-active")}>
                 {item.icon({ className: "h-4 w-4" })}
               </span>
               <span>{item.label}</span>

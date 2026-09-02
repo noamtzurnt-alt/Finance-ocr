@@ -15,7 +15,7 @@ const items: HubItem[] = [
     href: "/contracts",
     title: "חוזים",
     description: "חוזי לקוחות, PDF חתום ועותקי מייל",
-    color: "from-violet-500 to-purple-600",
+    color: "from-gold-500 to-gold-700",
     icon: (
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M7 3h7l3 3v15a1 1 0 0 1-1 1H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z" />
@@ -27,7 +27,7 @@ const items: HubItem[] = [
     href: "/receipts",
     title: "הוצאות מוכרות",
     description: "קבלות והוצאות לדיווח, לפי תיקיות וחודשים",
-    color: "from-amber-500 to-orange-600",
+    color: "from-gold-400 to-gold-600",
     icon: (
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M12 16V4m0 0 4 4m-4-4-4 4" strokeLinecap="round" strokeLinejoin="round" />
@@ -39,7 +39,7 @@ const items: HubItem[] = [
     href: "/payment-receipts",
     title: "קבלות הכנסות",
     description: "מסמכי הכנסה, חשבוניות וקבלות מלקוחות",
-    color: "from-lime-500 to-green-600",
+    color: "from-gold-500 to-gold-700",
     icon: (
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
@@ -51,7 +51,7 @@ const items: HubItem[] = [
     href: "/export",
     title: "ייצוא",
     description: "ייצוא שנתי לרו״ח – Excel ו-ZIP",
-    color: "from-sky-500 to-blue-600",
+    color: "from-gold-400 to-gold-700",
     icon: (
       <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M12 3v12M8 11l4 4 4-4" strokeLinecap="round" strokeLinejoin="round" />

@@ -1,11 +1,27 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, IBM_Plex_Sans_Hebrew, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import AppFrame from "@/app/ui/AppFrame";
 import OfflineBanner from "@/app/ui/OfflineBanner";
 import { Suspense } from "react";
 
+// Kept exactly as before — the chat bot inherits this as its body font and
+// must not change. New typography below is additive (exposed as CSS
+// variables only) and is opted into by the ".v2-shell" scope class, which
+// the chat screen never uses.
 const inter = Inter({ subsets: ["latin"] });
+
+const plexSansHebrew = IBM_Plex_Sans_Hebrew({
+  subsets: ["hebrew", "latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-plex-sans",
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-plex-mono",
+});
 
 export const metadata: Metadata = {
   title: "Noam Finance",
@@ -44,7 +60,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="he" dir="rtl">
-      <body className={inter.className}>
+      <body className={`${inter.className} ${plexSansHebrew.variable} ${plexMono.variable}`}>
         <OfflineBanner />
         <Suspense fallback={<div />}>
           <AppFrame>{children}</AppFrame>

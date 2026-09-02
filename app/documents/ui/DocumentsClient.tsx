@@ -177,7 +177,7 @@ export default function DocumentsClient(props: { categories: Category[]; initial
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <div className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-white">
+      <div className="overflow-hidden rounded-2xl border border-zinc-200/70 bg-[var(--surface)]">
         <table className="w-full text-sm">
           <thead className="bg-zinc-50 text-zinc-700">
             <tr>

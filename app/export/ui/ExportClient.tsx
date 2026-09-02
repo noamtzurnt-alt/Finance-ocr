@@ -64,9 +64,9 @@ export default function ExportClient(props: { defaultYear: number }) {
         </div>
       </div>
 
-      <div className="rounded-xl border border-indigo-100 bg-indigo-50/70 px-4 py-3 text-sm text-indigo-950">
+      <div className="rounded-xl border border-gold-100 bg-gold-50/70 px-4 py-3 text-sm text-gold-950">
         <p className="font-semibold">מה יוצא לרו״ח לשנה שנבחרה</p>
-        <ul className="mt-2 list-disc space-y-1 pr-5 text-indigo-800">
+        <ul className="mt-2 list-disc space-y-1 pr-5 text-gold-800">
           <li>
             <strong>מסמך 1, הוצאות מוכרות:</strong> כל ההוצאות של השנה
           </li>

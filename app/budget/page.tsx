@@ -10,7 +10,7 @@ export default async function BudgetPage() {
   return (
     <div className="space-y-6">
       <LiveRefresh url="/api/stream/events?full=1" />
-      <div className="relative overflow-hidden rounded-2xl border border-violet-200/60 bg-gradient-to-l from-violet-600 via-indigo-600 to-teal-600 px-5 py-4 text-white shadow-lg shadow-violet-200/40">
+      <div className="relative overflow-hidden rounded-2xl border border-gold-200/60 bg-gradient-to-l from-gold-600 via-gold-600 to-teal-600 px-5 py-4 text-white shadow-lg shadow-gold-200/40">
         <div className="pointer-events-none absolute -left-4 -top-4 h-20 w-20 rounded-full bg-white/10" />
         <div className="relative">
           <h1 className="text-xl font-bold tracking-tight">💰 תקציב</h1>

@@ -37,7 +37,8 @@ export default async function DashboardPage() {
           <Link
             href="/chat"
             prefetch
-            className="btn inline-flex items-center gap-2 bg-zinc-900 text-white hover:bg-zinc-800"
+            className="btn inline-flex items-center gap-2 border-transparent text-white hover:opacity-90"
+            style={{ background: "var(--sidebar-bg)" }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/noam-finance-bot.webp" alt="" className="h-6 w-6 rounded-full object-cover" />

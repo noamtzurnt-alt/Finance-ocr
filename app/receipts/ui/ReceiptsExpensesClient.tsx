@@ -162,7 +162,7 @@ export default function ReceiptsExpensesClient(props: {
       <div className="card p-4">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-9 items-center rounded-xl bg-indigo-50 px-3 text-sm font-bold text-indigo-700">
+            <span className="inline-flex h-9 items-center rounded-xl bg-gold-50 px-3 text-sm font-bold text-gold-700">
               {periodLabel} · {docs.length} מסמכים
             </span>
           </div>

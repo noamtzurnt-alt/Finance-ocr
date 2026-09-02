@@ -107,7 +107,7 @@ export default function ContractsClient(props: { initial: ContractRow[] }) {
     <div className="space-y-6">
       <form
         onSubmit={create}
-        className="grid gap-4 rounded-2xl border border-violet-200/70 bg-gradient-to-l from-violet-50/80 to-purple-50/50 p-5 sm:grid-cols-2"
+        className="grid gap-4 rounded-2xl border border-gold-200/70 bg-gradient-to-l from-gold-50/80 to-purple-50/50 p-5 sm:grid-cols-2"
       >
         <div>
           <label className="text-sm font-medium">שם לקוח</label>

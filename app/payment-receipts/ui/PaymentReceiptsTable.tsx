@@ -69,7 +69,7 @@ export default async function PaymentReceiptsTable(props: { userId: string; show
               <tr>
                 <td className="py-14 text-center text-zinc-400" colSpan={6}>
                   אין קבלות (הכנסות) עדיין.{" "}
-                  <Link className="font-semibold text-indigo-600 underline" href="/payment-receipts/upload">העלה קבלה</Link>
+                  <Link className="font-semibold text-gold-600 underline" href="/payment-receipts/upload">העלה קבלה</Link>
                 </td>
               </tr>
             ) : (
@@ -87,7 +87,7 @@ export default async function PaymentReceiptsTable(props: { userId: string; show
                     <tr key={d.id}>
                       <td className="text-zinc-500 text-xs">{d.date.toISOString().slice(0, 10)}</td>
                       <td>
-                        <Link className="font-semibold text-indigo-600 hover:text-indigo-800"
+                        <Link className="font-semibold text-gold-600 hover:text-gold-800"
                           href={`/documents/${d.id}?from=payment-receipts`}>{d.vendor}</Link>
                       </td>
                       <td className="text-zinc-500">{d.description ?? ""}</td>

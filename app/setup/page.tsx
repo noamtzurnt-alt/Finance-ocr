@@ -9,10 +9,10 @@ export default async function SetupPage() {
   if (users > 0) redirect("/login");
 
   return (
-    <div className="auth-page flex items-center justify-center bg-zinc-50 p-6">
-      <div className="w-full max-w-sm rounded-2xl border bg-white p-6 shadow-sm">
-        <h1 className="text-xl font-semibold text-zinc-950">הגדרה ראשונית</h1>
-        <p className="mt-1 text-sm text-zinc-600">
+    <div className="auth-page flex items-center justify-center p-6" style={{ background: "var(--bg)" }}>
+      <div className="card w-full max-w-sm p-6">
+        <h1 className="text-xl font-semibold" style={{ color: "var(--foreground)" }}>הגדרה ראשונית</h1>
+        <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
           יצירת משתמש יחיד למערכת (רק אתה).
         </p>
         <div className="mt-6">

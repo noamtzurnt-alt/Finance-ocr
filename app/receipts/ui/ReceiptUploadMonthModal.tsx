@@ -53,7 +53,7 @@ export default function ReceiptUploadMonthModal(props: {
         onClick={props.onCancel}
         disabled={props.uploading}
       />
-      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      <div className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl">
         <div className="border-b border-zinc-200 px-5 py-4">
           <h2 className="text-lg font-bold text-zinc-900">בחר חודש לכל קבלה</h2>
           <p className="mt-1 text-sm text-zinc-600">
