@@ -31,8 +31,8 @@ function parseDate(value: string): Date | null {
     const y = Number(iso[1]);
     const mo = Number(iso[2]);
     const d = Number(iso[3]);
-    const dt = new Date(y, mo - 1, d);
-    if (dt.getFullYear() === y && dt.getMonth() === mo - 1 && dt.getDate() === d) return dt;
+    const dt = new Date(Date.UTC(y, mo - 1, d));
+    if (dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d) return dt;
     return null;
   }
   const local = t.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})$/);
@@ -41,8 +41,8 @@ function parseDate(value: string): Date | null {
   if (y < 100) y += 2000;
   const mo = Number(local[2]);
   const d = Number(local[1]);
-  const dt = new Date(y, mo - 1, d);
-  if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
   return dt;
 }
 

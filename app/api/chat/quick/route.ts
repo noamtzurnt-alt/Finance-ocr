@@ -15,6 +15,7 @@ import {
   editPrompt,
 } from "@/app/lib/transactions/chat-commands";
 import { formatTransactionList } from "@/app/lib/transactions/chat-list";
+import { getUserBudgetCycle, israelToday } from "@/app/lib/budget/cycle";
 import {
   fetchListedTransactions,
   getTransactionByListIndex,
@@ -24,10 +25,27 @@ export const runtime = "nodejs";
 
 const bodySchema = z.object({
   text: z.string().min(1).max(500),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional()
+    .nullable(),
 });
 
 function amountsEqual(a: { toString(): string } | number | string, b: number) {
   return Number(a.toString()) === b;
+}
+
+function parseDateOnly(s: string): Date | null {
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (Number.isNaN(dt.getTime())) return null;
+  if (dt > israelToday()) return null;
+  return dt;
 }
 
 export async function POST(req: Request) {
@@ -59,6 +77,9 @@ export async function POST(req: Request) {
 
   const text = parsed.data.text.trim();
   const intent = parseChatIntent(text);
+  const txDate =
+    (parsed.data.date ? parseDateOnly(parsed.data.date) : null) ?? israelToday();
+  const txDateIso = txDate.toISOString().slice(0, 10);
 
   if (intent.type === "unknown") {
     return NextResponse.json(
@@ -70,11 +91,15 @@ export async function POST(req: Request) {
   try {
     if (intent.type === "list") {
       const now = new Date();
-      const rows = await fetchListedTransactions(user.id, now);
+      const [rows, cycle] = await Promise.all([
+        fetchListedTransactions(user.id, now),
+        getUserBudgetCycle(user.id, now),
+      ]);
       return NextResponse.json({
         ok: true,
         step: "list",
-        reply: formatTransactionList(rows, now),
+        reply: formatTransactionList(rows, cycle.label),
+        transactions: rows,
       });
     }
 
@@ -191,7 +216,7 @@ export async function POST(req: Request) {
     const created = await prisma.transaction.create({
       data: {
         userId: user.id,
-        date: new Date(),
+        date: txDate,
         amount: tx.amount.toFixed(2),
         currency: tx.currency,
         vendor: tx.vendor,
@@ -212,7 +237,7 @@ export async function POST(req: Request) {
         amount: created.amount.toString(),
         currency: created.currency,
         description: created.description,
-        date: new Date().toISOString().slice(0, 10),
+        date: txDateIso,
       },
     });
   } catch (e) {

@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/app/lib/auth/server";
 import LiveRefresh from "@/app/ui/LiveRefresh";
-import Link from "next/link";
 import { Suspense } from "react";
 import TransactionsContent from "./ui/TransactionsContent";
+import PageHeader from "@/app/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -12,21 +12,27 @@ export default async function TransactionsPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="space-y-5">
+    <div>
       <LiveRefresh />
-      <div className="section-header">
-        <div>
-          <h1 className="section-title">כל התנועות</h1>
-          <p className="section-sub">הכנסות והוצאות יחד, תזרים מזומנים</p>
-        </div>
-        <Link className="btn" href="/dashboard">← דשבורד</Link>
-      </div>
+      <PageHeader
+        title="תנועות"
+        subtitle="הכנסות והוצאות יחד, תזרים מזומנים"
+      />
 
       <Suspense
         fallback={
-          <div className="card p-4">
-            <div className="h-5 w-56 animate-pulse rounded bg-zinc-200" />
-            <div className="mt-4 h-64 animate-pulse rounded-2xl border border-[var(--border)]/70 bg-[var(--surface)]" />
+          <div className="space-y-6">
+            <div className="card p-5 sm:p-6">
+              <div className="h-5 w-40 animate-pulse rounded bg-[var(--surface2)]" />
+              <div className="overview-grid mt-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="metric-tile h-20 animate-pulse bg-[var(--surface2)]" />
+                ))}
+              </div>
+            </div>
+            <div className="card p-5 sm:p-6">
+              <div className="h-64 animate-pulse rounded-2xl bg-[var(--surface2)]" />
+            </div>
           </div>
         }
       >
@@ -35,4 +41,3 @@ export default async function TransactionsPage() {
     </div>
   );
 }
-

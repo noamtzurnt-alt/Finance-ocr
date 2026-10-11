@@ -2,10 +2,24 @@
 
 import { useState, useEffect, useRef } from "react";
 import { parseWizardState } from "@/app/lib/budget/wizard-state";
+import {
+  IconBriefcase,
+  IconCheck,
+  IconChevronLeft,
+  IconChevronRight,
+  IconPlus,
+  IconRefresh,
+  IconSavings,
+  IconTrash,
+  IconWallet,
+  IconGrid,
+} from "@/app/ui/icons";
+
 const WIZARD_LS_KEY = "budget_wizard_v4";
 
 type ExpenseRow = {
   id: string;
+  /** Legacy field, kept for stored state compatibility; not rendered. */
   icon: string;
   label: string;
   amount: string;
@@ -13,21 +27,14 @@ type ExpenseRow = {
 };
 
 const DEFAULT_PERSONAL_EXPENSE_ROWS: ExpenseRow[] = [
-  { id: "car",           icon: "🚗", label: "דלק/רכב",                amount: "" },
-  { id: "food",          icon: "🍽", label: "אוכל",                   amount: "" },
-  { id: "entertainment", icon: "🎉", label: "בזבוזים",                amount: "" },
-  { id: "events",        icon: "🎂", label: "יום הולדת/אירוע מיוחד", amount: "" },
-  { id: "books",         icon: "📌", label: "ספר",                    amount: "" },
-  { id: "train",         icon: "📌", label: "רכבת",                   amount: "" },
+  { id: "car",           icon: "", label: "דלק/רכב",                amount: "" },
+  { id: "food",          icon: "", label: "אוכל",                   amount: "" },
+  { id: "entertainment", icon: "", label: "בזבוזים",                amount: "" },
+  { id: "events",        icon: "", label: "יום הולדת/אירוע מיוחד", amount: "" },
+  { id: "train",         icon: "", label: "רכבת",                   amount: "" },
 ];
 
-const DEFAULT_BUSINESS_EXPENSE_ROWS: ExpenseRow[] = [
-  { id: "biz_software",   icon: "💻", label: "תוכנות ומנויים",       amount: "", notes: "" },
-  { id: "biz_phones",     icon: "📱", label: "מספרי טלפון",          amount: "", notes: "" },
-  { id: "biz_domain",     icon: "🌐", label: "דומיין",               amount: "", notes: "" },
-  { id: "biz_whatsapp",   icon: "💬", label: "עלות הודעות ווצאפ",    amount: "", notes: "" },
-  { id: "biz_accountant", icon: "📊", label: "עלות רואה חשבון",      amount: "", notes: "" },
-];
+const DEFAULT_BUSINESS_EXPENSE_ROWS: ExpenseRow[] = [];
 
 type IncomeSources = {
   steady: boolean;
@@ -202,613 +209,161 @@ function computeBudgetSummary(a: WizardAnswers): BudgetSummary {
   };
 }
 
-const stepTitles = ["הכנסה", "הוצאות", "סיכום"];
+// ─── UI helpers ───────────────────────────────────────────────────────────────
 
-const STEP_META = [
-  { emoji: "💵", gradient: "from-emerald-500 to-teal-500", ring: "ring-emerald-400", text: "text-emerald-700", bg: "bg-emerald-50", border: "border-emerald-200" },
-  { emoji: "🛒", gradient: "from-brand-500 to-brand-600", ring: "ring-brand-400", text: "text-brand-700", bg: "bg-brand-50", border: "border-brand-200" },
-  { emoji: "✨", gradient: "from-amber-500 to-orange-500", ring: "ring-amber-400", text: "text-amber-800", bg: "bg-amber-50", border: "border-amber-200" },
-] as const;
+const STEP_TITLES = ["הכנסה", "הוצאות", "סיכום"] as const;
 
-const INCOME_SOURCE_STYLE = {
-  steady: { emoji: "💼", active: "border-emerald-400 bg-gradient-to-l from-emerald-50 to-teal-50 shadow-sm shadow-emerald-100", accent: "accent-emerald-600" },
-  variable: { emoji: "🚀", active: "border-brand-400 bg-gradient-to-l from-brand-50 to-brand-50 shadow-sm shadow-brand-100", accent: "accent-brand-600" },
-  other: { emoji: "🎁", active: "border-sky-400 bg-gradient-to-l from-sky-50 to-brand-50 shadow-sm shadow-sky-100", accent: "accent-sky-600" },
-} as const;
+/** One color per category, shared by the expense list and the summary bar. */
+const CATEGORY_COLORS = [
+  "var(--chart-6)",
+  "var(--chart-3)",
+  "var(--chart-5)",
+  "var(--chart-7)",
+  "var(--chart-8)",
+  "var(--chart-4)",
+];
 
-function StepBanner({ step }: { step: WizardStep }) {
-  const meta = STEP_META[step - 1];
-  const subtitles = [
-    "כמה נכנס לכיס החודש? אפשר לשלב שכיר + עצמאי",
-    "חלק לחיים, חלק לעסק, קטגוריה אחר קטגוריה",
-    "התמונה המלאה: נכנס, יוצא, חיסכון ומה נשאר",
-  ];
-  return (
-    <div className={`rounded-2xl border ${meta.border} ${meta.bg} p-4 shadow-sm`}>
-      <div className="flex items-start gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--surface)]/80 text-2xl shadow-sm">
-          {meta.emoji}
-        </span>
-        <div>
-          <p className={`text-sm font-bold ${meta.text}`}>שלב {step} מתוך 3: {stepTitles[step - 1]}</p>
-          <p className="mt-1 text-xs text-[var(--muted)]">{subtitles[step - 1]}</p>
-        </div>
-      </div>
-    </div>
-  );
+function colorAt(i: number) {
+  return CATEGORY_COLORS[i % CATEGORY_COLORS.length]!;
 }
 
-function NumField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
+function ils(n: number) {
+  return `${Math.round(n).toLocaleString("he-IL")} ₪`;
+}
+
+function digitsOnly(v: string) {
+  return v.replace(/[^0-9]/g, "");
+}
+
+function AmountInput(props: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+  autoFocus?: boolean;
+}) {
   return (
-    <div className="rounded-2xl border border-[var(--border)]/80 bg-[var(--surface)]/80 p-4 shadow-sm">
-      <label className="text-sm font-semibold text-[var(--foreground)]">{label}</label>
+    <span className="bw-amount">
       <input
-        className="field mt-2 border-emerald-200 bg-emerald-50/40 focus:border-emerald-400 focus:ring-emerald-300/50"
-        value={value}
-        onChange={(e) => onChange(e.target.value.replace(/[^0-9.]/g, ""))}
-        inputMode="decimal"
-        placeholder={placeholder ?? "₪"}
+        className="bw-amount-input amount"
+        inputMode="numeric"
+        dir="ltr"
+        value={props.value}
+        onChange={(e) => props.onChange(digitsOnly(e.target.value))}
+        placeholder="0"
+        aria-label={props.label}
+        autoFocus={props.autoFocus}
+        enterKeyHint="done"
       />
+      <span className="bw-amount-unit" aria-hidden>₪</span>
+    </span>
+  );
+}
+
+function Switch(props: { on: boolean }) {
+  return (
+    <span className={`bw-switch${props.on ? " is-on" : ""}`} aria-hidden>
+      <span className="bw-switch-knob" />
+    </span>
+  );
+}
+
+function SectionHead(props: { title: string; meta?: string }) {
+  return (
+    <div className="bw-section-head">
+      <h3>{props.title}</h3>
+      {props.meta ? <span className="amount">{props.meta}</span> : null}
     </div>
   );
 }
 
-type ExpenseTableProps = {
-  title: string;
-  subtitle?: string;
-  headerClass: string;
-  income: number;
-  incomeLabel: string;
-  incomeIcon?: string;
-  savings?: { value: string; onChange: (v: string) => void };
+function ExpenseList(props: {
   rows: ExpenseRow[];
   onRowsChange: (rows: ExpenseRow[]) => void;
+  colorOffset?: number;
   showNotes?: boolean;
-  businessSubsidy?: number;
-};
-
-function ExpenseBudgetTable({
-  title,
-  subtitle,
-  headerClass,
-  income,
-  incomeLabel,
-  incomeIcon = "💵",
-  savings,
-  rows,
-  onRowsChange,
-  showNotes = false,
-  businessSubsidy,
-}: ExpenseTableProps) {
-  const savingsAmt = savings ? Number(savings.value) || 0 : 0;
-  const subsidyAmt = businessSubsidy ?? 0;
-  const rowBalances: number[] = [];
-  let bal = income - savingsAmt;
-  for (const row of rows) {
-    bal -= Number(row.amount) || 0;
-    rowBalances.push(bal);
-  }
-  if (businessSubsidy !== undefined) {
-    bal -= subsidyAmt;
-  }
-  const remaining = bal;
+  addLabel: string;
+}) {
+  const [focusId, setFocusId] = useState<string | null>(null);
 
   function updateRow(id: string, field: keyof ExpenseRow, value: string) {
-    onRowsChange(rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+    props.onRowsChange(props.rows.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
   }
 
   function deleteRow(id: string) {
-    onRowsChange(rows.filter((r) => r.id !== id));
+    props.onRowsChange(props.rows.filter((r) => r.id !== id));
   }
 
   function addRow() {
-    onRowsChange([
-      ...rows,
-      { id: `custom_${Date.now()}`, icon: "📌", label: "", amount: "", notes: "" },
-    ]);
+    const id = `custom_${Date.now()}`;
+    props.onRowsChange([...props.rows, { id, icon: "", label: "", amount: "", notes: "" }]);
+    setFocusId(id);
   }
 
   return (
-    <div className="space-y-2">
-      <div className={`rounded-xl border px-4 py-3 shadow-sm ${headerClass}`}>
-        <p className="text-sm font-bold">{title}</p>
-        {subtitle && <p className="mt-0.5 text-xs opacity-75">{subtitle}</p>}
-      </div>
-
-      <div className="rounded-2xl overflow-hidden border border-[var(--border)]/80 bg-[var(--surface)]/70 shadow-sm backdrop-blur-sm">
-        <table className="w-full text-sm" style={{ direction: "rtl" }}>
-          <thead>
-            <tr className="bg-[var(--surface)] border-b border-[var(--border)]">
-              <th className="px-3 py-2 text-right text-xs font-semibold text-zinc-500">קטגוריה</th>
-              {showNotes && (
-                <th className="px-3 py-2 text-right text-xs font-semibold text-zinc-500">פירוט</th>
-              )}
-              <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500 w-32">סכום חודשי ₪</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-zinc-500 w-24">יתרה</th>
-              <th className="w-8"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr className="border-b border-[var(--border)] bg-emerald-50/50">
-              <td className="px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <span>{incomeIcon}</span>
-                  <span className="text-sm font-semibold text-emerald-800">{incomeLabel}</span>
-                </div>
-              </td>
-              {showNotes && <td></td>}
-              <td className="px-3 py-2.5 text-left">
-                <span className="text-sm font-bold text-emerald-700">+{income.toLocaleString()} ₪</span>
-              </td>
-              <td className="px-3 py-2.5 text-left">
-                <span className="text-sm text-zinc-500 tabular-nums">{income.toLocaleString()} ₪</span>
-              </td>
-              <td></td>
-            </tr>
-
-            {savings && (() => {
-              const savBal = income - savingsAmt;
-              return (
-                <tr className="border-b border-brand-100 bg-brand-50/60">
-                  <td className="px-3 py-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-base leading-none w-6 text-center">💰</span>
-                      <div>
-                        <span className="text-sm font-semibold text-brand-800">חיסכון</span>
-                        <p className="text-[0.6rem] text-brand-400 leading-tight">יוצא ביום קבלת שכר, לפני הוצאות</p>
-                      </div>
-                    </div>
-                  </td>
-                  {showNotes && <td></td>}
-                  <td className="px-3 py-1.5 text-left">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      dir="ltr"
-                      value={savings.value}
-                      onChange={(e) => savings.onChange(e.target.value.replace(/[^0-9]/g, ""))}
-                      placeholder="0"
-                      className={`w-full rounded-lg border px-2 py-1 text-right text-sm font-semibold focus:outline-none focus:ring-1 ${
-                        savingsAmt > 0
-                          ? "border-brand-300 bg-brand-100 text-brand-800 focus:ring-brand-400"
-                          : "border-[var(--border)] bg-[var(--surface)] text-zinc-500 focus:ring-zinc-300"
-                      }`}
-                    />
-                  </td>
-                  <td className="px-3 py-1.5 text-left">
-                    <span className={`text-sm tabular-nums ${savBal < 0 ? "text-red-600 font-bold" : "text-zinc-500"}`}>
-                      {savBal.toLocaleString()} ₪
-                    </span>
-                  </td>
-                  <td></td>
-                </tr>
-              );
-            })()}
-
-            {rows.map((row, idx) => {
-              const rowBal = rowBalances[idx] ?? 0;
-              const amt = Number(row.amount) || 0;
-              return (
-                <tr key={row.id} className="border-b border-[var(--border)] hover:bg-[var(--surface)]/50 transition">
-                  <td className="px-3 py-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-base leading-none w-6 text-center">{row.icon}</span>
-                      <input
-                        type="text"
-                        dir="rtl"
-                        tabIndex={-1}
-                        value={row.label}
-                        onChange={(e) => updateRow(row.id, "label", e.target.value)}
-                        placeholder="שם קטגוריה"
-                        className="w-full bg-transparent text-sm font-medium text-[var(--foreground)] placeholder:text-zinc-300 focus:outline-none focus:bg-[var(--surface)] focus:rounded px-1"
-                      />
-                    </div>
-                  </td>
-                  {showNotes && (
-                    <td className="px-3 py-1.5">
-                      <input
-                        type="text"
-                        dir="rtl"
-                        value={row.notes ?? ""}
-                        onChange={(e) => updateRow(row.id, "notes", e.target.value)}
-                        placeholder="הערות פירוט..."
-                        className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[var(--foreground)] placeholder:text-zinc-300 focus:outline-none focus:ring-1 focus:ring-brand-300"
-                      />
-                    </td>
-                  )}
-                  <td className="px-3 py-1.5 text-left">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      dir="ltr"
-                      value={row.amount}
-                      onChange={(e) => updateRow(row.id, "amount", e.target.value.replace(/[^0-9]/g, ""))}
-                      placeholder="0"
-                      className={`w-full rounded-lg border px-2 py-1 text-right text-sm font-semibold focus:outline-none focus:ring-1 ${
-                        amt > 0
-                          ? "border-brand-200 bg-brand-50 text-brand-800 focus:ring-brand-400"
-                          : "border-[var(--border)] bg-[var(--surface)] text-zinc-500 focus:ring-zinc-300"
-                      }`}
-                    />
-                  </td>
-                  <td className="px-3 py-1.5 text-left">
-                    <span className={`text-sm tabular-nums ${rowBal < 0 ? "text-red-600 font-bold" : "text-zinc-500"}`}>
-                      {rowBal.toLocaleString()} ₪
-                    </span>
-                  </td>
-                  <td className="px-2 py-1.5 text-center">
-                    <button
-                      type="button"
-                      tabIndex={-1}
-                      onClick={() => deleteRow(row.id)}
-                      className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-300 transition hover:bg-red-50 hover:text-red-500"
-                      title="מחק שורה"
-                    >
-                      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M3 3l10 10M13 3L3 13" strokeLinecap="round" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-
-            {businessSubsidy !== undefined && (() => {
-              const subsidyBal = (rowBalances[rowBalances.length - 1] ?? income - savingsAmt) - subsidyAmt;
-              return (
-                <tr className={`border-b ${subsidyAmt > 0 ? "border-amber-200 bg-amber-50/70" : "border-[var(--border)] bg-[var(--surface)]/40"}`}>
-                  <td className="px-3 py-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-base leading-none w-6 text-center">🏢</span>
-                      <div>
-                        <span className={`text-sm font-semibold ${subsidyAmt > 0 ? "text-amber-900" : "text-zinc-500"}`}>
-                          השלמה לעסק
-                        </span>
-                        <p className="text-[0.6rem] text-zinc-400 leading-tight">
-                          מתעדכן אוטומטית לפי תקציב העסקי
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  {showNotes && <td></td>}
-                  <td className="px-3 py-1.5 text-left">
-                    <span className={`inline-block w-full rounded-lg border px-2 py-1 text-right text-sm font-semibold tabular-nums ${
-                      subsidyAmt > 0
-                        ? "border-amber-300 bg-amber-100 text-amber-900"
-                        : "border-[var(--border)] bg-[var(--surface2)] text-zinc-400"
-                    }`}>
-                      {subsidyAmt.toLocaleString()}
-                    </span>
-                  </td>
-                  <td className="px-3 py-1.5 text-left">
-                    <span className={`text-sm tabular-nums ${subsidyBal < 0 ? "text-red-600 font-bold" : "text-zinc-500"}`}>
-                      {subsidyBal.toLocaleString()} ₪
-                    </span>
-                  </td>
-                  <td></td>
-                </tr>
-              );
-            })()}
-
-            <tr className={`border-t-2 ${remaining < 0 ? "border-red-200 bg-red-50/50" : "border-[var(--border)] bg-[var(--surface)]"}`}>
-              <td className="px-3 py-2.5">
-                <span className="text-sm font-bold text-[var(--foreground)]">{remaining < 0 ? "⚠️ חריגה מהכנסה" : "✅ יתרה"}</span>
-              </td>
-              {showNotes && <td></td>}
-              <td className="px-3 py-2.5 text-left text-xs text-zinc-400">
-                הוצאות: {sumExpenseRows(rows).toLocaleString()} ₪
-                {subsidyAmt > 0 && ` + השלמה לעסק: ${subsidyAmt.toLocaleString()} ₪`}
-                {savingsAmt > 0 && ` + חיסכון: ${savingsAmt.toLocaleString()} ₪`}
-              </td>
-              <td className="px-3 py-2.5 text-left">
-                <span className={`text-sm font-bold tabular-nums ${remaining < 0 ? "text-red-600" : "text-emerald-600"}`}>
-                  {remaining.toLocaleString()} ₪
-                </span>
-              </td>
-              <td></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <button
-        type="button"
-        onClick={addRow}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand-300/60 bg-brand-50/50 py-2.5 text-sm font-medium text-brand-600 transition hover:border-brand-400 hover:bg-brand-100/60 hover:text-brand-800 active:scale-[0.99]"
-      >
-        <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M8 3v10M3 8h10" strokeLinecap="round" />
-        </svg>
-        הוסף קטגוריה
+    <div className="bw-group">
+      {props.rows.map((row, i) => (
+        <div key={row.id} className="bw-expense">
+          <span className="bw-dot" style={{ background: colorAt(i + (props.colorOffset ?? 0)) }} aria-hidden />
+          <div className="bw-expense-main">
+            <input
+              className="bw-expense-name"
+              value={row.label}
+              onChange={(e) => updateRow(row.id, "label", e.target.value)}
+              placeholder="שם הקטגוריה"
+              aria-label="שם הקטגוריה"
+              autoFocus={focusId === row.id}
+              enterKeyHint="next"
+            />
+            {props.showNotes ? (
+              <input
+                className="bw-expense-note"
+                value={row.notes ?? ""}
+                onChange={(e) => updateRow(row.id, "notes", e.target.value)}
+                placeholder="הערה (לא חובה)"
+                aria-label="הערה"
+              />
+            ) : null}
+          </div>
+          <AmountInput
+            value={row.amount}
+            onChange={(v) => updateRow(row.id, "amount", v)}
+            label={`סכום חודשי ל${row.label || "קטגוריה"}`}
+          />
+          <button
+            type="button"
+            className="bw-icon-btn bw-icon-btn--danger"
+            onClick={() => deleteRow(row.id)}
+            aria-label={`מחק את ${row.label || "הקטגוריה"}`}
+          >
+            <IconTrash className="h-[1.15rem] w-[1.15rem]" />
+          </button>
+        </div>
+      ))}
+      <button type="button" className="bw-add" onClick={addRow}>
+        <IconPlus className="h-5 w-5" />
+        {props.addLabel}
       </button>
     </div>
   );
 }
 
-function BudgetSummaryCard({
-  budget,
-  onSave,
-  onEditIncome,
-  onEditExpenses,
-  saving,
-  saved,
-}: {
-  budget: BudgetSummary;
-  onSave: () => void;
-  onEditIncome: () => void;
-  onEditExpenses: () => void;
-  saving: boolean;
-  saved: boolean;
-}) {
-  if (!budget.hasBreakdown) return null;
+// ─── Persistence ──────────────────────────────────────────────────────────────
 
-  const expensesOnly =
-    budget.personalExpenses + budget.businessExpenses + budget.personalSubsidyToBusiness;
-  const hasBusiness = budget.businessIncome > 0;
-  const personalOut =
-    budget.personalExpenses + budget.salarySavings + budget.personalSubsidyToBusiness;
-  const netLeft = budget.surplus;
-
-  type LineItem = {
-    icon: string;
-    label: string;
-    detail?: string;
-    amount: number;
-    tone: "in" | "out" | "auto" | "result";
-  };
-
-  const personalLines: LineItem[] = [
-    { icon: "💵", label: "הכנסה אישית", amount: budget.personalIncome, tone: "in" },
-  ];
-  if (budget.salarySavings > 0) {
-    personalLines.push({ icon: "💰", label: "חיסכון", amount: -budget.salarySavings, tone: "out" });
-  }
-  for (const row of budget.expenseRows) {
-    personalLines.push({
-      icon: row.icon,
-      label: row.label || "ללא שם",
-      amount: -(Number(row.amount) || 0),
-      tone: "out",
-    });
-  }
-  if (budget.personalSubsidyToBusiness > 0) {
-    personalLines.push({
-      icon: "🏢",
-      label: "השלמה לעסק",
-      detail: "מכוסה מהאישי כי העסק במינוס",
-      amount: -budget.personalSubsidyToBusiness,
-      tone: "auto",
-    });
-  }
-  personalLines.push({
-    icon: netLeft >= 0 ? "✅" : "⚠️",
-    label: "יתרה חופשית",
-    detail: "אחרי חיסכון, הוצאות והשלמה לעסק",
-    amount: netLeft,
-    tone: "result",
-  });
-
-  const businessLines: LineItem[] = hasBusiness
-    ? [
-        { icon: "🏢", label: "הכנסה עסקית", amount: budget.businessIncome, tone: "in" },
-        ...budget.businessExpenseRows.map((row) => ({
-          icon: row.icon,
-          label: row.label || "ללא שם",
-          detail: row.notes?.trim() || undefined,
-          amount: -(Number(row.amount) || 0),
-          tone: "out" as const,
-        })),
-        {
-          icon: budget.businessIncome - budget.businessExpenses >= 0 ? "✅" : "⚠️",
-          label: budget.businessIncome - budget.businessExpenses >= 0 ? "יתרה עסקית" : "חוסר עסקי",
-          detail:
-            budget.businessDeficit > 0
-              ? `${budget.businessDeficit.toLocaleString()} ₪ יגיעו מהאישי`
-              : undefined,
-          amount: budget.businessIncome - budget.businessExpenses,
-          tone: "result" as const,
-        },
-      ]
-    : [];
-
-  const savingsPct =
-    budget.personalIncome > 0
-      ? Math.round((budget.salarySavings / budget.personalIncome) * 100)
-      : 0;
-
-  function amountClass(tone: LineItem["tone"], amount: number) {
-    if (tone === "in") return "text-emerald-600 font-bold";
-    if (tone === "out") return amount === 0 ? "text-zinc-500" : "text-[var(--foreground)] font-semibold";
-    if (tone === "auto") return "text-amber-700 font-semibold";
-    return amount < 0 ? "text-red-600 font-bold" : "text-emerald-600 font-bold";
-  }
-
-  function formatAmount(amount: number, tone: LineItem["tone"]) {
-    if (tone === "result") return `${amount.toLocaleString()} ₪`;
-    if (amount === 0) return "0 ₪";
-    return amount > 0 ? `+${amount.toLocaleString()} ₪` : `${amount.toLocaleString()} ₪`;
-  }
-
-  function SectionTable({
-    title,
-    subtitle,
-    lines,
-    theme,
-  }: {
-    title: string;
-    subtitle: string;
-    lines: LineItem[];
-    theme: "personal" | "business";
-  }) {
-    const themeCls =
-      theme === "personal"
-        ? "border-emerald-200/80 bg-gradient-to-br from-emerald-50/90 via-white to-teal-50/50"
-        : "border-brand-200/80 bg-gradient-to-br from-brand-50/90 via-white to-brand-50/50";
-    const headCls =
-      theme === "personal"
-        ? "border-emerald-100 bg-gradient-to-l from-emerald-100/80 to-teal-50"
-        : "border-brand-100 bg-gradient-to-l from-brand-100/80 to-brand-50";
-
-    return (
-      <div className={`rounded-2xl border overflow-hidden shadow-sm ${themeCls}`}>
-        <div className={`border-b px-4 py-3 ${headCls}`}>
-          <h3 className="text-sm font-bold text-[var(--foreground)]">{title}</h3>
-          <p className="mt-0.5 text-xs text-[var(--muted)]">{subtitle}</p>
-        </div>
-        <table className="w-full text-sm" style={{ direction: "rtl" }}>
-          <thead>
-            <tr className="border-b border-[var(--border)]/80">
-              <th className="px-4 py-2 text-right text-xs font-semibold text-zinc-500">פריט</th>
-              <th className="px-4 py-2 text-left text-xs font-semibold text-zinc-500 w-28">סכום</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lines.map((line, i) => {
-              const isResult = line.tone === "result";
-              return (
-                <tr
-                  key={i}
-                  className={`border-b border-[var(--border)]/60 ${isResult ? "bg-[var(--surface)]/60" : ""}`}
-                >
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-base leading-none">{line.icon}</span>
-                      <div>
-                        <div className={`text-sm ${isResult ? "font-bold text-[var(--foreground)]" : "font-medium text-[var(--foreground)]"}`}>
-                          {line.label}
-                        </div>
-                        {line.detail && (
-                          <div className="text-[0.65rem] text-zinc-500">{line.detail}</div>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-2.5 text-left tabular-nums">
-                    <span className={amountClass(line.tone, line.amount)}>
-                      {formatAmount(line.amount, line.tone)}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-4 rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/40 via-brand-50/30 to-emerald-50/40 p-4 shadow-inner">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-100 via-emerald-50 to-teal-50 p-4 shadow-sm">
-          <span className="absolute -left-1 -top-1 text-3xl opacity-20">📈</span>
-          <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">נכנס החודש</p>
-          <p className="mt-2 text-2xl font-bold text-emerald-800 tabular-nums">
-            {budget.income.toLocaleString()} ₪
-          </p>
-          <p className="mt-1 text-[0.65rem] text-emerald-700/80">
-            {hasBusiness
-              ? `אישי ${budget.personalIncome.toLocaleString()} + עסק ${budget.businessIncome.toLocaleString()}`
-              : "הכנסה אישית"}
-          </p>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-orange-200 bg-gradient-to-br from-orange-100 via-orange-50 to-rose-50 p-4 shadow-sm">
-          <span className="absolute -left-1 -top-1 text-3xl opacity-20">🛍️</span>
-          <p className="text-xs font-bold uppercase tracking-wide text-orange-700">יוצא החודש</p>
-          <p className="mt-2 text-2xl font-bold text-orange-800 tabular-nums">
-            {expensesOnly.toLocaleString()} ₪
-          </p>
-          <p className="mt-1 text-[0.65rem] text-orange-700/80">
-            הוצאות בלבד{budget.personalSubsidyToBusiness > 0 ? " (כולל השלמה לעסק)" : ""}
-          </p>
-        </div>
-        <div className="relative overflow-hidden rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-100 via-sky-50 to-brand-50 p-4 shadow-sm">
-          <span className="absolute -left-1 -top-1 text-3xl opacity-20">🐷</span>
-          <p className="text-xs font-bold uppercase tracking-wide text-sky-700">הולך לחיסכון</p>
-          <p className="mt-2 text-2xl font-bold text-sky-800 tabular-nums">
-            {budget.salarySavings.toLocaleString()} ₪
-          </p>
-          <p className="mt-1 text-[0.65rem] text-sky-700/80">
-            {budget.salarySavings > 0 && budget.personalIncome > 0
-              ? `${savingsPct}% מההכנסה · ביום קבלת שכר 🎯`
-              : "הגדר סכום בשלב הוצאות"}
-          </p>
-        </div>
-      </div>
-
-      <SectionTable
-        title="🏠 חיים אישיים"
-        subtitle={`הכנסה ${budget.personalIncome.toLocaleString()} ₪ · יוצא ${personalOut.toLocaleString()} ₪`}
-        lines={personalLines}
-        theme="personal"
-      />
-
-      {hasBusiness && (
-        <SectionTable
-          title="🏢 עסק"
-          subtitle={`הכנסה ${budget.businessIncome.toLocaleString()} ₪ · הוצאות ${budget.businessExpenses.toLocaleString()} ₪`}
-          lines={businessLines}
-          theme="business"
-        />
-      )}
-
-      {budget.surplus < 0 && (
-        <div className="rounded-2xl border border-red-200 bg-gradient-to-l from-red-50 to-rose-50 px-4 py-3 text-sm text-red-800">
-          ההוצאות האישיות עולות על ההכנסה האישית (אחרי חיסכון והשלמה לעסק).
-          לחץ &quot;ערוך הוצאות&quot; לתיקון.
-        </div>
-      )}
-
-      <div className="grid gap-2 sm:grid-cols-2">
-        <button
-          type="button"
-          onClick={onEditIncome}
-          className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 hover:shadow-sm active:scale-[0.98]"
-        >
-          ✏️ ערוך הכנסות
-        </button>
-        <button
-          type="button"
-          onClick={onEditExpenses}
-          className="rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm font-semibold text-brand-800 transition hover:bg-brand-100 hover:shadow-sm active:scale-[0.98]"
-        >
-          ✏️ ערוך הוצאות
-        </button>
-      </div>
-
-      <div className="rounded-2xl border border-brand-200/60 bg-gradient-to-l from-brand-50 to-brand-50 p-4 shadow-sm">
-        {saved ? (
-          <div className="flex items-center gap-2 rounded-xl bg-gradient-to-l from-emerald-400 to-teal-500 px-4 py-3 text-sm font-bold text-white shadow-md">
-            <span className="text-lg">🎉</span>
-            <span>נשמר! תקציב חודשי {budget.expenseLimit.toLocaleString()} ₪</span>
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={saving}
-            className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-brand-200 transition hover:bg-brand-500 active:scale-[0.98] disabled:opacity-60"
-          >
-            {saving ? "שומר..." : "💾 שמור תקציב חודשי"}
-          </button>
-        )}
-        <p className="mt-2 text-center text-xs text-brand-700/70">
-          מגבלת הוצאות אישית = הכנסה אישית פחות חיסכון ({budget.salarySavings.toLocaleString()} ₪)
-          {budget.personalSubsidyToBusiness > 0 &&
-            ` פחות השלמה לעסק (${budget.personalSubsidyToBusiness.toLocaleString()} ₪)`}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
 type PersistedState = { answers: WizardAnswers; step: WizardStep; done: boolean };
 
-function loadFromStorage(): PersistedState | null {
+function getWizardStorageKey(userId: string) {
+  return `${WIZARD_LS_KEY}:${userId}`;
+}
+
+function loadFromStorage(userId: string): PersistedState | null {
   if (typeof window === "undefined") return null;
   try {
-    for (const key of [WIZARD_LS_KEY, "budget_wizard_v3", "budget_wizard_v2", "budget_wizard_v1"]) {
+    for (const key of [
+      getWizardStorageKey(userId),
+      `${"budget_wizard_v3"}:${userId}`,
+      `${"budget_wizard_v2"}:${userId}`,
+      `${"budget_wizard_v1"}:${userId}`,
+    ]) {
       const raw = localStorage.getItem(key);
       if (!raw) continue;
       const parsed = JSON.parse(raw) as PersistedState;
@@ -821,9 +376,9 @@ function loadFromStorage(): PersistedState | null {
   } catch { return null; }
 }
 
-function saveToStorage(state: PersistedState) {
+function saveToStorage(userId: string, state: PersistedState) {
   if (typeof window === "undefined") return;
-  try { localStorage.setItem(WIZARD_LS_KEY, JSON.stringify(state)); } catch { /* ignore */ }
+  try { localStorage.setItem(getWizardStorageKey(userId), JSON.stringify(state)); } catch { /* ignore */ }
 }
 
 function profileBodyFromState(state: PersistedState) {
@@ -845,6 +400,7 @@ async function pushWizardStateToServer(state: PersistedState) {
 }
 
 function applyPersistedState(
+  userId: string,
   state: PersistedState,
   setters: {
     setAnswers: (a: WizardAnswers) => void;
@@ -859,11 +415,12 @@ function applyPersistedState(
   if (state.done) {
     setters.setSummary(computeBudgetSummary(state.answers));
   }
-  saveToStorage(state);
+  saveToStorage(userId, state);
 }
 
+// ─── Component ────────────────────────────────────────────────────────────────
 
-export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
+export default function BudgetWizard({ userId }: { userId: string }) {
   const [step, setStep] = useState<WizardStep>(1);
   const [answers, setAnswers] = useState<WizardAnswers>(INITIAL_ANSWERS);
   const [done, setDone] = useState(false);
@@ -872,13 +429,14 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
   const [saved, setSaved] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const topRef = useRef<HTMLDivElement | null>(null);
 
   // Load from server (cross-device), fallback to localStorage
   useEffect(() => {
     let cancelled = false;
 
     async function load() {
-      const local = loadFromStorage();
+      const local = loadFromStorage(userId);
 
       try {
         const res = await fetch("/api/budget/profile");
@@ -893,14 +451,14 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
             step: server.step,
             done: server.done,
           };
-          applyPersistedState(state, { setAnswers, setStep, setDone, setSummary });
+          applyPersistedState(userId, state, { setAnswers, setStep, setDone, setSummary });
         } else if (!cancelled && local) {
-          applyPersistedState(local, { setAnswers, setStep, setDone, setSummary });
+          applyPersistedState(userId, local, { setAnswers, setStep, setDone, setSummary });
           void pushWizardStateToServer(local);
         }
       } catch {
         if (!cancelled && local) {
-          applyPersistedState(local, { setAnswers, setStep, setDone, setSummary });
+          applyPersistedState(userId, local, { setAnswers, setStep, setDone, setSummary });
         }
       }
 
@@ -909,13 +467,13 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
 
     void load();
     return () => { cancelled = true; };
-  }, []);
+  }, [userId]);
 
   // Cache locally + sync to server (debounced)
   useEffect(() => {
     if (!hydrated) return;
     const state: PersistedState = { answers, step, done };
-    saveToStorage(state);
+    saveToStorage(userId, state);
 
     if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     syncTimerRef.current = setTimeout(() => {
@@ -925,10 +483,16 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
     return () => {
       if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
     };
-  }, [answers, step, done, hydrated]);
+  }, [answers, step, done, hydrated, userId]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    topRef.current?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [step, hydrated]);
 
   function set<K extends keyof WizardAnswers>(key: K, value: WizardAnswers[K]) {
     setAnswers((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
   }
 
   function canAdvance(): boolean {
@@ -941,58 +505,35 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
       ...prev,
       incomeSources: { ...prev.incomeSources, [key]: !prev.incomeSources[key] },
     }));
+    setSaved(false);
+  }
+
+  function goToSummary() {
+    setSummary(computeBudgetSummary(answers));
+    setStep(3);
+    setDone(true);
   }
 
   function next() {
     if (!canAdvance()) return;
-    if (step < 2) {
-      setStep((s) => (s + 1) as WizardStep);
-    } else {
-      advanceToSummary();
-    }
+    if (step === 1) setStep(2);
+    else goToSummary();
   }
 
-  function advanceToSummary() {
-    setSummary(computeBudgetSummary(answers));
-    setStep(3);
-    setDone(true);
-    setSaved(false);
-  }
-
-  function returnToSummary() {
-    setSummary(computeBudgetSummary(answers));
-    setStep(3);
-  }
-
-  function goToEditIncome() {
-    setStep(1);
-    setSaved(false);
-  }
-
-  function goToEditExpenses() {
-    setStep(2);
-    setSaved(false);
+  function back() {
+    if (step > 1) setStep((s) => (s - 1) as WizardStep);
   }
 
   function goToStep(s: WizardStep) {
     if (s === 3) {
-      returnToSummary();
+      if (hasIncomeSource(answers)) goToSummary();
       return;
     }
     setStep(s);
-    setSaved(false);
-  }
-
-  function back() {
-    if (step === 3) {
-      setStep(2);
-    } else if (step > 1) {
-      setStep((s) => (s - 1) as WizardStep);
-    }
   }
 
   function reset() {
-    if (typeof window !== "undefined") localStorage.removeItem(WIZARD_LS_KEY);
+    if (typeof window !== "undefined") localStorage.removeItem(getWizardStorageKey(userId));
     void fetch("/api/budget/profile", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -1003,15 +544,13 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
 
   async function saveBudget(expenseLimit: number) {
     setSaving(true);
-    const now = new Date();
-    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const state: PersistedState = { answers, step: 3, done: true };
 
     await Promise.all([
       fetch("/api/budget", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ month, expenseLimit: expenseLimit.toFixed(2) }),
+        body: JSON.stringify({ expenseLimit: expenseLimit.toFixed(2) }),
       }),
       fetch("/api/budget/profile", {
         method: "POST",
@@ -1023,308 +562,307 @@ export default function BudgetWizard({ onClose }: { onClose?: () => void }) {
     setSaved(true);
   }
 
+  const split = computeIncomeSplit(answers);
+  const savingsAmt = Number(answers.monthlySavings) || 0;
+  const personalExpenses = sumExpenseRows(answers.expenseRows);
+  const businessExpenses = sumExpenseRows(answers.businessExpenseRows);
+  const businessDeficit = answers.incomeSources.variable ? Math.max(0, businessExpenses - split.businessNet) : 0;
+  const personalLeft = split.personalNet - savingsAmt - personalExpenses - businessDeficit;
+  const showPersonal = answers.incomeSources.steady || answers.incomeSources.other;
+  const showBusiness = answers.incomeSources.variable;
+
+  if (!hydrated) {
+    return <div className="bw-loading" aria-busy="true">טוען את התקציב…</div>;
+  }
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-brand-200/70 bg-gradient-to-br from-brand-50/80 via-white to-emerald-50/60 shadow-xl shadow-brand-100/40">
-      {/* Header */}
-      <div className="relative overflow-hidden border-b border-white/20 bg-gradient-to-l from-brand-600 via-brand-600 to-teal-600 px-5 py-5 text-white">
-        <div className="pointer-events-none absolute -left-6 -top-6 h-28 w-28 rounded-full bg-[var(--surface)]/10" />
-        <div className="pointer-events-none absolute -bottom-4 left-1/3 h-20 w-20 rounded-full bg-teal-400/20" />
-        <div className="relative flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-bold tracking-tight">✨ תכנון תקציב</h2>
-            <p className="mt-1 text-sm text-white/85">הכסף שלך, בצבע ובבהירות, בלי כאבי ראש</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {done && (
-              <button
-                type="button"
-                onClick={() => { if (confirm("לאפס את השאלון ולהתחיל מחדש?")) reset(); }}
-                className="flex items-center gap-1 rounded-lg border border-white/30 bg-[var(--surface)]/10 px-2.5 py-1.5 text-xs text-white/90 backdrop-blur-sm transition hover:bg-[var(--surface)]/20"
-                title="אפס שאלון"
-              >
-                <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M2 8a6 6 0 1 1 1.5 4" strokeLinecap="round" />
-                  <path d="M2 13V9h4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                אפס שאלון
-              </button>
-            )}
-            {onClose && (
-              <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-lg text-white/70 transition hover:bg-[var(--surface)]/15 hover:text-white">
-                <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 3l10 10M13 3L3 13" strokeLinecap="round" />
-                </svg>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Step indicator */}
-        <div className="relative mt-5 flex gap-2">
-          {([1, 2, 3] as WizardStep[]).map((s) => {
-            const meta = STEP_META[s - 1];
-            const isActive = s === step;
-            const isDone = s < step;
-            return (
-              <button
-                key={s}
-                type="button"
-                disabled={!done && !isActive && s > step}
-                onClick={() => (done || s <= step) && goToStep(s)}
-                className={`flex flex-1 flex-col items-center gap-1.5 rounded-xl px-2 py-2 transition ${
-                  isActive
-                    ? "bg-[var(--surface)]/20 ring-2 ring-white/50"
-                    : isDone
-                      ? "bg-[var(--surface)]/10 hover:bg-[var(--surface)]/15"
-                      : "opacity-50"
-                } ${done ? "cursor-pointer" : s <= step ? "cursor-pointer" : "cursor-default"}`}
-              >
-                <span className="text-lg leading-none">{meta.emoji}</span>
-                <span className="text-[0.65rem] font-semibold">{stepTitles[s - 1]}</span>
-                <div className={`h-1 w-full rounded-full bg-gradient-to-l ${meta.gradient} ${!isActive && !isDone ? "opacity-30" : ""}`} />
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="p-5">
-
-        {done && step < 3 && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-brand-200 bg-gradient-to-l from-brand-50 to-brand-50 px-4 py-3 shadow-sm">
-            <span className="text-sm font-medium text-brand-800">✏️ מצב עריכה, שינוי נקודתי</span>
-            <button type="button" onClick={returnToSummary} className="rounded-lg bg-brand-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-brand-500 active:scale-[0.98]">
-              חזרה לסיכום ✨
+    <div className="bw" ref={topRef}>
+      {/* Step control */}
+      <nav className="bw-steps" aria-label="שלבי התקציב">
+        {([1, 2, 3] as WizardStep[]).map((s) => {
+          const reachable = done || s <= step;
+          return (
+            <button
+              key={s}
+              type="button"
+              className={`bw-step${s === step ? " is-active" : ""}${s < step || (done && s !== step) ? " is-done" : ""}`}
+              onClick={() => reachable && goToStep(s)}
+              disabled={!reachable}
+              aria-current={s === step ? "step" : undefined}
+            >
+              <span className="bw-step-num">{s < step || (done && s !== step) ? <IconCheck className="h-3.5 w-3.5" /> : s}</span>
+              {STEP_TITLES[s - 1]}
             </button>
-          </div>
-        )}
+          );
+        })}
+      </nav>
 
-        {/* ── Step 1: Income ── */}
-        {step === 1 && (
-          <div className="space-y-5">
-            <StepBanner step={1} />
+      {/* ── Step 1: Income ── */}
+      {step === 1 && (
+        <section className="bw-screen">
+          <header className="bw-intro">
+            <h2>כמה נכנס לך בחודש?</h2>
+            <p>בחר את מקורות ההכנסה והזן סכום נטו.</p>
+          </header>
 
-            <div>
-              <label className="text-sm font-bold text-[var(--foreground)]">מאילו מקורות מגיעה ההכנסה שלך?</label>
-              <div className="mt-3 space-y-2">
-                {([
-                  ["steady", "שכיר (משכורת קבועה)", "אותו סכום כל חודש"],
-                  ["variable", "עצמאי / עסק צדדי", "פרילנס, סוכנות, עסק"],
-                  ["other", "אחר", "קצבה, עזרת משפחה, חסכונות"],
-                ] as const).map(([key, title, sub]) => {
-                  const style = INCOME_SOURCE_STYLE[key];
-                  return (
-                  <label
-                    key={key}
-                    className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition ${
-                      answers.incomeSources[key]
-                        ? style.active
-                        : "border-[var(--border)] bg-[var(--surface)]/60 hover:border-zinc-300 hover:bg-[var(--surface)]"
-                    }`}
-                  >
-                    <span className="text-2xl leading-none">{style.emoji}</span>
-                    <input
-                      type="checkbox"
-                      checked={answers.incomeSources[key]}
-                      onChange={() => toggleIncomeSource(key)}
-                      className={`mt-1 h-4 w-4 rounded border-zinc-300 ${style.accent}`}
-                    />
-                    <div className="flex-1">
-                      <div className="font-semibold text-[var(--foreground)]">{title}</div>
-                      <div className="mt-0.5 text-xs text-zinc-500">{sub}</div>
-                    </div>
-                  </label>
-                  );
-                })}
-              </div>
-              {!hasIncomeSource(answers) && (
-                <p className="mt-2 text-xs text-red-500">יש לבחור לפחות מקור הכנסה אחד</p>
-              )}
-            </div>
-
-            {answers.incomeSources.steady && (
-              <NumField
-                label="הכנסה נטו חודשית ממשכורת ₪"
-                value={answers.salaryIncome}
-                onChange={(v) => set("salaryIncome", v)}
-                placeholder="למשל 12000"
-              />
-            )}
-
-            {answers.incomeSources.variable && (
-              <NumField
-                label="הכנסה נטו חודשית מהעסק ₪"
-                value={answers.businessIncome}
-                onChange={(v) => set("businessIncome", v)}
-                placeholder="למשל 5000"
-              />
-            )}
-
-            {answers.incomeSources.other && (
-              <NumField
-                label="הכנסה חודשית ממקורות אחרים ₪"
-                value={answers.otherIncome}
-                onChange={(v) => set("otherIncome", v)}
-                placeholder="ניתן להשאיר 0"
-              />
-            )}
-
-            {hasIncomeSource(answers) && (() => {
-              const s = computeIncomeSplit(answers);
+          <div className="bw-group">
+            {([
+              ["steady", "משכורת", "סכום קבוע כל חודש", IconWallet, "salaryIncome"],
+              ["variable", "עסק / פרילנס", "הכנסה משתנה מהעסק", IconBriefcase, "businessIncome"],
+              ["other", "הכנסה אחרת", "קצבה, עזרה, שכירות", IconGrid, "otherIncome"],
+            ] as const).map(([key, title, sub, Icon, field]) => {
+              const on = answers.incomeSources[key];
               return (
-                <div className="rounded-2xl border border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50 p-4 text-sm text-emerald-900 shadow-sm space-y-1">
-                  {(answers.incomeSources.steady || answers.incomeSources.other) && (
-                    <div>
-                      <span className="font-semibold">הכנסה אישית: </span>
-                      {s.personalNet.toLocaleString()} ₪
+                <div key={key} className={`bw-source${on ? " is-on" : ""}`}>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={on}
+                    className="bw-source-toggle"
+                    onClick={() => toggleIncomeSource(key)}
+                  >
+                    <span className="bw-tile"><Icon className="h-5 w-5" /></span>
+                    <span className="bw-source-text">
+                      <span className="bw-source-title">{title}</span>
+                      <span className="bw-source-sub">{sub}</span>
+                    </span>
+                    <Switch on={on} />
+                  </button>
+                  {on ? (
+                    <div className="bw-source-amount">
+                      <span>סכום חודשי נטו</span>
+                      <AmountInput
+                        value={answers[field]}
+                        onChange={(v) => set(field, v)}
+                        label={`${title}, סכום חודשי נטו`}
+                      />
                     </div>
-                  )}
-                  {answers.incomeSources.variable && (
-                    <div>
-                      <span className="font-semibold">הכנסה עסקית: </span>
-                      {s.businessNet.toLocaleString()} ₪
-                    </div>
-                  )}
-                  {s.businessNet > 0 && s.personalNet > 0 && (
-                    <div className="text-xs text-emerald-700 pt-1 border-t border-emerald-200">
-                      בשלב 2 תבנה תקציב נפרד לכל אחד. אם העסק במינוס, תשלים מהאישי.
-                    </div>
-                  )}
+                  ) : null}
                 </div>
               );
-            })()}
+            })}
           </div>
-        )}
 
-        {/* ── Step 2: Personal + business expense tables ── */}
-        {step === 2 && (() => {
-          const split = computeIncomeSplit(answers);
-          const personalIncome = split.personalNet;
-          const businessIncome = split.businessNet;
-          const showPersonal = answers.incomeSources.steady || answers.incomeSources.other;
-          const showBusiness = answers.incomeSources.variable;
-          const businessExpenses = sumExpenseRows(answers.businessExpenseRows);
-          const businessRemaining = businessIncome - businessExpenses;
-          const businessDeficit = Math.max(0, -businessRemaining);
-          const personalExpenses = sumExpenseRows(answers.expenseRows);
-          const savings = Number(answers.monthlySavings) || 0;
-          const personalRemaining = personalIncome - savings - personalExpenses - businessDeficit;
-
-          return (
-            <div className="space-y-5">
-              <StepBanner step={2} />
-
-              {showBusiness && (
-                <ExpenseBudgetTable
-                  title="תקציב עסקי"
-                  subtitle={`הכנסה עסקית: ${businessIncome.toLocaleString()} ₪`}
-                  headerClass="border-brand-200 bg-gradient-to-l from-brand-100 to-brand-50 text-brand-900"
-                  income={businessIncome}
-                  incomeLabel="הכנסה עסקית"
-                  incomeIcon="🏢"
-                  rows={answers.businessExpenseRows}
-                  onRowsChange={(rows) => set("businessExpenseRows", rows)}
-                  showNotes
-                />
-              )}
-
-              {showPersonal && (
-                <>
-                  <ExpenseBudgetTable
-                    title="תקציב חיים אישיים"
-                    subtitle={`הכנסה אישית: ${personalIncome.toLocaleString()} ₪`}
-                    headerClass="border-emerald-200 bg-gradient-to-l from-emerald-100 to-teal-50 text-emerald-900"
-                    income={personalIncome}
-                    incomeLabel="הכנסה אישית"
-                    savings={{ value: answers.monthlySavings, onChange: (v) => set("monthlySavings", v) }}
-                    rows={answers.expenseRows}
-                    onRowsChange={(rows) => set("expenseRows", rows)}
-                    businessSubsidy={showBusiness ? businessDeficit : undefined}
-                  />
-                </>
-              )}
-
-              {showPersonal && showBusiness && (
-                <div className={`rounded-2xl border px-4 py-3 text-sm shadow-sm ${
-                  personalRemaining < 0
-                    ? "border-red-200 bg-gradient-to-l from-red-50 to-rose-50 text-red-800"
-                    : "border-emerald-200 bg-gradient-to-l from-emerald-50 to-teal-50 text-emerald-900"
-                }`}>
-                  <span className="font-bold">📊 סיכום מהיר: </span>
-                  אישי {personalIncome.toLocaleString()} ₪
-                  {businessIncome > 0 && ` + עסק ${businessIncome.toLocaleString()} ₪`}
-                  {" → "}
-                  <span className={personalRemaining < 0 ? "font-bold text-red-600" : "font-bold text-emerald-600"}>
-                    יתרה אישית {personalRemaining.toLocaleString()} ₪
-                  </span>
-                  {businessDeficit > 0 && (
-                    <span className="text-xs block mt-1 text-amber-700">
-                      (כולל השלמה של {businessDeficit.toLocaleString()} ₪ לעסק)
-                    </span>
-                  )}
-                </div>
-              )}
+          {hasIncomeSource(answers) ? (
+            <div className="bw-total">
+              <span>סה״כ הכנסה חודשית</span>
+              <strong className="amount">{ils(split.net)}</strong>
+              {split.businessNet > 0 && split.personalNet > 0 ? (
+                <small>אישי {ils(split.personalNet)} · עסק {ils(split.businessNet)}</small>
+              ) : null}
             </div>
-          );
-        })()}
+          ) : (
+            <p className="bw-hint">בחר לפחות מקור הכנסה אחד כדי להמשיך.</p>
+          )}
+        </section>
+      )}
 
-        {/* ── Step 3: Summary ── */}
-        {step === 3 && summary && (
-          <div className="space-y-4">
+      {/* ── Step 2: Expenses ── */}
+      {step === 2 && (
+        <section className="bw-screen">
+          <header className="bw-intro">
+            <h2>לאן הולך הכסף?</h2>
+            <p>כמה אתה מתכנן להוציא בכל קטגוריה בחודש.</p>
+          </header>
 
-            <BudgetSummaryCard
-              budget={summary}
-              onSave={() => saveBudget(summary.expenseLimit)}
-              onEditIncome={goToEditIncome}
-              onEditExpenses={goToEditExpenses}
-              saving={saving}
-              saved={saved}
-            />
+          {showPersonal ? (
+            <div className={`bw-remain${personalLeft < 0 ? " is-over" : ""}`} role="status" aria-live="polite">
+              <span>{personalLeft < 0 ? "חריגה מההכנסה" : "נשאר לחלוקה"}</span>
+              <strong className="amount">{ils(Math.abs(personalLeft))}</strong>
+            </div>
+          ) : null}
+
+          {showPersonal ? (
+            <>
+              <SectionHead title="חיסכון" />
+              <div className="bw-group">
+                <div className="bw-expense">
+                  <span className="bw-tile bw-tile--sm"><IconSavings className="h-[1.1rem] w-[1.1rem]" /></span>
+                  <div className="bw-expense-main">
+                    <span className="bw-expense-fixed">חיסכון חודשי</span>
+                    <span className="bw-expense-sub">יוצא ביום המשכורת, לפני הוצאות</span>
+                  </div>
+                  <AmountInput
+                    value={answers.monthlySavings}
+                    onChange={(v) => set("monthlySavings", v)}
+                    label="חיסכון חודשי"
+                  />
+                </div>
+              </div>
+
+              <SectionHead title="הוצאות אישיות" meta={ils(personalExpenses)} />
+              <ExpenseList
+                rows={answers.expenseRows}
+                onRowsChange={(rows) => set("expenseRows", rows)}
+                addLabel="הוסף קטגוריה"
+              />
+            </>
+          ) : null}
+
+          {showBusiness ? (
+            <>
+              <SectionHead title="הוצאות העסק" meta={`${ils(businessExpenses)} מתוך ${ils(split.businessNet)}`} />
+              <ExpenseList
+                rows={answers.businessExpenseRows}
+                onRowsChange={(rows) => set("businessExpenseRows", rows)}
+                colorOffset={answers.expenseRows.length}
+                showNotes
+                addLabel="הוסף הוצאה עסקית"
+              />
+              {businessDeficit > 0 ? (
+                <p className="bw-hint bw-hint--warn">
+                  העסק במינוס {ils(businessDeficit)}. הסכום יורד מהתקציב האישי.
+                </p>
+              ) : null}
+            </>
+          ) : null}
+        </section>
+      )}
+
+      {/* ── Step 3: Summary ── */}
+      {step === 3 && summary && summary.hasBreakdown && (() => {
+        const s = summary;
+        const free = s.surplus;
+        const base = Math.max(s.personalIncome, 1);
+        const slices = [
+          ...s.expenseRows
+            .map((r, i) => ({ label: r.label || "ללא שם", amount: Number(r.amount) || 0, color: colorAt(i) }))
+            .filter((x) => x.amount > 0),
+          ...(s.salarySavings > 0 ? [{ label: "חיסכון", amount: s.salarySavings, color: "var(--brand)" }] : []),
+          ...(s.personalSubsidyToBusiness > 0
+            ? [{ label: "השלמה לעסק", amount: s.personalSubsidyToBusiness, color: "var(--negative)" }]
+            : []),
+        ];
+
+        return (
+          <section className="bw-screen">
+            <div className="bw-hero">
+              <span className="bw-hero-label">תקציב הוצאות חודשי</span>
+              <strong className="bw-hero-value amount">{ils(s.expenseLimit)}</strong>
+              <span className="bw-hero-sub">
+                הכנסה {ils(s.personalIncome)}{s.salarySavings > 0 ? ` פחות חיסכון ${ils(s.salarySavings)}` : ""}
+              </span>
+            </div>
+
+            <div className="bw-stats">
+              <div><span>נכנס</span><strong className="amount">{ils(s.income)}</strong></div>
+              <div><span>מתוכנן</span><strong className="amount">{ils(s.personalExpenses + s.personalSubsidyToBusiness)}</strong></div>
+              <div className={free < 0 ? "is-over" : "is-ok"}>
+                <span>{free < 0 ? "חריגה" : "נשאר חופשי"}</span>
+                <strong className="amount">{ils(Math.abs(free))}</strong>
+              </div>
+            </div>
+
+            {s.personalIncome > 0 ? (
+              <>
+                <SectionHead title="לאן הולכת ההכנסה" />
+                <div className="bw-group bw-alloc">
+                  <div className="bw-alloc-bar" role="img" aria-label="חלוקת ההכנסה">
+                    {slices.map((x, i) => (
+                      <span key={i} style={{ width: `${(x.amount / base) * 100}%`, background: x.color }} />
+                    ))}
+                  </div>
+                  {slices.map((x, i) => (
+                    <div key={i} className="bw-alloc-row">
+                      <span className="bw-dot" style={{ background: x.color }} aria-hidden />
+                      <span className="bw-alloc-label">{x.label}</span>
+                      <span className="bw-alloc-pct">{Math.round((x.amount / base) * 100)}%</span>
+                      <span className="bw-alloc-amount amount">{ils(x.amount)}</span>
+                    </div>
+                  ))}
+                  <div className={`bw-alloc-row is-total${free < 0 ? " is-over" : ""}`}>
+                    <span className="bw-dot bw-dot--ring" aria-hidden />
+                    <span className="bw-alloc-label">{free < 0 ? "חריגה" : "נשאר חופשי"}</span>
+                    <span className="bw-alloc-pct">{Math.round((Math.abs(free) / base) * 100)}%</span>
+                    <span className="bw-alloc-amount amount">{ils(free)}</span>
+                  </div>
+                </div>
+              </>
+            ) : null}
+
+            {s.businessIncome > 0 ? (
+              <>
+                <SectionHead title="העסק" />
+                <div className="bw-group">
+                  <div className="bw-alloc-row">
+                    <span className="bw-alloc-label">הכנסה עסקית</span>
+                    <span className="bw-alloc-amount amount">{ils(s.businessIncome)}</span>
+                  </div>
+                  {s.businessExpenseRows
+                    .filter((r) => (Number(r.amount) || 0) > 0)
+                    .map((r) => (
+                      <div key={r.id} className="bw-alloc-row">
+                        <span className="bw-alloc-label">
+                          {r.label || "ללא שם"}
+                          {r.notes?.trim() ? <small>{r.notes}</small> : null}
+                        </span>
+                        <span className="bw-alloc-amount amount">−{ils(Number(r.amount) || 0)}</span>
+                      </div>
+                    ))}
+                  <div className={`bw-alloc-row is-total${s.businessIncome - s.businessExpenses < 0 ? " is-over" : ""}`}>
+                    <span className="bw-alloc-label">{s.businessIncome - s.businessExpenses < 0 ? "חוסר בעסק" : "נשאר בעסק"}</span>
+                    <span className="bw-alloc-amount amount">{ils(s.businessIncome - s.businessExpenses)}</span>
+                  </div>
+                </div>
+              </>
+            ) : null}
+
+            {free < 0 ? (
+              <p className="bw-hint bw-hint--warn" role="alert">
+                ההוצאות המתוכננות גבוהות מההכנסה ב־{ils(Math.abs(free))}. כדאי להוריד בקטגוריות או בחיסכון.
+              </p>
+            ) : null}
+
+            <div className="bw-group">
+              <button type="button" className="bw-link-row" onClick={() => setStep(1)}>
+                <span>עריכת הכנסות</span>
+                <IconChevronLeft className="h-5 w-5" />
+              </button>
+              <button type="button" className="bw-link-row" onClick={() => setStep(2)}>
+                <span>עריכת הוצאות</span>
+                <IconChevronLeft className="h-5 w-5" />
+              </button>
+            </div>
 
             <button
               type="button"
-              onClick={() => { if (confirm("לאפס את כל התקציב ולהתחיל מהתחלה?")) reset(); }}
-              className="w-full text-center text-xs text-zinc-400 hover:text-red-500 transition"
+              className="bw-reset"
+              onClick={() => { if (confirm("למחוק את התקציב ולהתחיל מהתחלה?")) reset(); }}
             >
-              איפוס מלא והתחלה מחדש
+              <IconRefresh className="h-4 w-4" />
+              התחלה מחדש
             </button>
+          </section>
+        );
+      })()}
+
+      {/* Bottom action bar */}
+      <div className="bw-bar">
+        {step > 1 ? (
+          <button type="button" className="bw-bar-back" onClick={back} aria-label="חזרה לשלב הקודם">
+            <IconChevronRight className="h-6 w-6" />
+          </button>
+        ) : null}
+
+        {step < 3 ? (
+          <button type="button" className="btn btn-primary bw-bar-cta" onClick={next} disabled={!canAdvance()}>
+            {step === 1 ? "המשך להוצאות" : done ? "עדכן סיכום" : "לסיכום"}
+          </button>
+        ) : saved ? (
+          <div className="bw-bar-saved" role="status">
+            <IconCheck className="h-5 w-5" />
+            נשמר · {ils(summary?.expenseLimit ?? 0)} לחודש
           </div>
+        ) : (
+          <button
+            type="button"
+            className="btn btn-primary bw-bar-cta"
+            onClick={() => summary && void saveBudget(summary.expenseLimit)}
+            disabled={saving || !summary}
+          >
+            {saving ? "שומר…" : "שמור תקציב"}
+          </button>
         )}
-
-        {/* Navigation, always visible */}
-        <div className="mt-6 flex items-center justify-between border-t border-brand-100/80 pt-4">
-          {step > 1 ? (
-            <button
-              type="button"
-              onClick={back}
-              className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-2 text-sm font-medium text-[var(--muted)] transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700 active:scale-[0.98]"
-            >
-              ← חזרה
-            </button>
-          ) : (
-            <div />
-          )}
-
-          {step < 3 && (
-            <span className="rounded-full bg-brand-100/80 px-3 py-1 text-xs font-medium text-brand-700">
-              שלב {step} מתוך 3
-            </span>
-          )}
-
-          {/* Forward button, steps 1–4 only */}
-          {step < 3 ? (
-            <button
-              type="button"
-              onClick={done && step === 2 ? returnToSummary : next}
-              disabled={!canAdvance()}
-              className="rounded-xl bg-brand-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-brand-200 transition hover:bg-brand-500 active:scale-[0.98] disabled:opacity-40"
-            >
-              {step === 2 ? (done ? "עדכן סיכום ✨" : "לסיכום ✨") : "הבא ←"}
-            </button>
-          ) : (
-            <div />
-          )}
-        </div>
       </div>
     </div>
   );

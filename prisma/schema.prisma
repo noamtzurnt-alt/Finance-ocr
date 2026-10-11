@@ -6,41 +6,60 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
 enum DocumentType {
-  expense       // קבלות החזר מס – קבלות שהוצאתי על הוצאות (להחזר מס)
-  income       // חשבוניות – חשבוניות שהוצאתי ללקוחות
-  payment_receipt  // קבלות על תשלום – קבלות שהוצאתי ללקוחות (הוכחת תשלום)
+  expense // קבלות החזר מס – קבלות שהוצאתי על הוצאות (להחזר מס)
+  income // חשבוניות – חשבוניות שהוצאתי ללקוחות
+  payment_receipt // קבלות על תשלום – קבלות שהוצאתי ללקוחות (הוכחת תשלום)
 }
 
 enum BusinessType {
-  exempt    // עוסק פטור
-  licensed  // עוסק מורשה
-  company   // חברה בע"מ
+  exempt // עוסק פטור
+  licensed // עוסק מורשה
+  company // חברה בע"מ
 }
 
 model User {
   id    String @id @default(uuid())
   email String @unique
 
-  // Business Profile
-  businessType    BusinessType @default(exempt)
-  businessName    String?
-  taxId           String?      // ח.פ / ת.ז עסק
-  vatPercent      Decimal      @default(18.0) @db.Decimal(4, 2)
+  // UI theme: "green" (Noam) | "pink" (Meitar)
+  theme               String  @default("green")
+  // Optional custom sidebar/app logo (R2 object key), mainly for Meitar
+  logoKey             String?
+  // Day of month the budget cycle starts (e.g. salary day). 1 = calendar month.
+  budgetCycleStartDay Int     @default(1)
+  // Last open notes screen, so phone and computer reopen the same place.
+  notesPlace         Json?
+  notesPlaceAt       DateTime?
 
-  categories Category[]
-  documents  Document[]
-  transactions Transaction[]
-  expenseFolders ExpenseFolder[]
-  budgets    Budget[]
-  financialProfile FinancialProfile?
-  contracts  Contract[]
-  passkeys   PasskeyCredential[]
+  // Business Profile
+  businessType BusinessType @default(exempt)
+  businessName String?
+  taxId        String? // ח.פ / ת.ז עסק
+  vatPercent   Decimal      @default(18.0) @db.Decimal(4, 2)
+
+  categories        Category[]
+  documents         Document[]
+  transactions      Transaction[]
+  expenseFolders    ExpenseFolder[]
+  budgets           Budget[]
+  financialProfile  FinancialProfile?
+  contracts         Contract[]
+  passkeys          PasskeyCredential[]
+  notes             Note[]
+  noteCaptures      NoteCapture[]
+  noteFolders       NoteFolder[]
+  vaultItems        VaultItem[]
+  vaultFolders      VaultFolder[]
+  reminderLists     ReminderList[]
+  reminderSections  ReminderSection[]
+  reminders         Reminder[]
+  pushSubscriptions PushSubscription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -52,13 +71,13 @@ enum BudgetScope {
 }
 
 model Category {
-  id     String @id @default(uuid())
-  userId String
-  name   String
+  id          String       @id @default(uuid())
+  userId      String
+  name        String
   budgetScope BudgetScope?
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documents Document[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents    Document[]
   transactions Transaction[]
 
   createdAt DateTime @default(now())
@@ -69,11 +88,11 @@ model Category {
 }
 
 model ExpenseFolder {
-  id        String   @id @default(uuid())
+  id        String @id @default(uuid())
   userId    String
   name      String
-  icon      String   @default("📁")
-  sortOrder Int      @default(0)
+  icon      String @default("📁")
+  sortOrder Int    @default(0)
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   documents Document[]
@@ -86,35 +105,35 @@ model ExpenseFolder {
 }
 
 model Document {
-  id        String       @id @default(uuid())
-  userId    String
-  type      DocumentType
-  date      DateTime     @db.Date
+  id     String       @id @default(uuid())
+  userId String
+  type   DocumentType
+  date   DateTime     @db.Date
 
   // Accounting fields
-  amount        Decimal      @db.Decimal(12, 2) // Total
-  vatAmount     Decimal      @default(0) @db.Decimal(12, 2)
-  preVatAmount  Decimal      @default(0) @db.Decimal(12, 2)
-  isRecognized  Decimal      @default(100.0) @db.Decimal(5, 2) // % recognized
+  amount       Decimal @db.Decimal(12, 2) // Total
+  vatAmount    Decimal @default(0) @db.Decimal(12, 2)
+  preVatAmount Decimal @default(0) @db.Decimal(12, 2)
+  isRecognized Decimal @default(100.0) @db.Decimal(5, 2) // % recognized
 
-  currency  String       @default("ILS")
-  vendor    String
-  categoryId String?
+  currency        String  @default("ILS")
+  vendor          String
+  categoryId      String?
   expenseFolderId String?
-  description String?
-  docNumber  String?
+  description     String?
+  docNumber       String?
 
-  fileKey   String
-  fileName  String
-  fileMime  String
-  fileSize  Int
-  sha256    String?
+  fileKey  String
+  fileName String
+  fileMime String
+  fileSize Int
+  sha256   String?
 
-  sourceUrl   String?  @db.Text // original receipt link (for link-only receipts)
-  needsReview Boolean  @default(false) // auto-imported, waiting for user approval
+  sourceUrl   String? @db.Text // original receipt link (for link-only receipts)
+  needsReview Boolean @default(false) // auto-imported, waiting for user approval
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category      Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   expenseFolder ExpenseFolder? @relation(fields: [expenseFolderId], references: [id], onDelete: SetNull)
 
   createdAt DateTime @default(now())
@@ -153,9 +172,9 @@ model PasskeyCredential {
   userId String
 
   // WebAuthn credential (stored as raw bytes)
-  credentialId Bytes @unique
+  credentialId Bytes   @unique
   publicKey    Bytes
-  counter      Int   @default(0)
+  counter      Int     @default(0)
   transports   String?
   deviceName   String?
 
@@ -168,11 +187,11 @@ model PasskeyCredential {
 }
 
 model Budget {
-  id            String   @id @default(uuid())
-  userId        String
-  month         String // YYYY-MM
-  expenseLimit  Decimal  @db.Decimal(12, 2)
-  manualIncome  Decimal? @db.Decimal(12, 2)
+  id           String   @id @default(uuid())
+  userId       String
+  month        String // YYYY-MM
+  expenseLimit Decimal  @db.Decimal(12, 2)
+  manualIncome Decimal? @db.Decimal(12, 2)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -185,12 +204,12 @@ model Budget {
 
 // Wizard settings persisted per user (not per month)
 model FinancialProfile {
-  id                       String   @id @default(uuid())
-  userId                   String   @unique
-  goal                     String?  // emergency_fund | pay_debt | vacation | financial_independence | business_investment
-  businessRetentionPercent Decimal? @db.Decimal(5, 2)
-  checkingBalance          Decimal? @db.Decimal(14, 2) // עו"ש + פיקדונות נזילים
-  monthlySavings           Decimal? @db.Decimal(12, 2)
+  id                       String    @id @default(uuid())
+  userId                   String    @unique
+  goal                     String? // emergency_fund | pay_debt | vacation | financial_independence | business_investment
+  businessRetentionPercent Decimal?  @db.Decimal(5, 2)
+  checkingBalance          Decimal?  @db.Decimal(14, 2) // עו"ש + פיקדונות נזילים
+  monthlySavings           Decimal?  @db.Decimal(12, 2)
   wizardCompletedAt        DateTime?
   personalCategories       Json?
   businessCategories       Json?
@@ -203,16 +222,16 @@ model FinancialProfile {
 }
 
 model Contract {
-  id                String    @id @default(uuid())
-  userId            String
-  clientName        String
-  clientEmail       String?
-  contractDate      DateTime?
-  details           String?   @db.Text
-  fileKey           String
-  fileName          String
-  fileMime          String
-  fileSize          Int
+  id           String    @id @default(uuid())
+  userId       String
+  clientName   String
+  clientEmail  String?
+  contractDate DateTime?
+  details      String?   @db.Text
+  fileKey      String
+  fileName     String
+  fileMime     String
+  fileSize     Int
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -221,4 +240,208 @@ model Contract {
 
   @@index([userId])
   @@index([userId, contractDate])
+}
+
+model Note {
+  id          String    @id @default(uuid())
+  userId      String
+  title       String    @default("")
+  content     String    @default("") @db.Text
+  // Phone-generated id. A retry after the app closes updates this same note.
+  clientKey   String?
+  pinned      Boolean   @default(false)
+  folderId    String?
+  // Short AI summary for the list; summaryHash marks which title+content it describes.
+  summary     String    @default("")
+  summaryHash String?
+  // Set when moved to "Recently Deleted"; permanent delete removes the row.
+  deletedAt   DateTime?
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder      NoteFolder?      @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  attachments NoteAttachment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, clientKey])
+  @@index([userId, updatedAt])
+  @@index([userId, pinned])
+  @@index([folderId])
+}
+
+// Append-only copy of note text. Kept even when the note itself fails to save.
+model NoteCapture {
+  id        String   @id @default(uuid())
+  userId    String
+  clientKey String?
+  noteId    String?
+  title     String   @default("")
+  content   String   @default("") @db.Text
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, clientKey])
+}
+
+model NoteFolder {
+  id     String @id @default(uuid())
+  userId String
+  name   String
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes Note[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model NoteAttachment {
+  id       String @id @default(uuid())
+  noteId   String
+  fileKey  String
+  fileName String
+  fileMime String
+  fileSize Int
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([noteId])
+}
+
+// Password vault items, encrypted at rest on the server (see app/lib/vault/server.ts).
+model VaultItem {
+  id        String    @id @default(uuid())
+  userId    String
+  data      String    @db.Text
+  folderId  String?
+  // Set when moved to "Recently Deleted"; permanent delete removes the row.
+  deletedAt DateTime?
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder VaultFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([folderId])
+}
+
+model VaultFolder {
+  id     String @id @default(uuid())
+  userId String
+  name   String
+
+  user  User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items VaultItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ReminderList {
+  id            String  @id @default(uuid())
+  userId        String
+  name          String
+  color         String  @default("blue")
+  icon          String  @default("list")
+  // "standard" | "groceries" (auto-sorted into store aisles)
+  kind          String  @default("standard")
+  // "manual" | "due" | "priority" | "created" | "title"
+  sortMode      String  @default("manual")
+  showCompleted Boolean @default(false)
+  // "list" | "columns"
+  viewMode      String  @default("list")
+  position      Float   @default(0)
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sections  ReminderSection[]
+  reminders Reminder[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model ReminderSection {
+  id       String @id @default(uuid())
+  userId   String
+  listId   String
+  name     String
+  position Float  @default(0)
+
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  list      ReminderList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  reminders Reminder[]
+
+  createdAt DateTime @default(now())
+
+  @@index([listId])
+}
+
+model Reminder {
+  id               String    @id @default(uuid())
+  userId           String
+  listId           String
+  sectionId        String?
+  parentId         String?
+  title            String
+  notes            String    @default("") @db.Text
+  url              String    @default("")
+  // Local calendar date/time (Asia/Jerusalem); no UTC conversion.
+  dueDate          String?
+  dueTime          String?
+  earlyMinutes     Int?
+  recurrence       Json?
+  priority         Int       @default(0)
+  flagged          Boolean   @default(false)
+  tags             String[]  @default([])
+  completed        Boolean   @default(false)
+  completedAt      DateTime?
+  position         Float     @default(0)
+  deletedAt        DateTime?
+  // "dueDate dueTime" of the occurrence already pushed, so each alert fires once.
+  notifiedKey      String?
+  earlyNotifiedKey String?
+
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  list     ReminderList     @relation(fields: [listId], references: [id], onDelete: Cascade)
+  section  ReminderSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  parent   Reminder?        @relation("ReminderSubtasks", fields: [parentId], references: [id], onDelete: Cascade)
+  subtasks Reminder[]       @relation("ReminderSubtasks")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, completed])
+  @@index([listId])
+  @@index([dueDate])
+  @@index([parentId])
+}
+
+model PushSubscription {
+  id         String   @id @default(uuid())
+  userId     String
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  timeZone   String   @default("Asia/Jerusalem")
+  userAgent  String   @default("")
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }

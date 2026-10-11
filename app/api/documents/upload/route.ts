@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/app/lib/auth/server";
+import { ensureOwnedCategoryId } from "@/app/lib/categories/ownership";
 import { putObject } from "@/app/lib/r2/objects";
 import { prisma } from "@/app/lib/prisma";
 import crypto from "crypto";
@@ -62,6 +63,10 @@ export async function POST(req: Request) {
   const vatPct = dbUser?.vatPercent.toNumber() ?? 17;
   const vatAmount = total * (vatPct / (100 + vatPct));
   const preVatAmount = total - vatAmount;
+  const categoryId = await ensureOwnedCategoryId(user.id, meta.categoryId);
+  if (meta.categoryId && !categoryId) {
+    return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+  }
 
   const doc = await prisma.document.create({
     data: {
@@ -72,7 +77,7 @@ export async function POST(req: Request) {
       vatAmount: Math.round(vatAmount * 100) / 100,
       preVatAmount: Math.round(preVatAmount * 100) / 100,
       vendor: meta.vendor || "Unknown",
-      categoryId: meta.categoryId || null,
+      categoryId,
       description: meta.description || null,
       docNumber: meta.docNumber ?? null,
       fileKey,

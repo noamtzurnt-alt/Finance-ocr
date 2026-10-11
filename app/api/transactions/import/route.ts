@@ -30,7 +30,7 @@ function parseDateOnly(s: string) {
   const y = Number(m[1]);
   const mo = Number(m[2]);
   const d = Number(m[3]);
-  const dt = new Date(y, mo - 1, d);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
   return Number.isNaN(dt.getTime()) ? null : dt;
 }
 

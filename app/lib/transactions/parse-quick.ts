@@ -27,9 +27,25 @@ export type ChatIntent =
   | { type: "unknown"; reason: string };
 
 const CURRENCY_RE = String.raw`₪|ש["״׳']?ח|שקל(?:ים)?|nis|ils|\$|usd|דולר(?:ים)?|€|eur`;
+const AMOUNT_TOKEN_RE = /^(\d+(?:[.,]\d{1,2})?)(?:(₪|\$|€|usd|eur|nis|ils|ש["״׳']?ח|שקל(?:ים)?|דולר(?:ים)?))?$/i;
+const CURRENCY_ONLY_RE = new RegExp(String.raw`^(?:${CURRENCY_RE})$`, "i");
+
+function normalizeQuickText(text: string): string {
+  return text
+    .normalize("NFKC")
+    // Eastern Arabic / Persian digits → ASCII
+    .replace(/[\u0660-\u0669]/g, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[\u06f0-\u06f9]/g, (d) => String(d.charCodeAt(0) - 0x06f0))
+    .replace(/[\u00A0\u202F\u2007\u2060\u200B\u200E\u200F\u202A-\u202E]/g, " ")
+    .replace(/[٫٬]/g, ".")
+    .replace(/[．。]/g, ".")
+    .replace(/[‐‑‒–—―]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function normalizeAmount(raw: string): number | null {
-  const s = raw.trim().replace(/\s/g, "").replace(/,/g, "");
+  const s = raw.trim().replace(/\s/g, "").replace(/,/g, ".");
   if (!/^\d+(\.\d{1,2})?$/.test(s)) return null;
   const n = Number(s);
   if (!Number.isFinite(n) || n <= 0 || n > 1_000_000) return null;
@@ -71,54 +87,115 @@ function cleanDescription(raw: string): string | null {
   return d.slice(0, 200);
 }
 
-/** Parse quick expense text with optional trailing description. */
+/**
+ * Parse quick expense text.
+ * Fixed order: <name> <amount> [currency] [description...]
+ * Examples: "apple 11.90 אחסון חודשי" | "קוטג 10 שקלים" | "סרט 80"
+ */
 export function parseQuickTransactionDetailed(text: string): ParseQuickResult {
-  const t = text.trim();
+  const t = normalizeQuickText(text);
   if (!t) return { ok: false, reason: "לא התקבלה הודעה." };
 
-  // "<vendor> סכום <amount> <currency?> <description?>"
-  const m1 = t.match(
+  // Alternate form: "<name> סכום <amount> [currency] [description]"
+  const withAmountWord = t.match(
     new RegExp(
       String.raw`^(.+?)\s+(?:סכום|amount)\s*[:\-]?\s*(\d+(?:[.,]\d{1,2})?)\s*(${CURRENCY_RE})?\s*(.*)$`,
       "i",
     ),
   );
-  // "<vendor> <amount> <currency?> <description?>"
-  const m2 = t.match(
-    new RegExp(String.raw`^(.+?)\s+(\d+(?:[.,]\d{1,2})?)\s*(${CURRENCY_RE})?\s*(.*)$`, "i"),
-  );
-  const m = m1 ?? m2;
-  if (!m) {
+
+  let nameRaw = "";
+  let amountRaw = "";
+  let curRaw = "";
+  let descriptionRaw = "";
+
+  if (withAmountWord) {
+    nameRaw = (withAmountWord[1] ?? "").trim();
+    amountRaw = (withAmountWord[2] ?? "").trim();
+    curRaw = (withAmountWord[3] ?? "").trim();
+    descriptionRaw = withAmountWord[4] ?? "";
+  } else {
+    const tokens = t.split(" ").filter(Boolean);
+
+    // Allow glued name+amount as first token: "apple11.90"
+    const gluedFirst = tokens[0]?.match(
+      /^([A-Za-z\u0590-\u05FF][A-Za-z\u0590-\u05FF'’\-]*)(\d+(?:[.,]\d{1,2})?)(₪|\$|€|usd|eur|nis|ils)?$/i,
+    );
+
+    let amountIdx = -1;
+    let amountMatch: RegExpMatchArray | null = null;
+
+    if (gluedFirst) {
+      nameRaw = (gluedFirst[1] ?? "").trim();
+      amountRaw = (gluedFirst[2] ?? "").trim();
+      curRaw = (gluedFirst[3] ?? "").trim();
+      amountIdx = 0;
+    } else {
+      // Find the amount: first token that is a price (name must come before it)
+      for (let i = 0; i < tokens.length; i++) {
+        const m = tokens[i]?.match(AMOUNT_TOKEN_RE);
+        if (m) {
+          amountIdx = i;
+          amountMatch = m;
+          break;
+        }
+      }
+      if (amountIdx < 0 || !amountMatch) {
+        return {
+          ok: false,
+          reason: "כתוב בסדר: שם, סכום, ואז תיאור. למשל: apple 11.90 אחסון חודשי",
+        };
+      }
+      if (amountIdx === 0) {
+        return {
+          ok: false,
+          reason: "חסר שם התנועה לפני הסכום. למשל: apple 11.90 אחסון חודשי",
+        };
+      }
+      nameRaw = tokens.slice(0, amountIdx).join(" ").trim();
+      amountRaw = (amountMatch[1] ?? "").trim();
+      curRaw = (amountMatch[2] ?? "").trim();
+    }
+
+    // After amount: optional currency, then description
+    const after = tokens.slice(amountIdx + 1);
+    if (after[0] && CURRENCY_ONLY_RE.test(after[0]) && !curRaw) {
+      curRaw = after[0];
+      descriptionRaw = after.slice(1).join(" ");
+    } else {
+      descriptionRaw = after.join(" ");
+    }
+  }
+
+  nameRaw = nameRaw.replace(/\s+/g, " ").trim();
+  amountRaw = amountRaw.replace(",", ".");
+  const description = cleanDescription(descriptionRaw);
+
+  if (!nameRaw) {
     return {
       ok: false,
-      reason: "לא הצלחתי להבין את התנועה. כתוב למשל: קוטג 10 שקלים",
+      reason: "חסר שם התנועה. כתוב למשל: apple 11.90 אחסון חודשי",
     };
   }
-
-  const vendorRaw = (m[1] ?? "").trim();
-  const amountRaw = (m[2] ?? "").trim().replace(",", ".");
-  const curRaw = (m[3] ?? "").trim();
-  const description = cleanDescription(m[4] ?? "");
-
-  if (!vendorRaw) {
-    return { ok: false, reason: "חסר שם להוצאה. כתוב למשל: קוטג 10 שקלים" };
-  }
   if (!amountRaw) {
-    return { ok: false, reason: "חסר סכום. כתוב למשל: קוטג 10 שקלים" };
+    return {
+      ok: false,
+      reason: "חסר סכום אחרי השם. כתוב למשל: apple 11.90 אחסון חודשי",
+    };
   }
 
   const amount = normalizeAmount(amountRaw);
   if (amount === null) {
     return {
       ok: false,
-      reason: "הסכום לא תקין. השתמש במספר חיובי עד שתי ספרות אחרי הנקודה, למשל: 10 או 10.50",
+      reason: "הסכום לא תקין. למשל: 10 או 11.90",
     };
   }
 
   return {
     ok: true,
     tx: {
-      vendor: vendorRaw.slice(0, 120),
+      vendor: nameRaw.slice(0, 120),
       amount,
       currency: parseCurrencyToken(curRaw, t),
       description,
@@ -195,7 +272,11 @@ export const CHAT_PARSE_FAILURE = "לא הצלחתי לקלוט את התנוע�
 export const CHAT_PAYMENT_PROMPT = "מעולה, מהם אמצעי התשלום?";
 export const CHAT_PAYMENT_OTHER_PROMPT = "הקלד את אמצעי התשלום";
 export const CHAT_PAYMENT_SUCCESS = "עודכן בהצלחה!";
+export const CHAT_CATEGORY_PROMPT = "באיזו קטגוריה לשייך את התנועה?";
+export const CHAT_CATEGORY_OTHER_PROMPT = "הקלד שם קטגוריה חדשה";
+export const CHAT_CATEGORY_SUCCESS = "נוסף בהצלחה!";
 export const CHAT_PAYMENT_FAILURE = "לא עודכן";
+export const CHAT_CATEGORY_FAILURE = "לא עודכן";
 
 export function formatChatFailure(reason: string): string {
   return `התהליך לא הצליח\n${reason}`;
@@ -209,7 +290,11 @@ export function formatChatPaymentFailure(reason: string): string {
   return `${CHAT_PAYMENT_FAILURE}\n${reason}`;
 }
 
-export const QUICK_HELP =
-  "כתוב לי הוצאה כמו בוואטסאפ:\nקוטג 10 שקלים\nסרט 80\nאו: קפה סכום 12 ₪";
+export function formatChatCategoryFailure(reason: string): string {
+  return `${CHAT_CATEGORY_FAILURE}\n${reason}`;
+}
 
-export const CHAT_WELCOME = "היי כאן Noam Finance, מה תרצה לעשות היום?";
+export const QUICK_HELP =
+  "כתוב בסדר: שם, סכום, תיאור\nלמשל: apple 11.90 אחסון חודשי\nאו: קוטג 10 שקלים";
+
+export const CHAT_WELCOME = "היי, מה תרצה לעשות היום?";

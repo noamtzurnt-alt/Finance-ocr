@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateAuthenticationOptions } from "@simplewebauthn/server";
+import type { AuthenticatorTransportFuture } from "@simplewebauthn/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { prisma } from "@/app/lib/prisma";
@@ -9,7 +10,24 @@ export const runtime = "nodejs";
 
 const bodySchema = z.object({
   email: z.string().email().optional().nullable(),
+  /** Prefer local biometrics (Touch ID / Windows Hello) or phone QR. */
+  mode: z.enum(["device", "phone"]).optional().default("device"),
 });
+
+function parseTransports(raw: string | null): AuthenticatorTransportFuture[] | undefined {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return undefined;
+    const allowed = new Set(["internal", "hybrid", "usb", "nfc", "ble", "cable", "smart-card"]);
+    const out = parsed.filter(
+      (t): t is AuthenticatorTransportFuture => typeof t === "string" && allowed.has(t),
+    );
+    return out.length ? out : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function POST(req: Request) {
   const { rpID } = await getWebAuthnHost();
@@ -19,27 +37,41 @@ export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(json ?? {});
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  // If we know the user (email), send allowCredentials to support non-discoverable passkeys.
-  // If email is not provided, we allow discoverable credentials (one-tap).
+  const mode = parsed.data.mode ?? "device";
   const email = parsed.data.email?.toLowerCase().trim() ?? "";
-  let allowCredentials: Array<{ id: string }> | undefined;
+
+  let allowCredentials:
+    | Array<{ id: string; transports?: AuthenticatorTransportFuture[] }>
+    | undefined;
+
   if (email) {
     const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
     if (user) {
       const creds = await prisma.passkeyCredential.findMany({
         where: { userId: user.id },
-        select: { credentialId: true },
+        select: { credentialId: true, transports: true },
       });
       if (creds.length) {
-        allowCredentials = creds.map((c) => ({ id: Buffer.from(c.credentialId).toString("base64url") }));
+        // Keep stored transports (usually internal+hybrid). Never force internal-only —
+        // that makes Chrome say "No passkeys available" on a Mac that only has phone keys.
+        allowCredentials = creds.map((c) => {
+          const stored = parseTransports(c.transports);
+          const transports: AuthenticatorTransportFuture[] =
+            mode === "phone"
+              ? ["hybrid", "internal"]
+              : stored ?? ["internal", "hybrid"];
+          return {
+            id: Buffer.from(c.credentialId).toString("base64url"),
+            transports,
+          };
+        });
       }
     }
   }
 
   const opts = await generateAuthenticationOptions({
     rpID,
-    userVerification: "preferred",
-    // If allowCredentials is omitted, the client can use discoverable credentials.
+    userVerification: "required",
     ...(allowCredentials ? { allowCredentials } : {}),
   });
 
@@ -52,8 +84,8 @@ export async function POST(req: Request) {
     maxAge: 60 * 10,
   });
 
-  // IMPORTANT: Return only the WebAuthn options object (no extra fields),
-  // because the browser helper may be strict about the shape.
-  return NextResponse.json(opts);
+  return NextResponse.json({
+    ...opts,
+    hints: mode === "phone" ? ["hybrid"] : ["client-device"],
+  });
 }
-

@@ -5,12 +5,12 @@ export type ChatPaymentOption = {
 };
 
 export const CHAT_PAYMENT_OPTIONS: ChatPaymentOption[] = [
-  { id: "bit", label: "ביט", value: "ביט" },
-  { id: "paypal", label: "פייפאל", value: "פייפאל" },
   { id: "7374", label: "7374 - אשראי ראשי", value: "7374" },
   { id: "9304", label: "9304 - אשראי עסקי", value: "9304" },
-  { id: "9537", label: "9537 - דיירקט", value: "9537" },
   { id: "5622", label: "5622 - בהצדעה", value: "5622" },
+  { id: "9537", label: "9537 - דיירקט", value: "9537" },
+  { id: "paypal", label: "פייפאל", value: "פייפאל" },
+  { id: "bit", label: "ביט", value: "ביט" },
   { id: "other", label: "אחר", value: "__other__" },
 ];
 

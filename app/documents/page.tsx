@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/app/lib/auth/server";
 import { prisma } from "@/app/lib/prisma";
 import DocumentsClient from "./ui/DocumentsClient";
+import PageHeader from "@/app/ui/PageHeader";
 
 export default async function DocumentsPage() {
   const user = await requireUser();
@@ -40,21 +41,14 @@ export default async function DocumentsPage() {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">מסמכים</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">חיפוש, פילטרים וניהול כל המסמכים במקום אחד.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <a className="btn" href="/upload">
-            העלאה
-          </a>
-          <a className="btn" href="/dashboard">
-            דשבורד
-          </a>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="מסמכים"
+        subtitle="חיפוש, פילטרים וניהול כל המסמכים במקום אחד"
+        actions={
+          <a className="btn" href="/upload">העלאה</a>
+        }
+      />
 
       <div className="card p-4">
         <DocumentsClient

@@ -7,11 +7,20 @@ import { getWebAuthnHost } from "@/app/lib/auth/webauthn";
 import { cookies } from "next/headers";
 import { signSessionToken } from "@/app/lib/auth/session";
 import { setSessionCookie } from "@/app/lib/auth/cookies";
+import { isValidSignedChallenge } from "@/app/lib/auth/passkey-challenge";
+import { normalizeAppTheme, THEME_COOKIE, themeCookieOptions } from "@/app/lib/ui/theme";
 
 export const runtime = "nodejs";
 
+/** Warm-up: called while the Face ID sheet is open so POST doesn't pay the cold start. */
+export async function GET() {
+  await prisma.$queryRaw`SELECT 1`.catch(() => null);
+  return new NextResponse(null, { status: 204, headers: { "cache-control": "no-store" } });
+}
+
 const bodySchema = z.object({
   response: z.any(),
+  expectUserId: z.string().uuid().optional().nullable(),
 });
 
 function decodeId(s: string): Uint8Array<ArrayBuffer> | null {
@@ -44,8 +53,9 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
   const cs = await cookies();
-  const challenge = cs.get("webauthn_auth_challenge")?.value ?? "";
-  if (!challenge) return NextResponse.json({ error: "Missing challenge" }, { status: 400 });
+  const cookieChallenge = cs.get("webauthn_auth_challenge")?.value ?? "";
+  const expectedChallenge = (c: string) =>
+    (cookieChallenge !== "" && c === cookieChallenge) || isValidSignedChallenge(c, secret);
 
   const { rpID, origin } = await getWebAuthnHost();
   if (!rpID) return NextResponse.json({ error: "Invalid host" }, { status: 400 });
@@ -77,7 +87,7 @@ export async function POST(req: Request) {
 
   const verification = await verifyAuthenticationResponse({
     response: res,
-    expectedChallenge: challenge,
+    expectedChallenge,
     expectedOrigin: origin,
     expectedRPID: rpID,
     credential: {
@@ -85,7 +95,7 @@ export async function POST(req: Request) {
       publicKey: new Uint8Array(cred.publicKey),
       counter: cred.counter,
     },
-    requireUserVerification: false,
+    requireUserVerification: true,
   });
 
   if (!verification.verified) {
@@ -98,11 +108,19 @@ export async function POST(req: Request) {
     select: { id: true },
   });
 
-  const user = await prisma.user.findUnique({ where: { id: cred.userId }, select: { id: true, email: true } });
+  const user = await prisma.user.findUnique({ where: { id: cred.userId }, select: { id: true, email: true, theme: true } });
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 401 });
+
+  if (parsed.data.expectUserId && parsed.data.expectUserId !== user.id) {
+    return NextResponse.json(
+      { error: "זה Passkey של חשבון אחר. השתמש ב־Face ID של החשבון המחובר." },
+      { status: 403 },
+    );
+  }
 
   const token = await signSessionToken({ sub: user.id, email: user.email }, secret);
   await setSessionCookie(token);
+  cs.set(THEME_COOKIE, normalizeAppTheme(user.theme), themeCookieOptions);
 
   // Clear challenge
   cs.set("webauthn_auth_challenge", "", {

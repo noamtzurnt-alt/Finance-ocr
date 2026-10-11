@@ -3,6 +3,7 @@ import { requireUser } from "@/app/lib/auth/server";
 import { prisma } from "@/app/lib/prisma";
 import CategoriesClient from "./ui/CategoriesClient";
 import LiveRefresh from "@/app/ui/LiveRefresh";
+import PageHeader from "@/app/ui/PageHeader";
 
 export default async function CategoriesPage() {
   const user = await requireUser();
@@ -15,17 +16,12 @@ export default async function CategoriesPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div>
       <LiveRefresh />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">קטגוריות</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">נהל קטגוריות להוצאות (משמש גם לייצוא).</p>
-        </div>
-        <a className="btn" href="/dashboard">
-          חזרה לדשבורד
-        </a>
-      </div>
+      <PageHeader
+        title="קטגוריות"
+        subtitle="נהל קטגוריות להוצאות (משמש גם לייצוא)"
+      />
 
       <div className="card p-4">
         <CategoriesClient initial={categories} />

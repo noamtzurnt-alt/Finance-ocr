@@ -10,22 +10,30 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/auth/passkey",
   "/api/health",
   "/api/cron/backup",
+  "/api/cron/reminders",
 ];
 
 function isPublicPath(pathname: string) {
   if (pathname.startsWith("/_next")) return true;
   if (pathname.startsWith("/favicon")) return true;
   if (pathname.startsWith("/public")) return true;
+  if (pathname === "/sw.js" || pathname === "/manifest.json" || pathname === "/notes/manifest.webmanifest") return true;
   if (pathname === "/") return true; // we handle redirect logic in app/page.tsx
   return PUBLIC_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+function continueWithPath(req: NextRequest) {
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-pathname", req.nextUrl.pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   // Cron routes must be reachable without login (CRON_SECRET is checked in the route).
   const isCron = pathname === "/api/cron/backup" || pathname.startsWith("/api/cron/backup/");
-  if (isCron) return NextResponse.next();
-  if (isPublicPath(pathname)) return NextResponse.next();
+  if (isCron) return continueWithPath(req);
+  if (isPublicPath(pathname)) return continueWithPath(req);
 
   const loginWithNext = () => {
     const url = new URL("/login", req.url);
@@ -43,7 +51,7 @@ export async function proxy(req: NextRequest) {
   const payload = await verifySessionToken(token, secret);
   if (!payload?.sub) return loginWithNext();
 
-  return NextResponse.next();
+  return continueWithPath(req);
 }
 
 export const config = {

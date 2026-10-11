@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/app/lib/auth/server";
 import ExportClient from "./ui/ExportClient";
 import LiveRefresh from "@/app/ui/LiveRefresh";
+import PageHeader from "@/app/ui/PageHeader";
 
 export default async function ExportPage() {
   const user = await requireUser();
@@ -10,20 +11,19 @@ export default async function ExportPage() {
   const year = new Date().getFullYear();
 
   return (
-    <div className="space-y-5">
+    <div>
       <LiveRefresh />
-      <div className="section-header">
-        <div>
-          <h1 className="section-title">ייצוא לרו״ח</h1>
-          <p className="section-sub">לכל שנה: מסמך הוצאות מוכרות + מסמך קבלות הכנסות</p>
-        </div>
-      </div>
+      <PageHeader
+        title="ייצוא לרו״ח"
+        subtitle="לכל שנה: מסמך הוצאות מוכרות + מסמך קבלות הכנסות"
+      />
 
       <div
-        className="rounded-lg border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900"
+        className="card mb-5 px-4 py-3 text-sm"
         role="alert"
+        style={{ color: "var(--muted)" }}
       >
-        <strong>הבהרה:</strong> המערכת היא כלי עזר לניהול בלבד ואינה תחליף לייעוץ מס או רואה חשבון.
+        <strong style={{ color: "var(--foreground)" }}>הבהרה:</strong> המערכת היא כלי עזר לניהול בלבד ואינה תחליף לייעוץ מס או רואה חשבון.
         האחריות על דיווח לרשויות המס, הגשת דוחות ורישום ספרים מוטלת עליך ורואה החשבון שלך בלבד.
       </div>
 

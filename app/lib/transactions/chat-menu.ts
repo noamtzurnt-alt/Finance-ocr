@@ -5,7 +5,10 @@ export type ChatFlow =
   | { kind: "add" }
   | { kind: "delete" }
   | { kind: "edit_field" }
-  | { kind: "edit_index"; field: ChatEditField };
+  | { kind: "edit_index"; field: ChatEditField }
+  | { kind: "edit_pick" }
+  | { kind: "add_category" }
+  | { kind: "delete_category" };
 
 export const CHAT_FLOW_IDLE: ChatFlow = { kind: "idle" };
 
@@ -14,22 +17,54 @@ export type InlineInputKind = "expense" | "number" | "text" | "date";
 export type MenuOptionId =
   | "add"
   | "list"
+  | "list_categories"
+  | "budget_plan"
   | "delete"
   | "edit"
+  | "add_category"
+  | "delete_category"
   | "edit_payment"
   | "edit_description"
   | "edit_vendor"
   | "edit_amount"
   | "edit_date"
+  | "ask_date"
   | "back_menu";
 
 export type MenuOption = { id: MenuOptionId; label: string };
 
+export const BACK_TO_MENU_OPTION: MenuOption = {
+  id: "back_menu",
+  label: "חזרה לתפריט",
+};
+
+export const ASK_DATE_OPTION: MenuOption = {
+  id: "ask_date",
+  label: "תאריך?",
+};
+
+export const ADD_TX_MENU_OPTIONS: MenuOption[] = [ASK_DATE_OPTION, BACK_TO_MENU_OPTION];
+
+/** Opening / follow-up menu only */
 export const MAIN_MENU_OPTIONS: MenuOption[] = [
-  { id: "add", label: "הוסף תנועה" },
-  { id: "list", label: "הצג את כל התנועות" },
+  { id: "add", label: "הוסף תנועה חדשה" },
+  { id: "list", label: "תנועות החודש" },
+  { id: "list_categories", label: "הצג את כל הקטגוריות" },
+  { id: "budget_plan", label: "תקציב ועמידה ביעדים" },
+];
+
+/** Shown under the transaction list */
+export const LIST_TX_MENU_OPTIONS: MenuOption[] = [
   { id: "delete", label: "מחק תנועה" },
   { id: "edit", label: "ערוך תנועה" },
+  { id: "back_menu", label: "חזרה לתפריט" },
+];
+
+/** Shown under the category list */
+export const LIST_CATEGORY_MENU_OPTIONS: MenuOption[] = [
+  { id: "add_category", label: "הוסף קטגוריה" },
+  { id: "delete_category", label: "מחק קטגוריה" },
+  { id: "back_menu", label: "חזרה לתפריט" },
 ];
 
 export const EDIT_FIELD_MENU_OPTIONS: MenuOption[] = [
@@ -40,19 +75,26 @@ export const EDIT_FIELD_MENU_OPTIONS: MenuOption[] = [
   { id: "edit_date", label: "תאריך" },
 ];
 
-export const BACK_TO_MENU_OPTION: MenuOption = {
-  id: "back_menu",
-  label: "חזרה לתפריט",
-};
-
 export const CHAT_MENU_FOLLOWUP = "מה תרצה לעשות עכשיו?";
-export const CHAT_ADD_PROMPT = "איזו תנועה תרצה להוסיף?";
-export const CHAT_ADD_PLACEHOLDER = "לדוגמה: קוטג 10 שקלים";
+export const CHAT_ADD_PROMPT = "כתוב: שם, סכום, ואז תיאור (אופציונלי)";
+export const CHAT_ADD_PLACEHOLDER = "";
+
+export function chatAddPromptWithDate(dateYmd: string | null): string {
+  if (!dateYmd) return CHAT_ADD_PROMPT;
+  const [y, m, d] = dateYmd.split("-");
+  const label = d && m && y ? `${d}/${m}/${y}` : dateYmd;
+  return `${CHAT_ADD_PROMPT}\nתאריך נבחר: ${label}`;
+}
+
 export const CHAT_DELETE_PROMPT = "כתוב את מספר התנועה שברצונך למחוק:";
 export const CHAT_DELETE_PLACEHOLDER = "מספר תנועה";
 export const CHAT_EDIT_PROMPT = "מה תרצה לערוך?";
-export const CHAT_EDIT_INDEX_PROMPT = "איזו תנועה? כתוב את המספר:";
+export const CHAT_EDIT_INDEX_PROMPT = "איזו תנועה? כתוב את המספר, או לחץ עליה:";
 export const CHAT_EDIT_INDEX_PLACEHOLDER = "מספר תנועה";
+export const CHAT_ADD_CATEGORY_PROMPT = "מה שם הקטגוריה החדשה?";
+export const CHAT_ADD_CATEGORY_PLACEHOLDER = "";
+export const CHAT_DELETE_CATEGORY_PROMPT = "כתוב את מספר הקטגוריה שברצונך למחוק:";
+export const CHAT_DELETE_CATEGORY_PLACEHOLDER = "מספר קטגוריה";
 
 export function menuIdToEditField(id: MenuOptionId): ChatEditField | null {
   if (id === "edit_payment") return "payment";

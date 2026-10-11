@@ -82,27 +82,43 @@ export async function POST(req: Request) {
   const counter = info.credential?.counter ?? 0;
   if (!credId || !pubKey) return NextResponse.json({ error: "Missing credential" }, { status: 400 });
 
-  // Keep multiple credentials (e.g. Mac Touch ID + iPhone Face ID).
-  // If the same passkey is synced across devices, this will update the existing row.
-  await prisma.passkeyCredential.upsert({
+  const existing = await prisma.passkeyCredential.findUnique({
     where: { credentialId: credId },
-    update: {
-      userId: user.id,
-      publicKey: pubKey,
-      counter,
-      transports: info.credential?.transports ? JSON.stringify(info.credential.transports) : null,
-      deviceName,
-    },
-    create: {
-      userId: user.id,
-      credentialId: credId,
-      publicKey: pubKey,
-      counter,
-      transports: info.credential?.transports ? JSON.stringify(info.credential.transports) : null,
-      deviceName,
-    },
-    select: { id: true },
+    select: { id: true, userId: true },
   });
+  if (existing && existing.userId !== user.id) {
+    return NextResponse.json(
+      { error: "ה-Passkey הזה כבר שייך לחשבון אחר. השתמש במכשיר/Passkey אחר לחשבון הזה." },
+      { status: 409 },
+    );
+  }
+
+  // Keep multiple credentials (e.g. Mac Touch ID + iPhone Face ID).
+  // If the same passkey is synced for the same account, update its metadata only.
+  if (existing) {
+    await prisma.passkeyCredential.update({
+      where: { id: existing.id },
+      data: {
+        publicKey: pubKey,
+        counter,
+        transports: info.credential?.transports ? JSON.stringify(info.credential.transports) : null,
+        deviceName,
+      },
+      select: { id: true },
+    });
+  } else {
+    await prisma.passkeyCredential.create({
+      data: {
+        userId: user.id,
+        credentialId: credId,
+        publicKey: pubKey,
+        counter,
+        transports: info.credential?.transports ? JSON.stringify(info.credential.transports) : null,
+        deviceName,
+      },
+      select: { id: true },
+    });
+  }
 
   // Clear challenge
   cs.set("webauthn_reg_challenge", "", {

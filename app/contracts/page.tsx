@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/app/lib/auth/server";
 import LiveRefresh from "@/app/ui/LiveRefresh";
+import PageHeader from "@/app/ui/PageHeader";
 import { Suspense } from "react";
 import ContractsContent from "./ui/ContractsContent";
 
@@ -11,21 +12,17 @@ export default async function ContractsPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="space-y-5">
+    <div>
       <LiveRefresh />
-      <div className="section-header">
-        <div>
-          <h1 className="section-title">חוזים</h1>
-          <p className="section-sub">
-            חוזי לקוחות לפי שם, כולל PDF חתום ועותק HTML של מייל החתימה
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="חוזים"
+        subtitle="חוזי לקוחות לפי שם, כולל PDF חתום ועותק HTML של מייל החתימה"
+      />
 
       <Suspense
         fallback={
           <div className="card p-4">
-            <div className="h-5 w-56 animate-pulse rounded bg-zinc-200" />
+            <div className="h-5 w-56 animate-pulse rounded bg-[var(--surface2)]" />
             <div className="mt-4 h-72 animate-pulse rounded-2xl border border-[var(--border)]/70 bg-[var(--surface)]" />
           </div>
         }

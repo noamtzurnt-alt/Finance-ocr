@@ -1,70 +1,99 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Rubik, IBM_Plex_Mono } from "next/font/google";
+import { Inter, Heebo } from "next/font/google";
 import "./globals.css";
 import AppFrame from "@/app/ui/AppFrame";
 import OfflineBanner from "@/app/ui/OfflineBanner";
 import { Suspense } from "react";
+import { getSession } from "@/app/lib/auth/server";
+import { prisma } from "@/app/lib/prisma";
+import { normalizeAppTheme, THEME_COOKIE, themeColorMeta } from "@/app/lib/ui/theme";
+import { cookies, headers } from "next/headers";
+import ServiceWorkerRegister from "@/app/ui/ServiceWorkerRegister";
+import HomeScreenMeta from "@/app/ui/HomeScreenMeta";
+import ChatFaceIdGate from "@/app/chat/ui/ChatFaceIdGate";
 
-// Kept exactly as before — the chat bot inherits this as its body font and
-// must not change. New typography below is additive (exposed as CSS
-// variables only) and is opted into by the ".app-shell"/".auth-page" scope
-// classes, which the chat screen never uses.
 const inter = Inter({ subsets: ["latin"] });
 
-const rubik = Rubik({
+const heebo = Heebo({
   subsets: ["hebrew", "latin"],
   weight: ["400", "500", "600", "700", "800"],
   variable: "--font-ui",
 });
 
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-num",
-});
-
 export const metadata: Metadata = {
   title: "Noam Finance",
   description: "כספת דיגיטלית לניהול הכנסות, הוצאות ומסמכים פיננסיים",
-  manifest: "/manifest.json",
   icons: {
     icon: [
       { url: "/icon-192x192.png", sizes: "192x192", type: "image/png" },
       { url: "/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Noam Finance",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0e1a",
+  themeColor: "#0b0b0b",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
+  interactiveWidget: "resizes-content",
 };
 
-// Make all pages dynamic to avoid stale/cached data between devices.
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") ?? "";
+  const notesHome = pathname === "/notes" || pathname.startsWith("/notes/");
+  const session = await getSession();
+  const cookieTheme = (await cookies()).get(THEME_COOKIE)?.value;
+  let theme = normalizeAppTheme(cookieTheme ?? "green");
+  if (!cookieTheme && session?.sub) {
+    const row = await prisma.user.findUnique({
+      where: { id: session.sub },
+      select: { theme: true },
+    });
+    theme = normalizeAppTheme(row?.theme);
+  }
+
   return (
-    <html lang="he" dir="rtl">
-      <body className={`${inter.className} ${rubik.variable} ${plexMono.variable}`}>
+    <html lang="he" dir="rtl" data-theme={theme} style={{ colorScheme: "dark" }}>
+      <head>
+        <meta name="theme-color" content={themeColorMeta(theme)} />
+        {notesHome ? (
+          <>
+            <link rel="manifest" href="/notes/manifest.webmanifest" />
+            <link rel="apple-touch-icon" href="/notes/apple-touch-icon.png" sizes="180x180" />
+            <meta name="apple-mobile-web-app-title" content="פתקים" />
+          </>
+        ) : (
+          <>
+            <link rel="manifest" href="/manifest.json" />
+            <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+            <meta name="apple-mobile-web-app-title" content="Noam Finance" />
+          </>
+        )}
+      </head>
+      <body className={`${inter.className} ${heebo.variable}`}>
         <OfflineBanner />
-        <Suspense fallback={<div />}>
-          <AppFrame>{children}</AppFrame>
-        </Suspense>
+        <ServiceWorkerRegister />
+        <HomeScreenMeta />
+        <ChatFaceIdGate>
+          <Suspense fallback={<div />}>
+            <AppFrame>{children}</AppFrame>
+          </Suspense>
+        </ChatFaceIdGate>
       </body>
     </html>
   );

@@ -1,18 +1,16 @@
 import { prisma } from "@/app/lib/prisma";
-import {
-  CHAT_LIST_LIMIT,
-  getCurrentMonthRange,
-  type ListedTransaction,
-} from "@/app/lib/transactions/chat-list";
+import { CHAT_LIST_LIMIT, type ListedTransaction } from "@/app/lib/transactions/chat-list";
+import { getUserBudgetCycle } from "@/app/lib/budget/cycle";
 
 export async function fetchListedTransactions(
   userId: string,
   refDate = new Date(),
 ): Promise<ListedTransaction[]> {
-  const { start, end } = getCurrentMonthRange(refDate);
+  const { start, end } = await getUserBudgetCycle(userId, refDate);
+  // Chronological: start of cycle at top, end of cycle at bottom while scrolling down.
   const rows = await prisma.transaction.findMany({
     where: { userId, date: { gte: start, lt: end } },
-    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    orderBy: [{ date: "asc" }, { createdAt: "asc" }, { updatedAt: "asc" }],
     take: CHAT_LIST_LIMIT,
     select: {
       id: true,
@@ -22,6 +20,8 @@ export async function fetchListedTransactions(
       description: true,
       cardLast4: true,
       date: true,
+      categoryId: true,
+      category: { select: { name: true } },
     },
   });
 
@@ -34,6 +34,8 @@ export async function fetchListedTransactions(
     description: row.description,
     paymentMethod: row.cardLast4,
     date: row.date.toISOString().slice(0, 10),
+    categoryId: row.categoryId,
+    categoryName: row.category?.name ?? null,
   }));
 }
 

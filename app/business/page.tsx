@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/app/lib/auth/server";
 import LiveRefresh from "@/app/ui/LiveRefresh";
 import BusinessHub from "./ui/BusinessHub";
+import PageHeader from "@/app/ui/PageHeader";
 
 export const dynamic = "force-dynamic";
 
@@ -10,15 +11,12 @@ export default async function BusinessPage() {
   if (!user) redirect("/login");
 
   return (
-    <div className="space-y-5">
+    <div>
       <LiveRefresh />
-      <div className="section-header">
-        <div>
-          <h1 className="section-title">עסקי</h1>
-          <p className="section-sub">חוזים, מסמכים וייצוא – הכל במקום אחד</p>
-        </div>
-      </div>
-
+      <PageHeader
+        title="עסקי"
+        subtitle="חוזים, מסמכים וייצוא – הכל במקום אחד"
+      />
       <BusinessHub />
     </div>
   );

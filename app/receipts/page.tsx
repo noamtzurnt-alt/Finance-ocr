@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/app/lib/auth/server";
 import LiveRefresh from "@/app/ui/LiveRefresh";
+import PageHeader from "@/app/ui/PageHeader";
 import { MIN_EXPENSE_ARCHIVE_YEAR } from "@/app/lib/receipts/defaults";
 import { parseArchiveMonth } from "@/app/lib/receipts/year-date";
 import { expenseDateRange } from "@/app/lib/receipts/query-range";
@@ -32,14 +33,12 @@ export default async function ReceiptsPage(props: {
   });
 
   return (
-    <div className="space-y-5">
+    <div>
       <LiveRefresh />
-      <div className="section-header">
-        <div>
-          <h1 className="section-title">הוצאות מוכרות (הוצאות)</h1>
-          <p className="section-sub">כל ההוצאות לפי תאריך, בהעלאה ידנית ומבוקרת בלבד</p>
-        </div>
-      </div>
+      <PageHeader
+        title="הוצאות מוכרות"
+        subtitle="כל ההוצאות לפי תאריך, בהעלאה ידנית ומבוקרת בלבד"
+      />
 
       <ReceiptsExpensesClient
         initialYear={year}

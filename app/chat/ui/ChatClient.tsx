@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
+  CHAT_CATEGORY_OTHER_PROMPT,
   CHAT_PAYMENT_OTHER_PROMPT,
   CHAT_WELCOME,
   formatChatFailure,
@@ -10,18 +11,24 @@ import {
 import type { ChatEditField } from "@/app/lib/transactions/chat-commands";
 import { parseTransactionIndex } from "@/app/lib/transactions/chat-commands";
 import {
+  ADD_TX_MENU_OPTIONS,
+  CHAT_ADD_CATEGORY_PLACEHOLDER,
+  CHAT_ADD_CATEGORY_PROMPT,
   CHAT_ADD_PLACEHOLDER,
   CHAT_ADD_PROMPT,
+  CHAT_DELETE_CATEGORY_PLACEHOLDER,
+  CHAT_DELETE_CATEGORY_PROMPT,
   CHAT_DELETE_PLACEHOLDER,
   CHAT_DELETE_PROMPT,
   CHAT_EDIT_INDEX_PLACEHOLDER,
   CHAT_EDIT_INDEX_PROMPT,
-  CHAT_EDIT_PROMPT,
   CHAT_FLOW_IDLE,
   CHAT_MENU_FOLLOWUP,
   BACK_TO_MENU_OPTION,
-  EDIT_FIELD_MENU_OPTIONS,
+  LIST_CATEGORY_MENU_OPTIONS,
+  LIST_TX_MENU_OPTIONS,
   MAIN_MENU_OPTIONS,
+  chatAddPromptWithDate,
   editFieldToCommand,
   inlineInputKindForEditField,
   inlinePlaceholderForEditField,
@@ -31,15 +38,29 @@ import {
   type MenuOption,
 } from "@/app/lib/transactions/chat-menu";
 import ChatInlineInput from "./ChatInlineInput";
+import AppModal from "@/app/ui/AppModal";
+import { todayLocalIso } from "@/app/lib/ui/local-date";
+import { IconCalendar, IconCard } from "@/app/ui/icons";
 import {
   CHAT_PAYMENT_OPTIONS,
+  formatPaymentMethodLabel,
   isOtherPaymentOption,
 } from "@/app/lib/transactions/chat-payment";
-import { isEmptyTransactionListReply } from "@/app/lib/transactions/chat-list";
+import {
+  isEmptyCategoryListReply,
+  isOtherCategoryOption,
+  type ChatCategoryOption,
+} from "@/app/lib/transactions/chat-category";
+import {
+  isEmptyTransactionListReply,
+  type ListedTransaction,
+} from "@/app/lib/transactions/chat-list";
 import ChatMenuButtons from "./ChatMenuButtons";
 import ChatTopBar from "./ChatTopBar";
+import ChatTxEditCard, { type TxEditDraft } from "./ChatTxEditCard";
 
 type PaymentPick = { id: string; label: string; value: string };
+type CategoryPick = ChatCategoryOption;
 
 type PendingEdit = {
   transactionId: string;
@@ -54,11 +75,17 @@ type Msg = {
   status?: "sending" | "ok" | "error";
   paymentOptions?: boolean;
   paymentDisabled?: boolean;
+  categoryOptions?: ChatCategoryOption[];
+  categoryDisabled?: boolean;
   menuOptions?: MenuOption[];
   menuDisabled?: boolean;
   inlineInput?: InlineInputKind;
   inlinePlaceholder?: string;
   inlineDisabled?: boolean;
+  txList?: ListedTransaction[];
+  txPick?: boolean;
+  editForm?: TxEditDraft;
+  editFormDisabled?: boolean;
 };
 
 function uid() {
@@ -110,14 +137,27 @@ export default function ChatClient() {
   const [activeMenuMsgId, setActiveMenuMsgId] = useState<string | null>("welcome");
   const [pendingPaymentTxId, setPendingPaymentTxId] = useState<string | null>(null);
   const [activePaymentMsgId, setActivePaymentMsgId] = useState<string | null>(null);
+  const [pendingPaymentAskCategory, setPendingPaymentAskCategory] = useState(false);
+  const [pendingCategoryTxId, setPendingCategoryTxId] = useState<string | null>(null);
+  const [activeCategoryMsgId, setActiveCategoryMsgId] = useState<string | null>(null);
   const [pendingEdit, setPendingEdit] = useState<PendingEdit | null>(null);
   const [selectedPayment, setSelectedPayment] = useState<PaymentPick | null>(null);
   const [paymentCustomMode, setPaymentCustomMode] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryPick | null>(null);
+  const [categoryCustomMode, setCategoryCustomMode] = useState(false);
   const [activeInlineMsgId, setActiveInlineMsgId] = useState<string | null>(null);
   const [inlineDraft, setInlineDraft] = useState("");
+  const [pendingAddDate, setPendingAddDate] = useState<string | null>(null);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [datePickerDraft, setDatePickerDraft] = useState(() => todayLocalIso());
+  const [chatBrand, setChatBrand] = useState<{ name: string; logoUrl: string | null }>({
+    name: "Noam Finance",
+    logoUrl: null,
+  });
   const [, startTransition] = useTransition();
   const busy = messages.some((m) => m.status === "sending");
   const stickToBottomRef = useRef(true);
+  const listedTxRef = useRef<ListedTransaction[]>([]);
   const layoutStateRef = useRef({ inlineMode: false, activeInlineId: null as string | null });
   layoutStateRef.current = {
     inlineMode: Boolean(activeInlineMsgId),
@@ -125,16 +165,36 @@ export default function ChatClient() {
   };
 
   useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { chatLabel?: string; logoUrl?: string | null } | null) => {
+        if (!data) return;
+        const chatName = data.chatLabel ?? "Noam Finance";
+        setChatBrand({
+          name: chatName,
+          logoUrl: data.logoUrl ?? null,
+        });
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === "welcome" ? { ...m, text: `היי כאן ${chatName}, מה תרצה לעשות היום?` } : m,
+          ),
+        );
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     const html = document.documentElement;
     const body = document.body;
     html.classList.add("nf-chat-active");
     body.classList.add("nf-chat-active");
 
-    const theme = document.createElement("meta");
-    theme.setAttribute("name", "theme-color");
-    theme.setAttribute("content", "#0b1c2a");
-    theme.setAttribute("data-nf-chat-theme", "1");
-    document.head.appendChild(theme);
+    const meta = document.createElement("meta");
+    const themeName = document.documentElement.dataset.theme === "pink" ? "pink" : "green";
+    meta.setAttribute("name", "theme-color");
+    meta.setAttribute("content", themeName === "pink" ? "#140810" : "#0b0b0b");
+    meta.setAttribute("data-nf-chat-theme", "1");
+    document.head.appendChild(meta);
 
     return () => {
       html.classList.remove("nf-chat-active");
@@ -240,7 +300,7 @@ export default function ChatClient() {
   useEffect(() => {
     if (layoutStateRef.current.activeInlineId) return;
     scrollToBottom(messages.length <= 2 ? "auto" : "smooth");
-  }, [messages, selectedPayment, paymentCustomMode, activeMenuMsgId, activePaymentMsgId, scrollToBottom]);
+  }, [messages, selectedPayment, paymentCustomMode, selectedCategory, categoryCustomMode, activeMenuMsgId, activePaymentMsgId, activeCategoryMsgId, scrollToBottom]);
 
   useEffect(() => {
     if (!activeInlineMsgId) return;
@@ -304,8 +364,16 @@ export default function ChatClient() {
   const resetPaymentFlow = useCallback(() => {
     setPendingPaymentTxId(null);
     setActivePaymentMsgId(null);
+    setPendingPaymentAskCategory(false);
     setSelectedPayment(null);
     setPaymentCustomMode(false);
+  }, []);
+
+  const resetCategoryFlow = useCallback(() => {
+    setPendingCategoryTxId(null);
+    setActiveCategoryMsgId(null);
+    setSelectedCategory(null);
+    setCategoryCustomMode(false);
   }, []);
 
   const resetEditFlow = useCallback(() => {
@@ -314,8 +382,9 @@ export default function ChatClient() {
 
   const resetPendingFlows = useCallback(() => {
     resetPaymentFlow();
+    resetCategoryFlow();
     resetEditFlow();
-  }, [resetPaymentFlow, resetEditFlow]);
+  }, [resetPaymentFlow, resetCategoryFlow, resetEditFlow]);
 
   const disablePaymentOptions = useCallback(() => {
     setMessages((prev) =>
@@ -324,22 +393,41 @@ export default function ChatClient() {
     resetPaymentFlow();
   }, [resetPaymentFlow]);
 
-  const fetchListReply = useCallback(async () => {
+  const disableCategoryOptions = useCallback(() => {
+    setMessages((prev) =>
+      prev.map((m) => (m.categoryOptions ? { ...m, categoryDisabled: true } : m)),
+    );
+    resetCategoryFlow();
+  }, [resetCategoryFlow]);
+
+  const fetchListReply = useCallback(async (): Promise<{
+    reply: string;
+    transactions: ListedTransaction[];
+  }> => {
     const res = await fetch("/api/chat/quick", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text: "הצג את כל התנועות שלי" }),
     });
-    const data = (await res.json().catch(() => null)) as { ok?: boolean; reply?: string } | null;
+    const data = (await res.json().catch(() => null)) as
+      | { ok?: boolean; reply?: string; transactions?: ListedTransaction[] }
+      | null;
     if (!data?.ok || !data.reply) {
-      return (
-        data?.reply ||
-        (res.status === 401
-          ? formatChatFailure("צריך להתחבר מחדש.")
-          : formatChatFailure(`שגיאת שרת (${res.status})`))
-      );
+      return {
+        reply:
+          data?.reply ||
+          (res.status === 401
+            ? formatChatFailure("צריך להתחבר מחדש.")
+            : formatChatFailure(`שגיאת שרת (${res.status})`)),
+        transactions: [],
+      };
     }
-    return data.reply;
+    const transactions = Array.isArray(data.transactions) ? data.transactions : [];
+    listedTxRef.current = transactions;
+    return {
+      reply: data.reply,
+      transactions,
+    };
   }, []);
 
   const runQuickCommand = useCallback(
@@ -405,6 +493,7 @@ export default function ChatClient() {
         } else if (needsPayment && data?.transaction?.id) {
           setPendingPaymentTxId(data.transaction.id);
           setActivePaymentMsgId(pendingId);
+          setPendingPaymentAskCategory(data.step === "payment");
           setSelectedPayment(null);
           setPaymentCustomMode(false);
         } else if (data?.ok && data.step === "edit_input" && data.edit) {
@@ -521,7 +610,7 @@ export default function ChatClient() {
   );
 
   const submitPayment = useCallback(
-    async (transactionId: string, paymentMethod: string, userLabel: string) => {
+    async (transactionId: string, paymentMethod: string, userLabel: string, askCategory: boolean) => {
       const pendingId = uid();
       setMessages((prev) => [
         ...prev,
@@ -538,7 +627,95 @@ export default function ChatClient() {
         const res = await fetch("/api/chat/payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ transactionId, paymentMethod }),
+          body: JSON.stringify({ transactionId, paymentMethod, askCategory }),
+        });
+        const data = (await res.json().catch(() => null)) as
+          | {
+              ok?: boolean;
+              reply?: string;
+              step?: string;
+              categories?: ChatCategoryOption[];
+              transaction?: { id: string };
+            }
+          | null;
+
+        const reply =
+          data?.reply ||
+          (res.status === 401
+            ? "לא עודכן\nצריך להתחבר מחדש."
+            : `לא עודכן\nשגיאת שרת (${res.status})`);
+        const isOk = Boolean(data?.ok);
+        const needsCategory = Boolean(
+          isOk && data?.step === "category" && data.transaction?.id && data.categories?.length,
+        );
+
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId
+                ? {
+                    ...m,
+                    text: reply,
+                    status: isOk ? "ok" : "error",
+                    categoryOptions: needsCategory ? data?.categories : undefined,
+                    categoryDisabled: false,
+                    ...(isOk ? {} : { menuOptions: [BACK_TO_MENU_OPTION], menuDisabled: false }),
+                  }
+                : m,
+            ),
+          );
+        });
+
+        if (!isOk) {
+          activateErrorMenu(pendingId);
+        } else if (needsCategory && data?.transaction?.id) {
+          setPendingCategoryTxId(data.transaction.id);
+          setActiveCategoryMsgId(pendingId);
+          setSelectedCategory(null);
+          setCategoryCustomMode(false);
+        } else {
+          showFollowUpMenu();
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId
+                ? { ...m, ...botErrorFields(`לא עודכן\n${msg}`) }
+                : m,
+            ),
+          );
+        });
+        activateErrorMenu(pendingId);
+      }
+    },
+    [activateErrorMenu, disablePaymentOptions, showFollowUpMenu],
+  );
+
+  const submitCategory = useCallback(
+    async (
+      transactionId: string,
+      payload: { categoryId?: string; categoryName?: string },
+      userLabel: string,
+    ) => {
+      const pendingId = uid();
+      setMessages((prev) => [
+        ...prev,
+        { id: uid(), role: "user", text: userLabel, status: "ok" },
+        { id: pendingId, role: "bot", text: "…", status: "sending" },
+      ]);
+      disableCategoryOptions();
+      setCategoryCustomMode(false);
+      setActiveInlineMsgId(null);
+      setInlineDraft("");
+      setFlow(CHAT_FLOW_IDLE);
+
+      try {
+        const res = await fetch("/api/chat/category", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ transactionId, ...payload }),
         });
         const data = (await res.json().catch(() => null)) as
           | { ok?: boolean; reply?: string }
@@ -582,7 +759,7 @@ export default function ChatClient() {
         activateErrorMenu(pendingId);
       }
     },
-    [activateErrorMenu, disablePaymentOptions, showFollowUpMenu],
+    [activateErrorMenu, disableCategoryOptions, showFollowUpMenu],
   );
 
   const pickPaymentOption = (option: PaymentPick) => {
@@ -619,29 +796,77 @@ export default function ChatClient() {
   const confirmPaymentSelection = () => {
     if (!pendingPaymentTxId || busy) return;
     if (!selectedPayment || isOtherPaymentOption(selectedPayment.id)) return;
-    void submitPayment(pendingPaymentTxId, selectedPayment.value, selectedPayment.label);
+    void submitPayment(
+      pendingPaymentTxId,
+      selectedPayment.value,
+      selectedPayment.label,
+      pendingPaymentAskCategory,
+    );
+  };
+
+  const pickCategoryOption = (option: CategoryPick) => {
+    if (!pendingCategoryTxId || busy) return;
+
+    if (isOtherCategoryOption(option.id)) {
+      setSelectedCategory(option);
+      setCategoryCustomMode(true);
+      setInlineDraft("");
+      if (activeCategoryMsgId) setActiveInlineMsgId(activeCategoryMsgId);
+      return;
+    }
+
+    setCategoryCustomMode(false);
+    setActiveInlineMsgId(null);
+    setSelectedCategory(option);
+    setInlineDraft("");
+  };
+
+  const backToCategoryOptions = () => {
+    setCategoryCustomMode(false);
+    setSelectedCategory(null);
+    setInlineDraft("");
+    setActiveInlineMsgId(null);
+  };
+
+  const clearCategorySelection = () => {
+    setSelectedCategory(null);
+    setCategoryCustomMode(false);
+    setInlineDraft("");
+    setActiveInlineMsgId(null);
+  };
+
+  const confirmCategorySelection = () => {
+    if (!pendingCategoryTxId || busy) return;
+    if (!selectedCategory || isOtherCategoryOption(selectedCategory.id)) return;
+    void submitCategory(
+      pendingCategoryTxId,
+      { categoryId: selectedCategory.categoryId ?? selectedCategory.value },
+      selectedCategory.label,
+    );
   };
 
   const sendExpense = useCallback(
-    async (raw: string, opts?: { showMenuOnComplete?: boolean; skipUserMessage?: boolean }) => {
+    async (raw: string, opts?: { showMenuOnComplete?: boolean; skipUserMessage?: boolean; date?: string | null }) => {
       const value = raw.trim();
       if (!value || busy) return;
 
       const userMsg: Msg = { id: uid(), role: "user", text: value, status: "ok" };
       const pendingId = uid();
+      const dateToSend = opts?.date ?? pendingAddDate;
 
       setMessages((prev) => [
         ...prev,
         ...(opts?.skipUserMessage ? [] : [userMsg]),
         { id: pendingId, role: "bot", text: "…", status: "sending" },
       ]);
+      setPendingAddDate(null);
       resetPendingFlows();
 
       try {
         const res = await fetch("/api/chat/quick", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: value }),
+          body: JSON.stringify({ text: value, ...(dateToSend ? { date: dateToSend } : {}) }),
         });
         const data = (await res.json().catch(() => null)) as
           | {
@@ -688,6 +913,7 @@ export default function ChatClient() {
         } else if (needsPayment && data?.transaction?.id) {
           setPendingPaymentTxId(data.transaction.id);
           setActivePaymentMsgId(pendingId);
+          setPendingPaymentAskCategory(data.step === "payment");
           setSelectedPayment(null);
           setPaymentCustomMode(false);
         } else if (data?.ok && data.step === "edit_input" && data.edit) {
@@ -732,7 +958,7 @@ export default function ChatClient() {
         return false;
       }
     },
-    [activateErrorMenu, busy, resetPendingFlows, showFollowUpMenu],
+    [activateErrorMenu, busy, resetPendingFlows, showFollowUpMenu, pendingAddDate],
   );
 
   const runListFromMenu = useCallback(async () => {
@@ -743,7 +969,142 @@ export default function ChatClient() {
     ]);
 
     try {
-      const reply = await fetchListReply();
+      const { reply, transactions } = await fetchListReply();
+      const isError = reply.startsWith("התהליך לא הצליח");
+      const isEmpty = !isError && isEmptyTransactionListReply(reply);
+      const monthMatch = reply.match(/^התנועות שלך ל([^\n(]+)/);
+      const header = isEmpty
+        ? reply
+        : isError
+          ? reply
+          : `התנועות שלך ל${(monthMatch?.[1] ?? "").trim() || "החודש"} (${transactions.length})`;
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId
+              ? {
+                  ...m,
+                  text: header,
+                  txList: isError || isEmpty ? undefined : transactions,
+                  status: isError ? "error" : "ok",
+                  menuOptions: isError
+                    ? [BACK_TO_MENU_OPTION]
+                    : isEmpty
+                      ? [BACK_TO_MENU_OPTION]
+                      : LIST_TX_MENU_OPTIONS,
+                  menuDisabled: false,
+                }
+              : m,
+          ),
+        );
+      });
+      if (isError) activateErrorMenu(pendingId);
+      else setActiveMenuMsgId(pendingId);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId ? { ...m, ...botErrorFields(formatChatFailure(msg)) } : m,
+          ),
+        );
+      });
+      activateErrorMenu(pendingId);
+    }
+  }, [activateErrorMenu, fetchListReply]);
+
+  const fetchCategoryListReply = useCallback(async () => {
+    const res = await fetch("/api/chat/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "list" }),
+    });
+    const data = (await res.json().catch(() => null)) as { ok?: boolean; reply?: string } | null;
+    if (!data?.ok || !data.reply) {
+      return (
+        data?.reply ||
+        (res.status === 401
+          ? formatChatFailure("צריך להתחבר מחדש.")
+          : formatChatFailure(`שגיאת שרת (${res.status})`))
+      );
+    }
+    return data.reply;
+  }, []);
+
+  const fetchBudgetPlanReply = useCallback(async () => {
+    const res = await fetch("/api/chat/budget-plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = (await res.json().catch(() => null)) as { ok?: boolean; reply?: string } | null;
+    if (!data?.ok || !data.reply) {
+      return (
+        data?.reply ||
+        (res.status === 401
+          ? formatChatFailure("צריך להתחבר מחדש.")
+          : formatChatFailure(`שגיאת שרת (${res.status})`))
+      );
+    }
+    return data.reply;
+  }, []);
+
+  const runCategoryListFromMenu = useCallback(async () => {
+    const pendingId = uid();
+    setMessages((prev) => [
+      ...prev,
+      { id: pendingId, role: "bot", text: "…", status: "sending" },
+    ]);
+
+    try {
+      const reply = await fetchCategoryListReply();
+      const isError = reply.startsWith("התהליך לא הצליח");
+      const isEmpty = !isError && isEmptyCategoryListReply(reply);
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId
+              ? {
+                  ...m,
+                  text: reply,
+                  status: isError ? "error" : "ok",
+                  menuOptions: isError
+                    ? [BACK_TO_MENU_OPTION]
+                    : isEmpty
+                      ? [
+                          { id: "add_category" as const, label: "הוסף קטגוריה" },
+                          BACK_TO_MENU_OPTION,
+                        ]
+                      : LIST_CATEGORY_MENU_OPTIONS,
+                  menuDisabled: false,
+                }
+              : m,
+          ),
+        );
+      });
+      if (isError) activateErrorMenu(pendingId);
+      else setActiveMenuMsgId(pendingId);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId ? { ...m, ...botErrorFields(formatChatFailure(msg)) } : m,
+          ),
+        );
+      });
+      activateErrorMenu(pendingId);
+    }
+  }, [activateErrorMenu, fetchCategoryListReply]);
+
+  const runBudgetPlanFromMenu = useCallback(async () => {
+    const pendingId = uid();
+    setMessages((prev) => [
+      ...prev,
+      { id: pendingId, role: "bot", text: "…", status: "sending" },
+    ]);
+
+    try {
+      const reply = await fetchBudgetPlanReply();
       const isError = reply.startsWith("התהליך לא הצליח");
       startTransition(() => {
         setMessages((prev) =>
@@ -772,7 +1133,125 @@ export default function ChatClient() {
       });
       activateErrorMenu(pendingId);
     }
-  }, [activateErrorMenu, fetchListReply, showFollowUpMenu]);
+  }, [activateErrorMenu, fetchBudgetPlanReply, showFollowUpMenu]);
+
+  const runAddCategoryStart = useCallback(() => {
+    setFlow({ kind: "add_category" });
+    const msgId = uid();
+    appendBotMessage({
+      id: msgId,
+      text: CHAT_ADD_CATEGORY_PROMPT,
+      status: "ok",
+      menuOptions: [BACK_TO_MENU_OPTION],
+      inlineInput: "text",
+      inlinePlaceholder: CHAT_ADD_CATEGORY_PLACEHOLDER,
+    });
+    activateInline(msgId);
+  }, [activateInline, appendBotMessage]);
+
+  const runDeleteCategoryStart = useCallback(async () => {
+    setFlow({ kind: "delete_category" });
+    const pendingId = uid();
+    setMessages((prev) => [
+      ...prev,
+      { id: pendingId, role: "bot", text: "…", status: "sending" },
+    ]);
+
+    try {
+      const listReply = await fetchCategoryListReply();
+      const isEmpty = isEmptyCategoryListReply(listReply);
+      const isError = listReply.startsWith("התהליך לא הצליח");
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId
+              ? {
+                  ...m,
+                  text: isEmpty || isError ? listReply : `${listReply}\n\n${CHAT_DELETE_CATEGORY_PROMPT}`,
+                  status: isError ? "error" : "ok",
+                  menuOptions: [BACK_TO_MENU_OPTION],
+                  inlineInput: isEmpty || isError ? undefined : "number",
+                  inlinePlaceholder: CHAT_DELETE_CATEGORY_PLACEHOLDER,
+                }
+              : m,
+          ),
+        );
+      });
+      setActiveMenuMsgId(pendingId);
+      if (isEmpty || isError) {
+        setFlow(CHAT_FLOW_IDLE);
+        if (isError) activateErrorMenu(pendingId);
+      } else {
+        activateInline(pendingId);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId ? { ...m, ...botErrorFields(formatChatFailure(msg)) } : m,
+          ),
+        );
+      });
+      activateErrorMenu(pendingId);
+    }
+  }, [activateErrorMenu, activateInline, fetchCategoryListReply]);
+
+  const submitCategoryManage = useCallback(
+    async (body: { action: "add"; name: string } | { action: "delete"; index: number }) => {
+      const pendingId = uid();
+      setMessages((prev) => [
+        ...prev,
+        { id: pendingId, role: "bot", text: "…", status: "sending" },
+      ]);
+
+      try {
+        const res = await fetch("/api/chat/categories", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const data = (await res.json().catch(() => null)) as
+          | { ok?: boolean; reply?: string }
+          | null;
+        const reply =
+          data?.reply ||
+          (res.status === 401
+            ? formatChatFailure("צריך להתחבר מחדש.")
+            : formatChatFailure(`שגיאת שרת (${res.status})`));
+        const isOk = Boolean(data?.ok);
+
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId
+                ? {
+                    ...m,
+                    text: reply,
+                    status: isOk ? "ok" : "error",
+                    ...(isOk ? {} : { menuOptions: [BACK_TO_MENU_OPTION], menuDisabled: false }),
+                  }
+                : m,
+            ),
+          );
+        });
+
+        if (!isOk) activateErrorMenu(pendingId);
+        else showFollowUpMenu();
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+        startTransition(() => {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === pendingId ? { ...m, ...botErrorFields(formatChatFailure(msg)) } : m,
+            ),
+          );
+        });
+        activateErrorMenu(pendingId);
+      }
+    },
+    [activateErrorMenu, showFollowUpMenu],
+  );
 
   const runDeleteStart = useCallback(async () => {
     setFlow({ kind: "delete" });
@@ -783,15 +1262,20 @@ export default function ChatClient() {
     ]);
 
     try {
-      const listReply = await fetchListReply();
+      const { reply: listReply, transactions } = await fetchListReply();
       const isEmpty = isEmptyTransactionListReply(listReply);
+      const monthMatch = listReply.match(/^התנועות שלך ל([^\n(]+)/);
+      const header = isEmpty
+        ? listReply
+        : `התנועות שלך ל${(monthMatch?.[1] ?? "").trim() || "החודש"} (${transactions.length})`;
       startTransition(() => {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === pendingId
               ? {
                   ...m,
-                  text: isEmpty ? listReply : `${listReply}\n\n${CHAT_DELETE_PROMPT}`,
+                  text: isEmpty ? listReply : `${header}\n\n${CHAT_DELETE_PROMPT}`,
+                  txList: isEmpty ? undefined : transactions,
                   status: "ok",
                   menuOptions: [BACK_TO_MENU_OPTION],
                   inlineInput: isEmpty ? undefined : "number",
@@ -820,34 +1304,55 @@ export default function ChatClient() {
     }
   }, [activateErrorMenu, activateInline, fetchListReply, showFollowUpMenu]);
 
-  const runEditStart = useCallback(async () => {
+  const openTransactionEditor = useCallback(async (tx: ListedTransaction) => {
     const pendingId = uid();
+    setFlow(CHAT_FLOW_IDLE);
+    setActiveMenuMsgId(null);
+    setActiveInlineMsgId(null);
+    setInlineDraft("");
     setMessages((prev) => [
-      ...prev,
-      { id: pendingId, role: "bot", text: "…", status: "sending" },
+      ...prev.map((m) => ({
+        ...m,
+        menuDisabled: m.menuOptions ? true : m.menuDisabled,
+        inlineDisabled: m.inlineInput ? true : m.inlineDisabled,
+        txPick: false,
+        editFormDisabled: m.editForm ? true : m.editFormDisabled,
+      })),
+      { id: pendingId, role: "bot" as const, text: "…", status: "sending" as const },
     ]);
 
     try {
-      const listReply = await fetchListReply();
-      const isEmpty = isEmptyTransactionListReply(listReply);
+      const res = await fetch("/api/chat/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "list" }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { ok?: boolean; categories?: { id: string; name: string }[] }
+        | null;
+      const categories = Array.isArray(data?.categories) ? data.categories : [];
+      const amountNum = Number(tx.amount);
+      const draft: TxEditDraft = {
+        transactionId: tx.id,
+        index: tx.index,
+        vendor: tx.vendor,
+        amount: Number.isFinite(amountNum) ? String(amountNum) : tx.amount,
+        payment: tx.paymentMethod ?? "",
+        description: tx.description ?? "",
+        date: tx.date,
+        categoryId: tx.categoryId ?? "",
+        categoryName: tx.categoryName,
+        categories,
+      };
       startTransition(() => {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === pendingId
-              ? {
-                  ...m,
-                  text: isEmpty ? listReply : `${listReply}\n\n${CHAT_EDIT_PROMPT}`,
-                  status: "ok",
-                  menuOptions: isEmpty
-                    ? [BACK_TO_MENU_OPTION]
-                    : [...EDIT_FIELD_MENU_OPTIONS, BACK_TO_MENU_OPTION],
-                }
+              ? { ...m, text: `עריכת תנועה ${tx.index}`, status: "ok", editForm: draft }
               : m,
           ),
         );
       });
-      setActiveMenuMsgId(pendingId);
-      setFlow(isEmpty ? CHAT_FLOW_IDLE : { kind: "edit_field" });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
       startTransition(() => {
@@ -859,11 +1364,156 @@ export default function ChatClient() {
       });
       activateErrorMenu(pendingId);
     }
-  }, [activateErrorMenu, fetchListReply, showFollowUpMenu]);
+  }, [activateErrorMenu]);
+
+  const saveTransactionEdit = useCallback(
+    async (msgId: string, draft: TxEditDraft) => {
+      const vendor = draft.vendor.trim();
+      const amount = draft.amount.replace(/,/g, "").trim();
+      const n = Number(amount);
+      if (!vendor || !Number.isFinite(n) || n <= 0 || n > 1_000_000) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === msgId
+              ? { ...m, status: "error", text: formatChatFailure("שם וסכום תקינים נדרשים") }
+              : m,
+          ),
+        );
+        return;
+      }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(draft.date)) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === msgId
+              ? { ...m, status: "error", text: formatChatFailure("תאריך לא תקין") }
+              : m,
+          ),
+        );
+        return;
+      }
+
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msgId ? { ...m, status: "sending" } : m)),
+      );
+      try {
+        const res = await fetch(`/api/transactions/${draft.transactionId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            vendor,
+            amount,
+            description: draft.description.trim() || null,
+            date: draft.date,
+            categoryId: draft.categoryId || null,
+            cardLast4: draft.payment.trim() || null,
+          }),
+        });
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === msgId
+                ? { ...m, status: "error", text: formatChatFailure(body?.error || "לא הצלחנו לעדכן") }
+                : m,
+            ),
+          );
+          return;
+        }
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === msgId
+              ? { ...m, status: "ok", text: "עודכן בהצלחה!", editFormDisabled: true }
+              : m,
+          ),
+        );
+        showFollowUpMenu();
+      } catch {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === msgId
+              ? { ...m, status: "error", text: formatChatFailure("אין חיבור לרשת") }
+              : m,
+          ),
+        );
+      }
+    },
+    [showFollowUpMenu],
+  );
+
+  const cancelTransactionEdit = useCallback(
+    (msgId: string) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msgId ? { ...m, editFormDisabled: true } : m)),
+      );
+      setFlow(CHAT_FLOW_IDLE);
+      showFollowUpMenu();
+    },
+    [showFollowUpMenu],
+  );
+
+  const runEditStart = useCallback(async () => {
+    setFlow({ kind: "edit_pick" });
+    const pendingId = uid();
+    setMessages((prev) => [
+      ...prev,
+      { id: pendingId, role: "bot", text: "…", status: "sending" },
+    ]);
+
+    try {
+      const { reply: listReply, transactions } = await fetchListReply();
+      const isEmpty = isEmptyTransactionListReply(listReply);
+      const monthMatch = listReply.match(/^התנועות שלך ל([^\n(]+)/);
+      const header = isEmpty
+        ? listReply
+        : `התנועות שלך ל${(monthMatch?.[1] ?? "").trim() || "החודש"} (${transactions.length})`;
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId
+              ? {
+                  ...m,
+                  text: isEmpty ? listReply : `${header}\n\n${CHAT_EDIT_INDEX_PROMPT}`,
+                  txList: isEmpty ? undefined : transactions,
+                  txPick: !isEmpty,
+                  status: "ok",
+                  menuOptions: [BACK_TO_MENU_OPTION],
+                  inlineInput: isEmpty ? undefined : "number",
+                  inlinePlaceholder: CHAT_EDIT_INDEX_PLACEHOLDER,
+                }
+              : m,
+          ),
+        );
+      });
+      setActiveMenuMsgId(pendingId);
+      if (isEmpty) {
+        setFlow(CHAT_FLOW_IDLE);
+      } else {
+        activateInline(pendingId);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "אין חיבור לרשת";
+      startTransition(() => {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === pendingId ? { ...m, ...botErrorFields(formatChatFailure(msg)) } : m,
+          ),
+        );
+      });
+      activateErrorMenu(pendingId);
+    }
+  }, [activateErrorMenu, activateInline, fetchListReply]);
 
   const handleMenuPick = useCallback(
     async (option: MenuOption) => {
       if (busy) return;
+
+      if (option.id === "ask_date") {
+        const today = todayLocalIso();
+        setDatePickerDraft(pendingAddDate ?? today);
+        setDatePickerOpen(true);
+        return;
+      }
+
       disableActiveMenus();
       setMessages((prev) => [
         ...prev,
@@ -872,6 +1522,8 @@ export default function ChatClient() {
 
       if (option.id === "back_menu") {
         setFlow(CHAT_FLOW_IDLE);
+        setPendingAddDate(null);
+        setDatePickerOpen(false);
         disableActiveInlines();
         showFollowUpMenu();
         return;
@@ -879,12 +1531,13 @@ export default function ChatClient() {
 
       if (option.id === "add") {
         const msgId = uid();
+        setPendingAddDate(null);
         setFlow({ kind: "add" });
         appendBotMessage({
           id: msgId,
           text: CHAT_ADD_PROMPT,
           status: "ok",
-          menuOptions: [BACK_TO_MENU_OPTION],
+          menuOptions: ADD_TX_MENU_OPTIONS,
           inlineInput: "expense",
           inlinePlaceholder: CHAT_ADD_PLACEHOLDER,
         });
@@ -899,6 +1552,20 @@ export default function ChatClient() {
         return;
       }
 
+      if (option.id === "list_categories") {
+        setFlow(CHAT_FLOW_IDLE);
+        disableActiveInlines();
+        await runCategoryListFromMenu();
+        return;
+      }
+
+      if (option.id === "budget_plan") {
+        setFlow(CHAT_FLOW_IDLE);
+        disableActiveInlines();
+        await runBudgetPlanFromMenu();
+        return;
+      }
+
       if (option.id === "delete") {
         disableActiveInlines();
         await runDeleteStart();
@@ -908,6 +1575,18 @@ export default function ChatClient() {
       if (option.id === "edit") {
         disableActiveInlines();
         await runEditStart();
+        return;
+      }
+
+      if (option.id === "add_category") {
+        disableActiveInlines();
+        runAddCategoryStart();
+        return;
+      }
+
+      if (option.id === "delete_category") {
+        disableActiveInlines();
+        await runDeleteCategoryStart();
         return;
       }
 
@@ -933,10 +1612,15 @@ export default function ChatClient() {
       disableActiveInlines,
       disableActiveMenus,
       flow.kind,
+      runAddCategoryStart,
+      runBudgetPlanFromMenu,
+      runCategoryListFromMenu,
+      runDeleteCategoryStart,
       runDeleteStart,
       runEditStart,
       runListFromMenu,
       showFollowUpMenu,
+      pendingAddDate,
     ],
   );
 
@@ -953,8 +1637,18 @@ export default function ChatClient() {
         ]);
       };
 
+      if (categoryCustomMode && pendingCategoryTxId) {
+        await submitCategory(pendingCategoryTxId, { categoryName: value }, value);
+        return;
+      }
+
       if (paymentCustomMode && pendingPaymentTxId) {
-        await submitPayment(pendingPaymentTxId, value, value);
+        await submitPayment(
+          pendingPaymentTxId,
+          value,
+          value,
+          pendingPaymentAskCategory,
+        );
         return;
       }
 
@@ -985,6 +1679,36 @@ export default function ChatClient() {
         return;
       }
 
+      if (flow.kind === "edit_pick") {
+        disableActiveMenus();
+        disableActiveInlines();
+        const index = parseTransactionIndex(value);
+        if (!index) {
+          const errId = appendBotMessage({
+            id: uid(),
+            text: formatChatFailure("כתוב מספר תנועה תקין, למשל: 2"),
+            status: "error",
+            menuOptions: [BACK_TO_MENU_OPTION],
+          });
+          activateErrorMenu(errId);
+          return;
+        }
+        const tx = listedTxRef.current.find((row) => row.index === index);
+        if (!tx) {
+          const errId = appendBotMessage({
+            id: uid(),
+            text: formatChatFailure(`לא מצאתי תנועה מספר ${index} ברשימה.`),
+            status: "error",
+            menuOptions: [BACK_TO_MENU_OPTION],
+          });
+          activateErrorMenu(errId);
+          return;
+        }
+        appendUser();
+        await openTransactionEditor(tx);
+        return;
+      }
+
       if (flow.kind === "edit_index") {
         disableActiveMenus();
         disableActiveInlines();
@@ -1012,8 +1736,39 @@ export default function ChatClient() {
         disableActiveMenus();
         disableActiveInlines();
         appendUser();
+        const dateForTx = pendingAddDate;
+        setPendingAddDate(null);
         setFlow(CHAT_FLOW_IDLE);
-        await sendExpense(value, { skipUserMessage: true });
+        await sendExpense(value, { skipUserMessage: true, date: dateForTx });
+        return;
+      }
+
+      if (flow.kind === "add_category") {
+        disableActiveMenus();
+        disableActiveInlines();
+        appendUser();
+        setFlow(CHAT_FLOW_IDLE);
+        await submitCategoryManage({ action: "add", name: value });
+        return;
+      }
+
+      if (flow.kind === "delete_category") {
+        disableActiveMenus();
+        disableActiveInlines();
+        const index = parseTransactionIndex(value);
+        if (!index) {
+          const errId = appendBotMessage({
+            id: uid(),
+            text: formatChatFailure("כתוב מספר קטגוריה תקין, למשל: 1"),
+            status: "error",
+            menuOptions: [BACK_TO_MENU_OPTION],
+          });
+          activateErrorMenu(errId);
+          return;
+        }
+        appendUser();
+        setFlow(CHAT_FLOW_IDLE);
+        await submitCategoryManage({ action: "delete", index });
         return;
       }
     },
@@ -1021,14 +1776,21 @@ export default function ChatClient() {
       activateErrorMenu,
       appendBotMessage,
       busy,
+      categoryCustomMode,
       disableActiveInlines,
       disableActiveMenus,
       flow,
+      pendingCategoryTxId,
       pendingEdit,
+      pendingAddDate,
       paymentCustomMode,
+      pendingPaymentAskCategory,
       pendingPaymentTxId,
+      openTransactionEditor,
       runQuickCommand,
       sendExpense,
+      submitCategory,
+      submitCategoryManage,
       submitFieldUpdate,
       submitPayment,
     ],
@@ -1044,10 +1806,13 @@ export default function ChatClient() {
   const canConfirmPreset = Boolean(
     selectedPayment && !paymentCustomMode && !isOtherPaymentOption(selectedPayment.id),
   );
+  const canConfirmCategory = Boolean(
+    selectedCategory && !categoryCustomMode && !isOtherCategoryOption(selectedCategory.id),
+  );
 
   return (
     <div ref={pageRef} className="nf-chat-page">
-      <ChatTopBar />
+      <ChatTopBar name={chatBrand.name} logoUrl={chatBrand.logoUrl} />
 
       <div className="nf-chat-thread">
         <div
@@ -1060,6 +1825,8 @@ export default function ChatClient() {
           {messages.map((m) => {
             const isActivePayment =
               m.paymentOptions && m.id === activePaymentMsgId && !m.paymentDisabled;
+            const isActiveCategory =
+              m.categoryOptions && m.id === activeCategoryMsgId && !m.categoryDisabled;
             const isActiveMenu =
               m.menuOptions && m.id === activeMenuMsgId && !m.menuDisabled;
             const isActiveInline =
@@ -1082,13 +1849,91 @@ export default function ChatClient() {
                   } ${m.status === "error" ? "is-error" : ""}`}
                 >
                   <span className="nf-bubble-text">{m.text}</span>
-                  {m.menuOptions && (
-                    <ChatMenuButtons
-                      options={m.menuOptions}
-                      disabled={busy || !isActiveMenu}
-                      onPick={handleMenuPick}
+                  {m.editForm && !m.editFormDisabled ? (
+                    <ChatTxEditCard
+                      draft={m.editForm}
+                      busy={busy || m.status === "sending"}
+                      onChange={(patch) => {
+                        setMessages((prev) =>
+                          prev.map((row) =>
+                            row.id === m.id && row.editForm
+                              ? { ...row, status: "ok", editForm: { ...row.editForm, ...patch } }
+                              : row,
+                          ),
+                        );
+                      }}
+                      onSave={() => {
+                        if (m.editForm) void saveTransactionEdit(m.id, m.editForm);
+                      }}
+                      onBack={() => cancelTransactionEdit(m.id)}
                     />
-                  )}
+                  ) : null}
+                  {m.txList && m.txList.length > 0 ? (
+                    <ul className="nf-tx-list">
+                      {m.txList.map((tx) => {
+                        const amountNum = Number(tx.amount);
+                        const amountLabel = Number.isFinite(amountNum)
+                          ? `${amountNum.toLocaleString("he-IL", { maximumFractionDigits: 2 })} ₪`
+                          : `${tx.amount} ₪`;
+                        const canPick = Boolean(m.txPick && isActiveMenu && !busy);
+                        return (
+                          <li
+                            key={tx.id}
+                            className={`nf-tx-list-item${canPick ? " is-pickable" : ""}`}
+                            role={canPick ? "button" : undefined}
+                            tabIndex={canPick ? 0 : undefined}
+                            onClick={
+                              canPick
+                                ? () => {
+                                    setMessages((prev) => [
+                                      ...prev,
+                                      { id: uid(), role: "user", text: String(tx.index), status: "ok" },
+                                    ]);
+                                    void openTransactionEditor(tx);
+                                  }
+                                : undefined
+                            }
+                            onKeyDown={
+                              canPick
+                                ? (e) => {
+                                    if (e.key !== "Enter" && e.key !== " ") return;
+                                    e.preventDefault();
+                                    setMessages((prev) => [
+                                      ...prev,
+                                      { id: uid(), role: "user", text: String(tx.index), status: "ok" },
+                                    ]);
+                                    void openTransactionEditor(tx);
+                                  }
+                                : undefined
+                            }
+                          >
+                            <div className="nf-tx-list-index" aria-hidden>
+                              {tx.index}
+                            </div>
+                            <div className="nf-tx-list-body">
+                              <div className="nf-tx-list-top">
+                                <strong className="nf-tx-list-vendor">{tx.vendor}</strong>
+                                <span className="nf-tx-list-amount amount">{amountLabel}</span>
+                              </div>
+                              <div className="nf-tx-list-meta">
+                                <span className="nf-tx-list-chip">
+                                  <IconCalendar className="nf-tx-list-chip-icon" />
+                                  {tx.date}
+                                </span>
+                                <span className="nf-tx-list-chip">
+                                  <IconCard className="nf-tx-list-chip-icon" />
+                                  {formatPaymentMethodLabel(tx.paymentMethod)}
+                                </span>
+                              </div>
+                              {tx.description ? (
+                                <div className="nf-tx-list-desc">{tx.description}</div>
+                              ) : null}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : null}
                   {isActiveInline && (
                     <div data-inline-msg={m.id}>
                       <ChatInlineInput
@@ -1101,6 +1946,13 @@ export default function ChatClient() {
                         onFocus={() => scrollInlineInputIntoView(m.id, "smooth")}
                       />
                     </div>
+                  )}
+                  {m.menuOptions && (
+                    <ChatMenuButtons
+                      options={m.menuOptions}
+                      disabled={busy || !isActiveMenu}
+                      onPick={handleMenuPick}
+                    />
                   )}
                   {m.paymentOptions && (
                     <>
@@ -1178,12 +2030,127 @@ export default function ChatClient() {
                       )}
                     </>
                   )}
+                  {m.categoryOptions && m.categoryOptions.length > 0 && (
+                    <>
+                      <div className="nf-payment-options">
+                        {m.categoryOptions.map((option) => {
+                          const isSelected = isActiveCategory && selectedCategory?.id === option.id;
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              className={`nf-payment-option${isSelected ? " is-selected" : ""}`}
+                              disabled={busy || m.categoryDisabled}
+                              onClick={() => pickCategoryOption(option)}
+                            >
+                              <span className="nf-payment-option-label">{option.label}</span>
+                              {isSelected && (
+                                <span className="nf-payment-option-check" aria-hidden="true">
+                                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {isActiveCategory && categoryCustomMode && (
+                        <div data-inline-msg={m.id}>
+                          <ChatInlineInput
+                            value={inlineDraft}
+                            placeholder={CHAT_CATEGORY_OTHER_PROMPT}
+                            disabled={busy}
+                            onChange={setInlineDraft}
+                            onSubmit={handleInlineSubmit}
+                            onFocus={() => scrollInlineInputIntoView(m.id, "smooth")}
+                          />
+                        </div>
+                      )}
+                      {isActiveCategory && (
+                        <div className="nf-payment-actions">
+                          {categoryCustomMode ? (
+                            <button
+                              type="button"
+                              className="nf-payment-back"
+                              disabled={busy}
+                              onClick={backToCategoryOptions}
+                            >
+                              חזרה לבחירה
+                            </button>
+                          ) : (
+                            <>
+                              {selectedCategory && (
+                                <button
+                                  type="button"
+                                  className="nf-payment-back"
+                                  disabled={busy}
+                                  onClick={clearCategorySelection}
+                                >
+                                  ביטול
+                                </button>
+                              )}
+                              {canConfirmCategory && (
+                                <button
+                                  type="button"
+                                  className="nf-payment-confirm"
+                                  disabled={busy}
+                                  onClick={confirmCategorySelection}
+                                >
+                                  אישור
+                                </button>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
       </div>
+
+      <AppModal
+        open={datePickerOpen}
+        onClose={() => setDatePickerOpen(false)}
+        label="בחירת תאריך"
+      >
+        <h3 className="nf-modal-title">בחר תאריך להוצאה</h3>
+        <p className="nf-modal-sub">אפשר לבחור תאריך בעבר. ברירת מחדל בלי בחירה: היום.</p>
+        <input
+          className="field mt-3"
+          type="date"
+          value={datePickerDraft}
+          max={todayLocalIso()}
+          onChange={(e) => setDatePickerDraft(e.target.value)}
+        />
+        <div className="nf-modal-actions">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setDatePickerOpen(false)}>
+            ביטול
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={() => {
+              const picked = datePickerDraft;
+              setPendingAddDate(picked);
+              setDatePickerOpen(false);
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === activeInlineMsgId || (m.inlineInput === "expense" && !m.inlineDisabled)
+                    ? { ...m, text: chatAddPromptWithDate(picked) }
+                    : m,
+                ),
+              );
+            }}
+          >
+            אישור
+          </button>
+        </div>
+      </AppModal>
     </div>
   );
 }

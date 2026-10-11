@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "@/app/lib/auth/server";
 import LiveRefresh from "@/app/ui/LiveRefresh";
+import PageHeader from "@/app/ui/PageHeader";
 import Link from "next/link";
 import { Suspense } from "react";
 import PaymentReceiptsTable from "./ui/PaymentReceiptsTable";
@@ -15,25 +16,25 @@ export default async function PaymentReceiptsPage(props: { searchParams?: Promis
   const showAll = sp.all !== "0";
 
   return (
-    <div className="space-y-5">
+    <div>
       <LiveRefresh />
-      <div className="section-header">
-        <div>
-          <h1 className="section-title">קבלות (הכנסות)</h1>
-          <p className="section-sub">קבלות על כסף שנכנס בפועל לחשבון</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link className="btn" href={showAll ? "/payment-receipts?all=0" : "/payment-receipts"}>
-            {showAll ? "החודש בלבד" : "הצג הכל"}
-          </Link>
-          <Link className="btn btn-primary" href="/payment-receipts/upload">+ קבלה חדשה</Link>
-        </div>
-      </div>
+      <PageHeader
+        title="קבלות הכנסה"
+        subtitle="קבלות על כסף שנכנס בפועל לחשבון"
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Link className="btn" href={showAll ? "/payment-receipts?all=0" : "/payment-receipts"}>
+              {showAll ? "החודש בלבד" : "הצג הכל"}
+            </Link>
+            <Link className="btn btn-primary" href="/payment-receipts/upload">+ קבלה חדשה</Link>
+          </div>
+        }
+      />
 
       <Suspense
         fallback={
           <div className="card p-4">
-            <div className="h-5 w-60 animate-pulse rounded bg-zinc-200" />
+            <div className="h-5 w-60 animate-pulse rounded bg-[var(--surface2)]" />
             <div className="mt-4 h-64 animate-pulse rounded-2xl border border-[var(--border)]/70 bg-[var(--surface)]" />
           </div>
         }

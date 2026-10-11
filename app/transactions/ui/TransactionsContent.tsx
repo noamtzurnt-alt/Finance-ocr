@@ -1,6 +1,7 @@
 import { prisma } from "@/app/lib/prisma";
 import { syncBudgetCategoriesForUser } from "@/app/lib/categories/budget";
 import { getTransactionsList } from "@/app/lib/transactions/list";
+import { getUserBudgetCycle } from "@/app/lib/budget/cycle";
 import TransactionsClient from "./TransactionsClient";
 
 const ensuredUsers = new Set<string>();
@@ -25,9 +26,9 @@ export default async function TransactionsContent(props: { userId: string }) {
     ensuredUsers.add(props.userId);
   }
 
-  const now = new Date();
-  const initialYear = now.getFullYear();
-  const initialMonth = now.getMonth() + 1;
+  const cycle = await getUserBudgetCycle(props.userId);
+  const initialYear = cycle.start.getUTCFullYear();
+  const initialMonth = cycle.start.getUTCMonth() + 1;
 
   const [categories, initialItems] = await Promise.all([
     prisma.category.findMany({
@@ -35,7 +36,12 @@ export default async function TransactionsContent(props: { userId: string }) {
       orderBy: [{ budgetScope: "asc" }, { name: "asc" }],
       select: { id: true, name: true, budgetScope: true },
     }),
-    getTransactionsList(props.userId, { limit: 200, year: initialYear, month: initialMonth }),
+    getTransactionsList(props.userId, {
+      limit: 200,
+      year: initialYear,
+      month: initialMonth,
+      cycleStartDay: cycle.startDay,
+    }),
   ]);
 
   const scopedCategories = categories.filter(
@@ -44,13 +50,12 @@ export default async function TransactionsContent(props: { userId: string }) {
   );
 
   return (
-    <div className="card p-4">
-      <TransactionsClient
-        categories={scopedCategories}
-        initialItems={initialItems}
-        initialYear={initialYear}
-        initialMonth={initialMonth}
-      />
-    </div>
+    <TransactionsClient
+      categories={scopedCategories}
+      initialItems={initialItems}
+      initialYear={initialYear}
+      initialMonth={initialMonth}
+      cycleStartDay={cycle.startDay}
+    />
   );
 }

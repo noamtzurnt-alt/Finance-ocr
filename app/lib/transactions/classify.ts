@@ -21,33 +21,12 @@ type HistoryRow = {
 
 const RULES: Array<{ pattern: RegExp; categoryNames: string[] }> = [
   {
-    pattern:
-      /cursor|anthropic|claude|openai|chatgpt|gemini|google workspace|adobe|canva|capcut|vercel|github|microsoft 365|zoom|dropbox/i,
-    categoryNames: ["תוכנות ומנויים", "תוכנות/מנויים"],
-  },
-  {
-    pattern: /namecheap|godaddy|cloudflare|domain|דומיין|livedns|internic/i,
-    categoryNames: ["דומיין", "דומיינים"],
-  },
-  {
-    pattern: /twilio|green api|whatsapp|ווטסאפ|וואטסאפ/i,
-    categoryNames: ["עלות הודעות ווצאפ"],
-  },
-  {
-    pattern: /רואה חשבון|ראיית חשבון|accounting|accountant|cpa/i,
-    categoryNames: ["עלות רואה חשבון"],
-  },
-  {
     pattern: /רכבת ישראל|israel railways|רב.?קו|rav.?kav/i,
     categoryNames: ["רכבת"],
   },
   {
     pattern: /פז|paz|סונול|sonol|דלק|delek|דור אלון|dor alon|ten |טן |yellow/i,
     categoryNames: ["דלק/רכב", "רכב/דלק"],
-  },
-  {
-    pattern: /סטימצקי|צומת ספרים|steimatzky|book depository|עברית ספרים/i,
-    categoryNames: ["ספר"],
   },
   {
     pattern: /wolt|וולט|תן ביס|10bis|משלוחה|mishloha/i,

@@ -244,8 +244,8 @@ export default function ImportStatementCard(props: {
 
   return (
     <>
-      <button type="button" className="btn" onClick={openModal}>
-        📥 ייבוא מקובץ כאל
+      <button type="button" className="btn btn-ghost text-sm" onClick={openModal}>
+        ייבוא מכאל
       </button>
 
       {open ? (

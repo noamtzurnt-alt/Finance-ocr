@@ -1,23 +1,21 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import BrandLogo from "@/app/ui/BrandLogo";
 
-export default function ChatTopBar() {
+export default function ChatTopBar(props: {
+  name?: string;
+  logoUrl?: string | null;
+}) {
+  const name = props.name ?? "Noam Finance";
+
   return (
     <header className="nf-chat-topbar">
       <div className="nf-chat-topbar-inner">
         <div className="nf-chat-identity">
-          <Image
-            src="/noam-finance-bot.webp"
-            alt="Noam Finance"
-            width={44}
-            height={44}
-            className="nf-chat-avatar"
-            priority
-          />
+          <BrandLogo size="md" src={props.logoUrl} className="nf-chat-avatar" />
           <div className="min-w-0">
-            <div className="nf-chat-name">Noam Finance</div>
+            <div className="nf-chat-name">{name}</div>
             <div className="nf-chat-status">מחובר · תשובה מיידית</div>
           </div>
         </div>

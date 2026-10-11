@@ -34,3 +34,13 @@ export function categoryColor(name: string | null | undefined): string {
   if (!name) return CHART_OTHER_COLOR;
   return CHART_COLORS[hashString(name) % CHART_COLORS.length]!;
 }
+
+export function categoryColorSoft(name: string | null | undefined): string {
+  const color = categoryColor(name);
+  return `color-mix(in srgb, ${color} 22%, var(--surface2))`;
+}
+
+export function categoryColorBorder(name: string | null | undefined): string {
+  const color = categoryColor(name);
+  return `color-mix(in srgb, ${color} 55%, transparent)`;
+}

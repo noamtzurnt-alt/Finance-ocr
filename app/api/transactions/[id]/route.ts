@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/prisma";
 import { requireUser } from "@/app/lib/auth/server";
+import { ensureOwnedCategoryId } from "@/app/lib/categories/ownership";
 
 const patchSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -19,7 +20,7 @@ function parseDateOnly(s: string) {
   const y = Number(m[1]);
   const mo = Number(m[2]);
   const d = Number(m[3]);
-  const dt = new Date(y, mo - 1, d);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
   return Number.isNaN(dt.getTime()) ? null : dt;
 }
 
@@ -48,7 +49,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (parsed.data.vendor) data.vendor = parsed.data.vendor.trim();
   if (parsed.data.currency) data.currency = parsed.data.currency.trim();
   if ("description" in parsed.data) data.description = parsed.data.description ?? null;
-  if ("categoryId" in parsed.data) data.categoryId = parsed.data.categoryId ?? null;
+  if ("categoryId" in parsed.data) {
+    const categoryId = await ensureOwnedCategoryId(user.id, parsed.data.categoryId);
+    if (parsed.data.categoryId && !categoryId) {
+      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+    }
+    data.categoryId = categoryId;
+  }
   if ("cardLast4" in parsed.data) data.cardLast4 = parsed.data.cardLast4 ?? null;
 
   const updated = await prisma.transaction.updateMany({

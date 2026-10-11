@@ -1,38 +1,89 @@
 import Link from "next/link";
 import type { RecentTransactionItem } from "@/app/lib/dashboard/summary";
+import { categoryColor } from "@/app/lib/ui/category-color";
+import { IconKebab } from "@/app/ui/icons";
 
-function fmtDate(iso: string) {
+const MONTHS = ["ינו׳", "פבר׳", "מרץ", "אפר׳", "מאי", "יונ׳", "יול׳", "אוג׳", "ספט׳", "אוק׳", "נוב׳", "דצמ׳"];
+
+function dateParts(iso: string) {
   const d = new Date(iso);
-  return new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit" }).format(d);
+  return { day: String(d.getDate()), month: MONTHS[d.getMonth()] ?? "" };
+}
+
+function recency(iso: string) {
+  const days = Math.round((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days <= 0) return "היום";
+  if (days === 1) return "אתמול";
+  return `לפני ${days} ימים`;
+}
+
+function fmtAmount(n: number) {
+  return `${Math.round(Math.abs(n)).toLocaleString("he-IL")} ₪`;
 }
 
 export default function RecentTransactionsWidget(props: { items: RecentTransactionItem[] }) {
   return (
-    <div className="card p-6 dash-enter" style={{ animationDelay: "320ms" }}>
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold" style={{ color: "var(--foreground)" }}>עסקאות אחרונות</h3>
-        <Link href="/transactions" className="text-xs font-medium" style={{ color: "var(--brand)" }}>
-          הצג הכל
+    <div className="card p-5 sm:p-6 dash-enter" style={{ animationDelay: "200ms" }}>
+      <div className="card-head">
+        <div>
+          <h3>תנועות אחרונות</h3>
+          {props.items.length > 0 ? (
+            <p className="recent-tx-sub">{props.items.length} תנועות אחרונות</p>
+          ) : null}
+        </div>
+        <Link href="/transactions" className="card-kebab" aria-label="כל התנועות">
+          <IconKebab className="h-4 w-4" />
         </Link>
       </div>
+
       {props.items.length === 0 ? (
-        <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>אין עדיין תנועות</p>
+        <div className="recent-tx-empty">
+          <p className="recent-tx-empty-title">אין עדיין תנועות</p>
+          <p className="recent-tx-empty-sub">תנועות חדשות יופיעו כאן מיד אחרי שתוסיף אותן</p>
+          <Link href="/transactions" className="btn btn-primary mt-3 text-xs">
+            לעמוד התנועות
+          </Link>
+        </div>
       ) : (
-        <ul className="mt-4 space-y-3">
-          {props.items.map((t) => (
-            <li key={t.id} className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium" style={{ color: "var(--foreground)" }}>{t.vendor}</p>
-                <p className="text-xs" style={{ color: "var(--muted)" }}>
-                  {fmtDate(t.date)}{t.categoryName ? ` · ${t.categoryName}` : ""}
-                </p>
-              </div>
-              <span className="amount amount-negative shrink-0 text-sm">
-                -{Math.round(Math.abs(t.amount)).toLocaleString()} ₪
-              </span>
-            </li>
-          ))}
-        </ul>
+        <div className="recent-tx-list">
+          <div className="recent-tx-columns" aria-hidden>
+            <span>תאריך</span>
+            <span>תנועה</span>
+            <span>סכום</span>
+          </div>
+
+          <ul className="recent-tx-rows">
+            {props.items.map((t) => {
+              const { day, month } = dateParts(t.date);
+              const category = t.categoryName ?? "ללא קטגוריה";
+              const dotColor = categoryColor(category);
+
+              return (
+                <li key={t.id}>
+                  <Link href="/transactions" className="recent-tx-row">
+                    <div className="date-badge" aria-label={`תאריך ${day} ${month}`}>
+                      <span className="date-badge-day">{day}</span>
+                      <span className="date-badge-month">{month}</span>
+                    </div>
+
+                    <div className="recent-tx-main">
+                      <p className="recent-tx-vendor">{t.vendor}</p>
+                      <div className="recent-tx-meta">
+                        <span className="recent-tx-category">
+                          <span className="cat-dot" style={{ background: dotColor }} />
+                          {category}
+                        </span>
+                        <span className="recent-tx-recency">{recency(t.date)}</span>
+                      </div>
+                    </div>
+
+                    <div className="recent-tx-amount amount">{fmtAmount(t.amount)}</div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
     </div>
   );

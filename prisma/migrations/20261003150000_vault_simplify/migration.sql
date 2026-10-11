@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS "VaultKeyWrap";
+DROP TABLE IF EXISTS "VaultConfig";

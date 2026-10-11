@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/app/lib/prisma";
 import { requireUser } from "@/app/lib/auth/server";
+import { ensureOwnedCategoryId } from "@/app/lib/categories/ownership";
 import { deleteObject, getObjectReadUrl } from "@/app/lib/r2/objects";
 
 const numOrStr = z.union([z.string(), z.number()]).transform((v) => (typeof v === "string" ? parseFloat(v) : v));
@@ -82,7 +83,13 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   if (parsed.data.preVatAmount !== undefined) data.preVatAmount = Number(parsed.data.preVatAmount);
   if (parsed.data.isRecognized !== undefined) data.isRecognized = Number(parsed.data.isRecognized);
   if (parsed.data.vendor !== undefined) data.vendor = parsed.data.vendor;
-  if (parsed.data.categoryId !== undefined) data.categoryId = parsed.data.categoryId?.trim() || null;
+  if (parsed.data.categoryId !== undefined) {
+    const categoryId = await ensureOwnedCategoryId(user.id, parsed.data.categoryId);
+    if (parsed.data.categoryId && !categoryId) {
+      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+    }
+    data.categoryId = categoryId;
+  }
   if (parsed.data.description !== undefined) data.description = parsed.data.description;
   if (parsed.data.docNumber !== undefined) data.docNumber = parsed.data.docNumber;
   if (parsed.data.fileName !== undefined) data.fileName = parsed.data.fileName.trim();

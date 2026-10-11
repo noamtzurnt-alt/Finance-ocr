@@ -16,19 +16,20 @@ export type TransactionRow = {
 
 export async function getTransactionsList(
   userId: string,
-  opts: { limit?: number; year?: number; month?: number } = {},
+  opts: { limit?: number; year?: number; month?: number; cycleStartDay?: number } = {},
 ): Promise<TransactionRow[]> {
   const limit = Math.min(200, Math.max(10, opts.limit ?? 200));
+  const day = opts.cycleStartDay ?? 1;
 
   const where: Record<string, unknown> = { userId };
   if (opts.year) {
     if (opts.month) {
-      const start = new Date(opts.year, opts.month - 1, 1);
-      const end = new Date(opts.year, opts.month, 1);
+      const start = new Date(Date.UTC(opts.year, opts.month - 1, day));
+      const end = new Date(Date.UTC(opts.year, opts.month, day));
       where.date = { gte: start, lt: end };
     } else {
-      const start = new Date(opts.year, 0, 1);
-      const end = new Date(opts.year + 1, 0, 1);
+      const start = new Date(Date.UTC(opts.year, 0, 1));
+      const end = new Date(Date.UTC(opts.year + 1, 0, 1));
       where.date = { gte: start, lt: end };
     }
   }

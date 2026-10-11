@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/app/lib/prisma";
 import { requireUser } from "@/app/lib/auth/server";
+import { ensureOwnedCategoryId } from "@/app/lib/categories/ownership";
 import { getTransactionsList } from "@/app/lib/transactions/list";
+import { getUserCycleStartDay } from "@/app/lib/budget/cycle";
 
 const createSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -20,7 +22,7 @@ function parseDateOnly(s: string) {
   const y = Number(m[1]);
   const mo = Number(m[2]);
   const d = Number(m[3]);
-  const dt = new Date(y, mo - 1, d);
+  const dt = new Date(Date.UTC(y, mo - 1, d));
   return Number.isNaN(dt.getTime()) ? null : dt;
 }
 
@@ -50,7 +52,8 @@ export async function GET(req: Request) {
     }
   }
 
-  const items = await getTransactionsList(user.id, { limit, year, month });
+  const cycleStartDay = await getUserCycleStartDay(user.id);
+  const items = await getTransactionsList(user.id, { limit, year, month, cycleStartDay });
   return NextResponse.json(items);
 }
 
@@ -70,6 +73,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid amount" }, { status: 400 });
   }
 
+  const categoryId = await ensureOwnedCategoryId(user.id, parsed.data.categoryId);
+  if (parsed.data.categoryId && !categoryId) {
+    return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+  }
+
   const created = await prisma.transaction.create({
     data: {
       userId: user.id,
@@ -78,7 +86,7 @@ export async function POST(req: Request) {
       currency: parsed.data.currency?.trim() || "ILS",
       vendor: parsed.data.vendor.trim(),
       description: parsed.data.description?.trim() || null,
-      categoryId: parsed.data.categoryId || null,
+      categoryId,
       cardLast4: parsed.data.cardLast4?.trim() || null,
     },
     select: { id: true },

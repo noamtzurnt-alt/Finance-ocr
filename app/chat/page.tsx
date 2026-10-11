@@ -1,4 +1,6 @@
 import type { Metadata, Viewport } from "next";
+import { redirect } from "next/navigation";
+import { requireUser } from "@/app/lib/auth/server";
 import ChatClient from "./ui/ChatClient";
 
 export const metadata: Metadata = {
@@ -12,16 +14,18 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b1c2a",
+  themeColor: "#0b0b0b",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
-  // Keyboard overlays; we shrink the chat shell via visualViewport.height only.
   interactiveWidget: "overlays-content",
 };
 
-export default function ChatPage() {
+export default async function ChatPage() {
+  const user = await requireUser();
+  if (!user) redirect("/login?next=/chat");
+
   return <ChatClient />;
 }
