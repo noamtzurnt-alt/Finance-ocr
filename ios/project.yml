@@ -37,6 +37,7 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         SUPPORTS_MACCATALYST: NO
+        TARGETED_DEVICE_FAMILY: "1"
     scheme:
       gatherCoverageData: false
   Notes:
@@ -71,5 +72,6 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         SUPPORTS_MACCATALYST: NO
+        TARGETED_DEVICE_FAMILY: "1"
     scheme:
       gatherCoverageData: false
