@@ -19,12 +19,14 @@ targets:
         excludes:
           - Info.plist
           - NoamFinance.entitlements
+          - NoamFinance.release.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.noamfinance.ios
         PRODUCT_NAME: NoamFinance
         INFOPLIST_FILE: NoamFinance/Info.plist
         CODE_SIGN_ENTITLEMENTS: NoamFinance/NoamFinance.entitlements
+        CODE_SIGN_ENTITLEMENTS[config=Release]: NoamFinance/NoamFinance.release.entitlements
         GENERATE_INFOPLIST_FILE: YES
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
@@ -45,17 +47,20 @@ targets:
         excludes:
           - Info.plist
           - NoamFinance.entitlements
+          - NoamFinance.release.entitlements
           - Assets.xcassets
       - path: Notes
         excludes:
           - Info.plist
           - Notes.entitlements
+          - Notes.release.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.noamfinance.notes
         PRODUCT_NAME: Notes
         INFOPLIST_FILE: Notes/Info.plist
         CODE_SIGN_ENTITLEMENTS: Notes/Notes.entitlements
+        CODE_SIGN_ENTITLEMENTS[config=Release]: Notes/Notes.release.entitlements
         GENERATE_INFOPLIST_FILE: YES
         MARKETING_VERSION: "1.0"
         CURRENT_PROJECT_VERSION: "1"
