@@ -31,6 +31,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         INFOPLIST_KEY_CFBundleDisplayName: Noam Finance
         INFOPLIST_KEY_LSRequiresIPhoneOS: YES
+        INFOPLIST_KEY_NSFaceIDUsageDescription: "פתיחת האפליקציה באמצעות Face ID"
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         SUPPORTS_MACCATALYST: NO
@@ -61,6 +62,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         INFOPLIST_KEY_CFBundleDisplayName: פתקים
         INFOPLIST_KEY_LSRequiresIPhoneOS: YES
+        INFOPLIST_KEY_NSFaceIDUsageDescription: "פתיחת האפליקציה באמצעות Face ID"
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         SUPPORTS_MACCATALYST: NO
