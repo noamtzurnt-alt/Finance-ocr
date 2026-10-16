@@ -48,7 +48,7 @@ export default function ThemePicker(props: { initialTheme: AppTheme }) {
       <div>
         <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>ערכת צבעים</h3>
         <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
-          לכל חשבון יש מראה משלו. מיתר — ורוד. Noam — ירוק.
+          ירוק הוא המראה של Noam Finance. ורוד נשאר כאפשרות.
         </p>
       </div>
 
@@ -61,7 +61,7 @@ export default function ThemePicker(props: { initialTheme: AppTheme }) {
           onClick={() => void save("pink")}
         >
           <span className="theme-picker-dot" />
-          ורוד · מיתר
+          ורוד
         </button>
         <button
           type="button"
@@ -71,7 +71,7 @@ export default function ThemePicker(props: { initialTheme: AppTheme }) {
           onClick={() => void save("green")}
         >
           <span className="theme-picker-dot" />
-          ירוק · Noam
+          ירוק
         </button>
       </div>
 

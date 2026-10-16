@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   const email = normalizeEmail(parsed.data.email);
   if (!isAllowedAccountEmail(email)) {
     return NextResponse.json(
-      { error: "אפשר להירשם רק עם האימיילים המורשים של Noam או Meitar." },
+      { error: "אפשר להירשם רק עם האימייל של Noam." },
       { status: 403 },
     );
   }

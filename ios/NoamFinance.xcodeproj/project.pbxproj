@@ -1,0 +1,467 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0F8671BCB315A64F3E9CC819 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DD97762893373131D73B4773 /* Assets.xcassets */; };
+		0F9793FF21E3745FFCB32F4E /* SiteWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16C06A653D37475ED7B0337F /* SiteWebView.swift */; };
+		145C16262824C4969CC32C43 /* SiteWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 16C06A653D37475ED7B0337F /* SiteWebView.swift */; };
+		1947EC54BB994654BB356D4D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7B45923792A3FC584262FFD5 /* Assets.xcassets */; };
+		532C6D2C83CA9BD39E2FEE18 /* LockModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E8D338CB39578A74D87B15 /* LockModel.swift */; };
+		594AD7368FA7A9A8DB4529BF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8514DB550B35A7D21343A44A /* RootView.swift */; };
+		908621FE8B316441A9092926 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2375165398B43FF45AA9DF /* AppConfig.swift */; };
+		9C9336C065846AFD31696A8C /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8514DB550B35A7D21343A44A /* RootView.swift */; };
+		AE713CBB890D187188937DB8 /* NoamFinanceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A990C6AB0D508895EAD50B /* NoamFinanceApp.swift */; };
+		B47E45DAE4755FAC335F005F /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C2375165398B43FF45AA9DF /* AppConfig.swift */; };
+		F85E787FD661A1E909B9365B /* LockModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4E8D338CB39578A74D87B15 /* LockModel.swift */; };
+		F98AC16DF9BAF446704A013E /* NoamFinanceApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A990C6AB0D508895EAD50B /* NoamFinanceApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		16C06A653D37475ED7B0337F /* SiteWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiteWebView.swift; sourceTree = "<group>"; };
+		2C2375165398B43FF45AA9DF /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		3168C002DB4EC905D3A8FAFC /* NoamFinance.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = NoamFinance.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7B45923792A3FC584262FFD5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		8514DB550B35A7D21343A44A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		A4E8D338CB39578A74D87B15 /* LockModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockModel.swift; sourceTree = "<group>"; };
+		DD97762893373131D73B4773 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F5FDA60BDBF898E2547C2D60 /* Notes.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Notes.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F7A990C6AB0D508895EAD50B /* NoamFinanceApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoamFinanceApp.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0D38D160E5994450B013A38E /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				3168C002DB4EC905D3A8FAFC /* NoamFinance.app */,
+				F5FDA60BDBF898E2547C2D60 /* Notes.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		9DC786A7FA1AC44600F2128D /* Notes */ = {
+			isa = PBXGroup;
+			children = (
+				DD97762893373131D73B4773 /* Assets.xcassets */,
+			);
+			path = Notes;
+			sourceTree = "<group>";
+		};
+		E036CD213DBE10399BC96ECC /* NoamFinance */ = {
+			isa = PBXGroup;
+			children = (
+				2C2375165398B43FF45AA9DF /* AppConfig.swift */,
+				7B45923792A3FC584262FFD5 /* Assets.xcassets */,
+				A4E8D338CB39578A74D87B15 /* LockModel.swift */,
+				F7A990C6AB0D508895EAD50B /* NoamFinanceApp.swift */,
+				8514DB550B35A7D21343A44A /* RootView.swift */,
+				16C06A653D37475ED7B0337F /* SiteWebView.swift */,
+			);
+			path = NoamFinance;
+			sourceTree = "<group>";
+		};
+		E770B0915E5E3E96A37030E9 = {
+			isa = PBXGroup;
+			children = (
+				E036CD213DBE10399BC96ECC /* NoamFinance */,
+				9DC786A7FA1AC44600F2128D /* Notes */,
+				0D38D160E5994450B013A38E /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7D9E15DC0D46E9A2B4B46F9A /* Notes */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2A7A85E5BB99DDD53B3FB727 /* Build configuration list for PBXNativeTarget "Notes" */;
+			buildPhases = (
+				A3B05825F24EFD0A95C2CF9E /* Sources */,
+				A21C68EF1EB118C8D0BBA2AC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Notes;
+			packageProductDependencies = (
+			);
+			productName = Notes;
+			productReference = F5FDA60BDBF898E2547C2D60 /* Notes.app */;
+			productType = "com.apple.product-type.application";
+		};
+		FE3A35C32856C3FA3D4C3C45 /* NoamFinance */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 2AE43F5D1282413C03A35111 /* Build configuration list for PBXNativeTarget "NoamFinance" */;
+			buildPhases = (
+				2A3441D8493B1F6AF40C4028 /* Sources */,
+				55837B24707905ADE3762972 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NoamFinance;
+			packageProductDependencies = (
+			);
+			productName = NoamFinance;
+			productReference = 3168C002DB4EC905D3A8FAFC /* NoamFinance.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		8DC683C4EBA1195DF97BC4D9 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					7D9E15DC0D46E9A2B4B46F9A = {
+						DevelopmentTeam = W8P2Q5W8GA;
+						ProvisioningStyle = Automatic;
+					};
+					FE3A35C32856C3FA3D4C3C45 = {
+						DevelopmentTeam = W8P2Q5W8GA;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 9839A183F2EC7FA78BF4C012 /* Build configuration list for PBXProject "NoamFinance" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = E770B0915E5E3E96A37030E9;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0D38D160E5994450B013A38E /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				FE3A35C32856C3FA3D4C3C45 /* NoamFinance */,
+				7D9E15DC0D46E9A2B4B46F9A /* Notes */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		55837B24707905ADE3762972 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1947EC54BB994654BB356D4D /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A21C68EF1EB118C8D0BBA2AC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0F8671BCB315A64F3E9CC819 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		2A3441D8493B1F6AF40C4028 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				908621FE8B316441A9092926 /* AppConfig.swift in Sources */,
+				532C6D2C83CA9BD39E2FEE18 /* LockModel.swift in Sources */,
+				F98AC16DF9BAF446704A013E /* NoamFinanceApp.swift in Sources */,
+				594AD7368FA7A9A8DB4529BF /* RootView.swift in Sources */,
+				145C16262824C4969CC32C43 /* SiteWebView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A3B05825F24EFD0A95C2CF9E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B47E45DAE4755FAC335F005F /* AppConfig.swift in Sources */,
+				F85E787FD661A1E909B9365B /* LockModel.swift in Sources */,
+				AE713CBB890D187188937DB8 /* NoamFinanceApp.swift in Sources */,
+				9C9336C065846AFD31696A8C /* RootView.swift in Sources */,
+				0F9793FF21E3745FFCB32F4E /* SiteWebView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		07CE793EC5B05EEA1987D475 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Notes/Notes.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Notes/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "פתקים";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSRequiresIPhoneOS = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.noamfinance.notes;
+				PRODUCT_NAME = Notes;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		2E21E9F6759955E08AC18D51 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = W8P2Q5W8GA;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		7763007156DAE608F331889C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = NoamFinance/NoamFinance.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NoamFinance/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Noam Finance";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSRequiresIPhoneOS = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.noamfinance.ios;
+				PRODUCT_NAME = NoamFinance;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CB7C9AFA14AF0D608788EA1D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Notes/Notes.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Notes/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "פתקים";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSRequiresIPhoneOS = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.noamfinance.notes;
+				PRODUCT_NAME = Notes;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D71D055F227FA233201E266F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = W8P2Q5W8GA;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = minimal;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		F6CF3DD5B9DB4C444E4043E8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = NoamFinance/NoamFinance.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NoamFinance/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "Noam Finance";
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSRequiresIPhoneOS = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = app.noamfinance.ios;
+				PRODUCT_NAME = NoamFinance;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2A7A85E5BB99DDD53B3FB727 /* Build configuration list for PBXNativeTarget "Notes" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CB7C9AFA14AF0D608788EA1D /* Debug */,
+				07CE793EC5B05EEA1987D475 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		2AE43F5D1282413C03A35111 /* Build configuration list for PBXNativeTarget "NoamFinance" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7763007156DAE608F331889C /* Debug */,
+				F6CF3DD5B9DB4C444E4043E8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9839A183F2EC7FA78BF4C012 /* Build configuration list for PBXProject "NoamFinance" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2E21E9F6759955E08AC18D51 /* Debug */,
+				D71D055F227FA233201E266F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 8DC683C4EBA1195DF97BC4D9 /* Project object */;
+}

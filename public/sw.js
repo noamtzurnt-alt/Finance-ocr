@@ -1,13 +1,16 @@
 /*
  * Fast launch for the home-screen app.
- * - /chat, /notes: network first; the cached copy only when the network is slow or offline.
- * - /_next/static/*: content-hashed, cache-first so a cached /chat always has its chunks.
- * Everything else goes straight to the network.
+ * - /chat: the saved page immediately. The network copy is stored for the next open,
+ *   together with the scripts and CSS it needs, so a launch never waits on the server.
+ * - /notes is never cached. The page includes the note list, so a saved copy
+ *   would hide notes that were written on the other device.
+ * - /_next/static/*: content-hashed, cache-first.
+ * The saved page is kept across updates. A new service worker must not wipe it
+ * and must not reload the open app.
  */
-const SHELL_CACHE = "nf-shell-v8";
-const SHELL_NETWORK_TIMEOUT_MS = 2500;
+const SHELL_CACHE = "nf-shell";
 const STATIC_CACHE = "nf-static-v1";
-const SHELLS = new Set(["/chat", "/notes"]);
+const SHELLS = new Set(["/chat"]);
 const STATIC_MAX_ENTRIES = 400;
 
 self.addEventListener("install", () => self.skipWaiting());
@@ -15,6 +18,18 @@ self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
+      const names = await caches.keys();
+      const shell = await caches.open(SHELL_CACHE);
+      for (const name of names) {
+        if (!/^nf-shell-v\d+$/.test(name)) continue;
+        const old = await caches.open(name);
+        for (const req of await old.keys()) {
+          if (await shell.match(req)) continue;
+          const res = await old.match(req);
+          if (res) await shell.put(req, res);
+        }
+        await caches.delete(name);
+      }
       const keep = new Set([SHELL_CACHE, STATIC_CACHE]);
       for (const key of await caches.keys()) if (!keep.has(key)) await caches.delete(key);
       await self.clients.claim();
@@ -56,20 +71,42 @@ async function trim(cache) {
 
 async function shell(event, req, path) {
   const cache = await caches.open(SHELL_CACHE);
-  const network = fetch(req).then(async (res) => {
-    const same = res.ok && res.type === "basic" && !res.redirected && new URL(res.url).pathname === path;
-    if (same) await cache.put(path, res.clone());
-    else if (res.type === "opaqueredirect" || res.redirected) await cache.delete(path);
-    return res;
-  });
-  event.waitUntil(network.catch(() => null));
-
   const hit = await cache.match(path);
-  if (!hit) return network;
-  // The page carries the data, so a cached copy is shown only when the network is slow or offline.
-  const slow = new Promise((resolve) => setTimeout(() => resolve(null), SHELL_NETWORK_TIMEOUT_MS));
-  const fresh = await Promise.race([network.catch(() => null), slow]);
-  return fresh || hit;
+  const network = fetch(req)
+    .then(async (res) => {
+      const same = res.ok && res.type === "basic" && !res.redirected && new URL(res.url).pathname === path;
+      if (!same) return { res, store: null };
+      const store = res.clone();
+      await cache.put(path, res.clone());
+      return { res, store };
+    })
+    .catch(() => null);
+  event.waitUntil(network.then((result) => (result?.store ? precacheAssets(result.store) : null)).catch(() => null));
+  // Saved page opens now. Updating it, and a logged-out redirect, happen behind that.
+  if (hit) return hit;
+  const fresh = await network;
+  if (fresh?.res) return fresh.res;
+  return fetch(req);
+}
+
+async function precacheAssets(res) {
+  let html = "";
+  try {
+    html = await res.text();
+  } catch {
+    return;
+  }
+  const urls = new Set(html.match(/\/_next\/static\/[^"'\\\s)]+/g) ?? []);
+  if (urls.size === 0) return;
+  const cache = await caches.open(STATIC_CACHE);
+  await Promise.all(
+    [...urls].map(async (path) => {
+      const abs = new URL(path, self.location.origin).href;
+      if (await cache.match(abs)) return;
+      const asset = await fetch(abs).catch(() => null);
+      if (asset && asset.ok && asset.type === "basic") await cache.put(abs, asset);
+    }),
+  );
 }
 
 /* ── Reminder push notifications ─────────────────────────────────────────── */

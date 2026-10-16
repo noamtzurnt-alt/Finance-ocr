@@ -1,8 +1,8 @@
 import { prisma } from "@/app/lib/prisma";
 import { getDashboardBudgetCategoryNames } from "@/app/lib/dashboard/category-budgets";
-import { getUserBudgetCycle, israelToday, utcDate } from "@/app/lib/budget/cycle";
+import { getBudgetCycle, getBudgetCycleForMonth, getUserCycleStartDay, israelToday, utcDate } from "@/app/lib/budget/cycle";
 import { getCycleBudget } from "@/app/lib/budget/cycle-budget";
-import { getUpcomingCardCharge, type UpcomingCardCharge } from "@/app/lib/budget/card-charge";
+import { getUpcomingCardCharges, type UpcomingCardCharge } from "@/app/lib/budget/card-charge";
 
 export type CategoryBreakdownItem = { category: string; amount: number };
 export type RecentTransactionItem = {
@@ -13,7 +13,21 @@ export type RecentTransactionItem = {
   categoryName: string | null;
 };
 
+export class InvalidDashboardMonthError extends Error {
+  constructor() {
+    super("Invalid dashboard month");
+    this.name = "InvalidDashboardMonthError";
+  }
+}
+
 export type DashboardSummary = {
+  /** YYYY-MM being viewed. */
+  month: string;
+  /** YYYY-MM of the live cycle. Stays put while browsing history. */
+  currentMonth: string;
+  isCurrentMonth: boolean;
+  /** Manually entered checking-account balance. Null until the user sets one. */
+  checkingBalance: string | null;
   income: string;
   manualIncome: string | null;
   incomeFromDocs: string;
@@ -27,7 +41,8 @@ export type DashboardSummary = {
   cycleLabel: string;
   cycleDayIndex: number;
   cycleTotalDays: number;
-  cardCharge: UpcomingCardCharge;
+  /** Soonest first. */
+  cardCharges: UpcomingCardCharge[];
   incomeParts: {
     salary: number;
     other: number;
@@ -50,14 +65,22 @@ export type DashboardSummary = {
   };
 };
 
-export async function getDashboardSummary(userId: string): Promise<DashboardSummary> {
+export async function getDashboardSummary(userId: string, requestedMonth?: string): Promise<DashboardSummary> {
   const now = new Date();
-  const cycle = await getUserBudgetCycle(userId, now);
+  const startDay = await getUserCycleStartDay(userId);
+  const current = getBudgetCycle(now, startDay);
+  let cycle = current;
+  if (requestedMonth && requestedMonth !== current.month) {
+    const historical = getBudgetCycleForMonth(requestedMonth, startDay, now);
+    if (!historical) throw new InvalidDashboardMonthError();
+    cycle = historical;
+  }
+  const isCurrentMonth = cycle.month === current.month;
   const { start, end, month } = cycle;
   const todayStart = israelToday(now);
   const todayEnd = utcDate(todayStart.getUTCFullYear(), todayStart.getUTCMonth(), todayStart.getUTCDate() + 1);
 
-  const [budget, docSums, txAgg, todayTxSums, todayDocSums, categoryBreakdown, recentTx, cardCharge] = await Promise.all([
+  const [budget, docSums, txAgg, todayTxSums, todayDocSums, categoryBreakdown, recentTx, cardCharges, profile] = await Promise.all([
     getCycleBudget(userId, month),
     prisma.document.groupBy({
       by: ["type"],
@@ -69,15 +92,19 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
       _sum: { amount: true },
       _count: { _all: true },
     }),
-    prisma.transaction.aggregate({
-      where: { userId, date: { gte: todayStart, lt: todayEnd } },
-      _sum: { amount: true },
-    }),
-    prisma.document.groupBy({
-      by: ["type"],
-      where: { userId, type: "expense", date: { gte: todayStart, lt: todayEnd } },
-      _sum: { amount: true },
-    }),
+    isCurrentMonth
+      ? prisma.transaction.aggregate({
+          where: { userId, date: { gte: todayStart, lt: todayEnd } },
+          _sum: { amount: true },
+        })
+      : Promise.resolve(null),
+    isCurrentMonth
+      ? prisma.document.groupBy({
+          by: ["type"],
+          where: { userId, type: "expense", date: { gte: todayStart, lt: todayEnd } },
+          _sum: { amount: true },
+        })
+      : Promise.resolve([]),
     prisma.transaction.groupBy({
       by: ["categoryId"],
       where: { userId, date: { gte: start, lt: end } },
@@ -85,12 +112,16 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
       orderBy: { _sum: { amount: "desc" } },
     }),
     prisma.transaction.findMany({
-      where: { userId },
+      where: { userId, date: { gte: start, lt: end } },
       orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       take: 5,
       select: { id: true, date: true, vendor: true, amount: true, category: { select: { name: true } } },
     }),
-    getUpcomingCardCharge(userId, now),
+    isCurrentMonth ? getUpcomingCardCharges(userId, now) : Promise.resolve([]),
+    prisma.financialProfile.findUnique({
+      where: { userId },
+      select: { checkingBalance: true },
+    }),
   ]);
 
   const incomeFromDocs = Number(docSums.find((s) => s.type === "payment_receipt")?._sum.amount ?? 0);
@@ -104,7 +135,7 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
   const income = effectiveIncome.toFixed(2);
   const net = (effectiveIncome - Number(totalExpense)).toFixed(2);
 
-  const todayExpenseFromTx = Number(todayTxSums._sum.amount ?? 0);
+  const todayExpenseFromTx = Number(todayTxSums?._sum.amount ?? 0);
   const todayExpenseFromDocs = Number(todayDocSums.find((s) => s.type === "expense")?._sum.amount ?? 0);
   const todayExpense = (todayExpenseFromTx + todayExpenseFromDocs).toFixed(2);
 
@@ -145,6 +176,10 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
   }));
 
   return {
+    month,
+    currentMonth: current.month,
+    isCurrentMonth,
+    checkingBalance: profile?.checkingBalance != null ? profile.checkingBalance.toString() : null,
     income,
     manualIncome: manualIncome !== null ? manualIncome.toFixed(2) : null,
     incomeFromDocs: incomeFromDocs.toFixed(2),
@@ -158,7 +193,7 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
     cycleLabel: cycle.label,
     cycleDayIndex: cycle.dayIndex,
     cycleTotalDays: cycle.totalDays,
-    cardCharge,
+    cardCharges,
     incomeParts: {
       salary: budget.salaryIncome,
       other: budget.otherIncome,
@@ -175,7 +210,7 @@ export async function getDashboardSummary(userId: string): Promise<DashboardSumm
       expenseFromDocs,
       rawPct,
       remaining: budget.expenseLimit ? budget.expenseLimit - Number(totalExpense) : null,
-      daysLeft: Math.max(0, cycle.totalDays - cycle.dayIndex + 1),
+      daysLeft: isCurrentMonth ? Math.max(0, cycle.totalDays - cycle.dayIndex + 1) : 0,
     },
   };
 }

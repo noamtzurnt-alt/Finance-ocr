@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { isAllowedAccountEmail } from "@/app/lib/auth/accounts";
 import { SESSION_COOKIE_NAME, verifySessionToken } from "@/app/lib/auth/session";
 
 export async function getSession() {
@@ -12,12 +13,13 @@ export async function getSession() {
 export async function requireUser() {
   const session = await getSession();
   const userId = session?.sub;
-  if (!userId) return null;
+  const email = session?.email ?? "";
+  if (!userId || (email && !isAllowedAccountEmail(email))) return null;
 
   // Avoid hitting the DB on every request just to load the user.
   // The session token is already verified and contains the email.
   return {
     id: userId,
-    email: session?.email ?? "",
+    email,
   };
 }

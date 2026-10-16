@@ -21,6 +21,8 @@ export default function IncomeExpenseBarChart(props: {
   todayExpense?: number;
   cycleDayIndex?: number;
   cycleTotalDays?: number;
+  /** False when the dashboard is showing a closed month. */
+  showToday?: boolean;
 }) {
   const income = Math.max(0, props.income);
   const expense = Math.max(0, props.expense);
@@ -136,11 +138,19 @@ export default function IncomeExpenseBarChart(props: {
           <strong className="ie-metric-value amount">{dailyAvg > 0 ? `${fmt(dailyAvg)} ₪` : "—"}</strong>
           <span className="ie-metric-sub">סה״כ הוצאות ÷ {dayOfMonth} ימים</span>
         </div>
-        <div className="ie-metric-card">
-          <span className="ie-metric-label">היום</span>
-          <strong className="ie-metric-value amount">{todayExpense > 0 ? `${fmt(todayExpense)} ₪` : "—"}</strong>
-          <span className="ie-metric-sub">הוצאות היום</span>
-        </div>
+        {props.showToday === false ? (
+          <div className="ie-metric-card">
+            <span className="ie-metric-label">החודש</span>
+            <strong className="ie-metric-value">הסתיים</strong>
+            <span className="ie-metric-sub">{daysInMonth} ימים</span>
+          </div>
+        ) : (
+          <div className="ie-metric-card">
+            <span className="ie-metric-label">היום</span>
+            <strong className="ie-metric-value amount">{todayExpense > 0 ? `${fmt(todayExpense)} ₪` : "—"}</strong>
+            <span className="ie-metric-sub">הוצאות היום</span>
+          </div>
+        )}
         {budgetLimit > 0 ? (
           <div className={`ie-metric-card${budgetUsedPct >= 100 ? " is-warning" : ""}`}>
             <span className="ie-metric-label">תקציב חודשי</span>
@@ -156,7 +166,9 @@ export default function IncomeExpenseBarChart(props: {
             <strong className={`ie-metric-value amount${projectedOverBudget ? " text-negative" : ""}`}>
               {dailyAvg > 0 ? `${fmt(projectedMonth)} ₪` : "—"}
             </strong>
-            <span className="ie-metric-sub">{daysLeft} ימים נותרו</span>
+            <span className="ie-metric-sub">
+              {props.showToday === false ? "החודש הסתיים" : `${daysLeft} ימים נותרו`}
+            </span>
           </div>
         )}
       </div>

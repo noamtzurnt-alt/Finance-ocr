@@ -49,7 +49,7 @@ export default function LoginForm(props: { accounts: LoginAccount[]; challenge?:
   const desktop = isDesktopBrowser();
   const deviceLabel = getDeviceLabel();
 
-  async function loginWithPasskey(mode: AuthMode, email?: string) {
+  async function loginWithPasskey(mode: AuthMode, email?: string, fromTap = false) {
     const chosenEmail = (email ?? selectedEmail).trim();
     if (!chosenEmail) {
       setError("בחר חשבון להתחברות.");
@@ -77,13 +77,13 @@ export default function LoginForm(props: { accounts: LoginAccount[]; challenge?:
     }
 
     setNeedsTap(true);
-    if (!result.needsGesture) setError(result.error);
+    if (fromTap || !result.needsGesture) setError(result.error ?? "Face ID לא נפתח");
   }
 
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    // On phone, auto-start Face ID. On desktop wait for tap — avoids "No passkeys" popup spam.
+    // On phone (including the iOS app shell), auto-start Face ID. On desktop wait for tap to avoid "No passkeys" popup spam.
     if (!desktop && props.accounts.length === 1 && props.accounts[0]?.email) {
       setBusy(true);
       setBusyMode("device");
@@ -129,7 +129,7 @@ export default function LoginForm(props: { accounts: LoginAccount[]; challenge?:
 
       <button
         type="button"
-        onClick={() => void loginWithPasskey("device")}
+        onClick={() => void loginWithPasskey("device", undefined, true)}
         disabled={busy}
         className="btn btn-primary w-full py-3 disabled:opacity-60"
       >
@@ -143,7 +143,7 @@ export default function LoginForm(props: { accounts: LoginAccount[]; challenge?:
       {desktop ? (
         <button
           type="button"
-          onClick={() => void loginWithPasskey("phone")}
+          onClick={() => void loginWithPasskey("phone", undefined, true)}
           disabled={busy}
           className="btn btn-ghost w-full py-2.5 disabled:opacity-60"
         >

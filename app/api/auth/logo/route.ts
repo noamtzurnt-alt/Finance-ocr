@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/app/lib/prisma";
 import { requireUser } from "@/app/lib/auth/server";
 import { deleteObject, getObjectReadUrl, putObject } from "@/app/lib/r2/objects";
-import { isMeitarEmail } from "@/app/lib/auth/accounts";
-
 export const runtime = "nodejs";
 
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
@@ -12,9 +10,6 @@ const MAX_BYTES = 2 * 1024 * 1024;
 export async function POST(req: Request) {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isMeitarEmail(user.email)) {
-    return NextResponse.json({ error: "החלפת לוגו זמינה רק למשתמש Meitar" }, { status: 403 });
-  }
 
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
@@ -67,9 +62,6 @@ export async function POST(req: Request) {
 export async function DELETE() {
   const user = await requireUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!isMeitarEmail(user.email)) {
-    return NextResponse.json({ error: "החלפת לוגו זמינה רק למשתמש Meitar" }, { status: 403 });
-  }
 
   const existing = await prisma.user.findUnique({
     where: { id: user.id },

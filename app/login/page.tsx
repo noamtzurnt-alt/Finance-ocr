@@ -10,13 +10,11 @@ import { createSignedChallenge } from "@/app/lib/auth/passkey-challenge";
 export const dynamic = "force-dynamic";
 
 export default async function LoginPage() {
-  const users = await prisma.user.count();
-  if (users === 0) redirect("/setup");
   const accounts = await prisma.user.findMany({
-    where: {},
     select: { email: true },
     orderBy: { email: "asc" },
   });
+  if (accounts.length === 0) redirect("/setup");
   const loginAccounts = accounts
     .map((row) => row.email)
     .filter(isAllowedAccountEmail)

@@ -165,10 +165,19 @@ export default function ChatClient() {
   };
 
   useEffect(() => {
+    fetch("/api/auth/session", { cache: "no-store" })
+      .then((r) => {
+        if (r.status === 401 || r.redirected) window.location.replace("/login?next=/chat");
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
-      .then((data: { chatLabel?: string; logoUrl?: string | null } | null) => {
+      .then((data: { chatLabel?: string; logoUrl?: string | null; theme?: string } | null) => {
         if (!data) return;
+        if (data.theme === "pink" || data.theme === "green") document.documentElement.dataset.theme = data.theme;
         const chatName = data.chatLabel ?? "Noam Finance";
         setChatBrand({
           name: chatName,

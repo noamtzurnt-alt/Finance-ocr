@@ -3778,6 +3778,138 @@ body.nf-chat-active {
   .metric-tile-hero .metric-action { color: rgba(255, 255, 255, 0.85); }
   .metric-tile-hero .metric-action:active { background: rgba(255, 255, 255, 0.18); }
 
+  /* ── Dashboard month picker + checking balance ── */
+  .month-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-bottom: 0.85rem;
+    padding: 0.2rem;
+    border-radius: 0.95rem;
+    background: var(--surface2);
+  }
+  .month-nav-btn {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border: 0;
+    border-radius: 0.75rem;
+    background: transparent;
+    color: var(--foreground);
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .month-nav-btn:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--foreground) 7%, transparent);
+  }
+  .month-nav-btn:active:not(:disabled) { transform: scale(0.96); }
+  .month-nav-btn:disabled { opacity: 0.32; cursor: default; }
+  .month-nav-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .month-nav-current {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    place-items: center;
+    min-height: 2.75rem;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .month-nav-current:hover { background: color-mix(in srgb, var(--foreground) 5%, transparent); }
+  .month-nav-current:focus-within { outline: 2px solid var(--brand); outline-offset: 1px; }
+  .month-nav-face {
+    pointer-events: none;
+    max-width: 100%;
+    padding-inline: 0.35rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    color: var(--foreground);
+  }
+  .month-nav-select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .checking-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
+    padding: 0.9rem 0.45rem 0.9rem 1rem;
+    border-radius: 1rem;
+    background: var(--surface2);
+    min-height: 5.4rem;
+  }
+  .checking-bar-main { min-width: 0; flex: 1; }
+  .checking-note {
+    margin: 0.15rem 0 0;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    color: var(--muted);
+  }
+  .checking-empty { font-size: 1.05rem; font-weight: 600; color: var(--muted); }
+  .checking-input-line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.35rem;
+    margin-top: 0.15rem;
+  }
+  .checking-input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--foreground);
+    font-size: 1.45rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    outline: none;
+    padding: 0;
+  }
+  .checking-input::placeholder { color: color-mix(in srgb, var(--muted) 65%, transparent); }
+  .checking-input-unit { flex-shrink: 0; font-size: 1rem; font-weight: 600; color: var(--muted); }
+  .checking-actions { display: flex; align-items: center; gap: 0.2rem; flex-shrink: 0; }
+  .checking-cancel {
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    min-height: 2.75rem;
+    padding-inline: 0.7rem;
+    border-radius: 0.8rem;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+  .checking-cancel:hover { color: var(--foreground); background: color-mix(in srgb, var(--foreground) 7%, transparent); }
+  .checking-save {
+    flex-shrink: 0;
+    min-height: 2.75rem;
+    padding-inline: 1rem;
+    border-radius: 0.8rem;
+  }
+  .checking-error { margin: -0.35rem 0 0.75rem; font-size: 0.82rem; color: var(--negative); }
+  .dash-month-body { transition: opacity 140ms ease; }
+  .dash-month-body.is-loading { opacity: 0.48; pointer-events: none; }
+  @media (prefers-reduced-motion: reduce) {
+    .dash-month-body { transition: none; }
+  }
+
   /* ── Dashboard sheets ── */
   .dash-sheet { display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.85rem; }
   .dash-sheet-field { display: flex; flex-direction: column; gap: 0.4rem; }

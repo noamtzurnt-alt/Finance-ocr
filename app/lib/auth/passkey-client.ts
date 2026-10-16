@@ -168,7 +168,7 @@ export async function runPasskeyAuthentication(opts?: {
         needsGesture: true,
         error:
           mode === "device"
-            ? "לחץ כדי לפתוח ביומטרי במכשיר הזה"
+            ? "Face ID לא נפתח. נסה שוב."
             : "לחץ כדי לפתוח התחברות מהטלפון",
       };
     }

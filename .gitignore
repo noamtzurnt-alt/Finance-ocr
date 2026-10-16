@@ -51,3 +51,7 @@ secrets/
 next-env.d.ts
 
 /app/generated/prisma
+
+xcuserdata/
+*.xcuserstate
+DerivedData/

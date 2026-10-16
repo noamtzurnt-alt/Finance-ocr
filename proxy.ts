@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isAllowedAccountEmail } from "@/app/lib/auth/accounts";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/app/lib/auth/session";
 
 const PUBLIC_PATH_PREFIXES = [
@@ -50,6 +51,7 @@ export async function proxy(req: NextRequest) {
 
   const payload = await verifySessionToken(token, secret);
   if (!payload?.sub) return loginWithNext();
+  if (payload.email && !isAllowedAccountEmail(payload.email)) return loginWithNext();
 
   return continueWithPath(req);
 }

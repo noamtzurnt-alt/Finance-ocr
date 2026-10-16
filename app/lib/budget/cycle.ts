@@ -1,22 +1,8 @@
 import { prisma } from "@/app/lib/prisma";
+import { HEBREW_MONTHS, parseMonthKey } from "@/app/lib/budget/months";
 
 /** Capped at 28 so every month has the start day. */
 export const MAX_CYCLE_START_DAY = 28;
-
-const HEBREW_MONTHS = [
-  "ינואר",
-  "פברואר",
-  "מרץ",
-  "אפריל",
-  "מאי",
-  "יוני",
-  "יולי",
-  "אוגוסט",
-  "ספטמבר",
-  "אוקטובר",
-  "נובמבר",
-  "דצמבר",
-];
 
 export type BudgetCycle = {
   startDay: number;
@@ -59,6 +45,14 @@ export function utcDate(year: number, monthIndex: number, day: number): Date {
   return new Date(Date.UTC(year, monthIndex, day));
 }
 
+/** Keeps the numeric range in left-to-right order inside Hebrew text. */
+function cycleLabel(start: Date, lastDay: Date, day: number): string {
+  const base = `${HEBREW_MONTHS[start.getUTCMonth()]} ${start.getUTCFullYear()}`;
+  if (day === 1) return base;
+  const range = `${start.getUTCDate()}.${start.getUTCMonth() + 1}–${lastDay.getUTCDate()}.${lastDay.getUTCMonth() + 1}`;
+  return `${base} (\u2066${range}\u2069)`;
+}
+
 export function getBudgetCycle(refDate = new Date(), startDay = 1): BudgetCycle {
   const day = normalizeCycleStartDay(startDay);
   const today = israelToday(refDate);
@@ -68,17 +62,43 @@ export function getBudgetCycle(refDate = new Date(), startDay = 1): BudgetCycle 
   const lastDay = utcDate(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() - 1);
 
   const month = `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, "0")}`;
-  const baseLabel = `${HEBREW_MONTHS[start.getUTCMonth()]} ${start.getUTCFullYear()}`;
-  const label =
-    day === 1
-      ? baseLabel
-      : `${baseLabel} (${start.getUTCDate()}.${start.getUTCMonth() + 1}–${lastDay.getUTCDate()}.${lastDay.getUTCMonth() + 1})`;
+  const label = cycleLabel(start, lastDay, day);
 
   const msPerDay = 24 * 60 * 60 * 1000;
   const dayIndex = Math.round((today.getTime() - start.getTime()) / msPerDay) + 1;
   const totalDays = Math.round((end.getTime() - start.getTime()) / msPerDay);
 
   return { startDay: day, start, end, month, label, dayIndex, totalDays };
+}
+
+/** Cycle for a YYYY-MM key. Future months and invalid keys return null. A past month is treated as complete. */
+export function getBudgetCycleForMonth(month: string, startDay = 1, now = new Date()): BudgetCycle | null {
+  const parsed = parseMonthKey(month);
+  if (!parsed) return null;
+
+  const current = getBudgetCycle(now, startDay);
+  if (month > current.month) return null;
+  if (month === current.month) return current;
+
+  const day = normalizeCycleStartDay(startDay);
+  const start = utcDate(parsed.year, parsed.monthIndex, day);
+  const end = utcDate(start.getUTCFullYear(), start.getUTCMonth() + 1, day);
+  const lastDay = utcDate(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate() - 1);
+
+  const label = cycleLabel(start, lastDay, day);
+
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const totalDays = Math.round((end.getTime() - start.getTime()) / msPerDay);
+
+  return {
+    startDay: day,
+    start,
+    end,
+    month,
+    label,
+    dayIndex: totalDays,
+    totalDays,
+  };
 }
 
 export async function getUserCycleStartDay(userId: string): Promise<number> {

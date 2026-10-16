@@ -4,8 +4,6 @@ import "./globals.css";
 import AppFrame from "@/app/ui/AppFrame";
 import OfflineBanner from "@/app/ui/OfflineBanner";
 import { Suspense } from "react";
-import { getSession } from "@/app/lib/auth/server";
-import { prisma } from "@/app/lib/prisma";
 import { normalizeAppTheme, THEME_COOKIE, themeColorMeta } from "@/app/lib/ui/theme";
 import { cookies, headers } from "next/headers";
 import ServiceWorkerRegister from "@/app/ui/ServiceWorkerRegister";
@@ -53,19 +51,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const headerList = await headers();
+  const [headerList, cookieStore] = await Promise.all([headers(), cookies()]);
   const pathname = headerList.get("x-pathname") ?? "";
   const notesHome = pathname === "/notes" || pathname.startsWith("/notes/");
-  const session = await getSession();
-  const cookieTheme = (await cookies()).get(THEME_COOKIE)?.value;
-  let theme = normalizeAppTheme(cookieTheme ?? "green");
-  if (!cookieTheme && session?.sub) {
-    const row = await prisma.user.findUnique({
-      where: { id: session.sub },
-      select: { theme: true },
-    });
-    theme = normalizeAppTheme(row?.theme);
-  }
+  const theme = normalizeAppTheme(cookieStore.get(THEME_COOKIE)?.value ?? "green");
 
   return (
     <html lang="he" dir="rtl" data-theme={theme} style={{ colorScheme: "dark" }}>
@@ -86,6 +75,13 @@ export default async function RootLayout({
         )}
       </head>
       <body className={`${inter.className} ${heebo.variable}`}>
+        {process.env.NODE_ENV === "production" ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: "if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js')",
+            }}
+          />
+        ) : null}
         <OfflineBanner />
         <ServiceWorkerRegister />
         <HomeScreenMeta />

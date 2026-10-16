@@ -30,7 +30,7 @@ export default function LogoPicker(props: {
     }
     const body = (await res.json().catch(() => null)) as { logoUrl?: string } | null;
     setLogoUrl(body?.logoUrl ?? null);
-    setMsg("הלוגו עודכן. רענני את העמוד אם עדיין רואים את הישן.");
+    setMsg("הלוגו עודכן. רענן את העמוד אם עדיין רואים את הישן.");
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -55,7 +55,7 @@ export default function LogoPicker(props: {
       <div>
         <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>לוגו האפליקציה</h3>
         <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
-          הלוגו יופיע בסרגל הצד אצל Meitar בלבד. PNG / JPG / WEBP עד 2MB.
+          הלוגו יופיע בסרגל הצד. PNG / JPG / WEBP עד 2MB.
         </p>
       </div>
 

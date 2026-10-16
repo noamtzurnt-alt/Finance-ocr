@@ -38,8 +38,8 @@ export default function RecentTransactionsWidget(props: { items: RecentTransacti
 
       {props.items.length === 0 ? (
         <div className="recent-tx-empty">
-          <p className="recent-tx-empty-title">אין עדיין תנועות</p>
-          <p className="recent-tx-empty-sub">תנועות חדשות יופיעו כאן מיד אחרי שתוסיף אותן</p>
+          <p className="recent-tx-empty-title">אין תנועות בחודש הזה</p>
+          <p className="recent-tx-empty-sub">תנועות מהחודש שנבחר יופיעו כאן</p>
           <Link href="/transactions" className="btn btn-primary mt-3 text-xs">
             לעמוד התנועות
           </Link>

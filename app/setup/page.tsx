@@ -21,7 +21,7 @@ export default async function SetupPage() {
         </div>
         <h1 className="text-xl font-semibold" style={{ color: "var(--foreground)" }}>יצירת חשבון</h1>
         <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-          יצירת חשבון ל־Noam או Meitar בלבד. כל אחד רואה רק את הנתונים שלו.
+          יצירת חשבון ל־Noam Finance בלבד.
         </p>
         <div className="mt-6">
           <SetupForm inviteRequired={inviteRequired} />

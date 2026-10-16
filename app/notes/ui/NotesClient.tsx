@@ -283,7 +283,7 @@ function sortNotes(list: NoteRow[]) {
 
 const AUTOSAVE_DELAY_MS = 500;
 const AUTOSAVE_RETRY_MS = 3000;
-const NOTES_POLL_MS = 15_000;
+const NOTES_POLL_MS = 5_000;
 const DRAFT_KEY = "nf_notes_draft_v1";
 const OUTBOX_KEY = "nf_notes_outbox_v1";
 const PLACE_KEY = "nf_notes_place_v1";
@@ -559,7 +559,10 @@ export default function NotesClient(props: {
       nextView = place.view;
     }
     setView(nextView);
+    viewRef.current = nextView;
 
+    // Reopen the note that was on screen. A blank "new note" is not a place to return to:
+    // an unfinished draft stays in the list of its folder.
     if (place?.composing && place.noteId) {
       const note = initialRef.current.find((n) => n.id === place.noteId && !n.deletedAt);
       const pending = outbox.find((item) => item.id === place.noteId);
@@ -576,7 +579,7 @@ export default function NotesClient(props: {
           attachments: note.attachments ?? [],
           resumeDirty: pendingNewer,
         });
-      } else if (pending) {
+      } else if (pending && outboxHasText(pending)) {
         openComposer({
           id: pending.id,
           clientKey: pending.clientKey,
@@ -584,19 +587,6 @@ export default function NotesClient(props: {
           folderId: pending.folderId,
           content: pending.content,
           resumeDirty: true,
-        });
-      }
-    } else if (place?.composing) {
-      const pending = outbox.find((item) => !item.id);
-      if (pending) {
-        openComposer({
-          id: null,
-          clientKey: pending.clientKey,
-          pinned: pending.pinned,
-          folderId: pending.folderId,
-          content: pending.content,
-          resumeDirty: true,
-          focus: true,
         });
       }
     }
@@ -631,7 +621,9 @@ export default function NotesClient(props: {
 
   useLayoutEffect(() => {
     const pending = pendingFill.current;
-    if (!editorOpen || !pending || !bodyRef.current) return;
+    // The editor is portaled only after mount, so the first open has no body yet.
+    // Wait for it; otherwise the note paints empty and looks like a new note.
+    if (!mounted || !editorOpen || !pending || !bodyRef.current) return;
     pendingFill.current = null;
     bodyRef.current.innerHTML = contentForEditor(pending.content);
     normalizeNoteBlocks(bodyRef.current);
@@ -642,7 +634,7 @@ export default function NotesClient(props: {
     else scrollRef.current?.scrollTo({ top: 0 });
     if (pending.resumeDirty) markDirty();
     else ackedHtmlRef.current = bodyRef.current.innerHTML.trim();
-  }, [editorOpen, editingId]);
+  }, [mounted, editorOpen, editingId]);
 
   useEffect(() => {
     const stale = initialRef.current.filter((n) => !n.deletedAt && n.summaryStale).slice(0, 20);
@@ -658,17 +650,6 @@ export default function NotesClient(props: {
       cancelled = true;
     };
   }, []);
-
-  useEffect(() => {
-    const onNav = (e: Event) => {
-      if ((e as CustomEvent<string>).detail !== "/notes") return;
-      setMenu(null);
-      setView({ kind: "all" });
-      if (editorOpen) void closeEditor();
-    };
-    window.addEventListener("nf:nav", onNav);
-    return () => window.removeEventListener("nf:nav", onNav);
-  });
 
   useEffect(() => {
     const publishExit = (keepalive: boolean) => {
@@ -722,6 +703,9 @@ export default function NotesClient(props: {
     return () => {
       document.removeEventListener("visibilitychange", flush);
       window.removeEventListener("pagehide", onPageHide);
+      // Client navigations unmount the page without hiding the tab, so save the
+      // open folder or note here. Otherwise the next visit starts from scratch.
+      publishExit(true);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

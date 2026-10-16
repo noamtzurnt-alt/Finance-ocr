@@ -28,7 +28,7 @@ export default function SetupForm(props: { inviteRequired?: boolean }) {
     const normalized = normalizeEmail(email);
     if (!isAllowedAccountEmail(normalized)) {
       setLoading(false);
-      setError("אפשר להירשם רק עם האימייל של Noam או Meitar.");
+      setError("אפשר להירשם רק עם האימייל של Noam.");
       return;
     }
 
@@ -110,12 +110,12 @@ export default function SetupForm(props: { inviteRequired?: boolean }) {
           type="email"
           value={email}
           onChange={(e) => onEmailChange(e.target.value)}
-          placeholder="noamtzurt@gmail.com או meitar672@gmail.com"
+          placeholder="noamtzurt@gmail.com"
           required
           autoComplete="email"
         />
         <p className="mt-1.5 text-xs" style={{ color: "var(--muted)" }}>
-          הרשמה רק ל־Noam או Meitar. הצבעים נקבעים אוטומטית לפי האימייל.
+          הרשמה רק ל־noamtzurt@gmail.com.
         </p>
       </div>
 

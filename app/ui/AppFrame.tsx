@@ -26,6 +26,7 @@ type ShellProfile = {
   chatLabel: string;
   showBusiness: boolean;
   logoUrl: string | null;
+  theme?: string;
 };
 
 type NavItem = {
@@ -42,7 +43,7 @@ function buildNav(profile: ShellProfile | null): NavItem[] {
     { href: "/dashboard", label: "דשבורד", icon: IconDashboard },
     { href: "/transactions", label: "תנועות", icon: IconList },
   ];
-  // Until profile loads keep business visible; Meitar hides it after /api/auth/me.
+  // Until profile loads keep business visible.
   if (!profile || profile.showBusiness) {
     items.push({ href: "/business", label: "עסקי", icon: IconHome });
   }
@@ -146,7 +147,9 @@ export default function AppFrame(props: { children: React.ReactNode }) {
     fetch("/api/auth/me")
       .then((r) => (r.ok ? r.json() : null))
       .then((data: ShellProfile | null) => {
-        if (!cancelled && data) setProfile(data);
+        if (cancelled || !data) return;
+        setProfile(data);
+        if (data.theme === "pink" || data.theme === "green") document.documentElement.dataset.theme = data.theme;
       })
       .catch(() => {});
     return () => {

@@ -27,9 +27,9 @@ model User {
   id    String @id @default(uuid())
   email String @unique
 
-  // UI theme: "green" (Noam) | "pink" (Meitar)
+  // UI theme: "green" | "pink"
   theme               String  @default("green")
-  // Optional custom sidebar/app logo (R2 object key), mainly for Meitar
+  // Optional custom sidebar/app logo (R2 object key)
   logoKey             String?
   // Day of month the budget cycle starts (e.g. salary day). 1 = calendar month.
   budgetCycleStartDay Int     @default(1)

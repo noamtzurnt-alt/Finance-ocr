@@ -169,7 +169,7 @@ export function BudgetUsageSheet(props: {
                 tone={d.remaining != null && d.remaining < 0 ? "neg" : "pos"}
                 strong
               />
-              <Row label="ימים שנשארו בחודש" value={String(d.daysLeft)} />
+              {d.daysLeft > 0 ? <Row label="ימים שנשארו בחודש" value={String(d.daysLeft)} /> : null}
               {perDay > 0 ? <Row label="אפשר להוציא ביום" value={fmt(perDay)} /> : null}
             </div>
 

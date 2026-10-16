@@ -32,6 +32,10 @@ function fmtDate(iso: string) {
 export default function CategoryDonutChart(props: {
   items: Item[];
   categoryBudgets?: Record<string, number>;
+  /** YYYY-MM of the dashboard month. Category drill-down uses the same window. */
+  month?: string;
+  /** Days elapsed in the cycle, or the full length of a closed month. */
+  dayCount?: number;
 }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -67,8 +71,8 @@ export default function CategoryDonutChart(props: {
 
   const dailyAvg = useMemo(() => {
     if (total <= 0) return 0;
-    return Math.round(total / Math.max(new Date().getDate(), 1));
-  }, [total]);
+    return Math.round(total / Math.max(props.dayCount || new Date().getDate(), 1));
+  }, [total, props.dayCount]);
 
   async function openCategory(category: string) {
     setSelectedCategory(category);
@@ -76,9 +80,9 @@ export default function CategoryDonutChart(props: {
     setPopupError(null);
     setPopupLoading(true);
     try {
-      const res = await fetch(
-        `/api/dashboard/category-transactions?category=${encodeURIComponent(category)}`,
-      );
+      const params = new URLSearchParams({ category });
+      if (props.month) params.set("month", props.month);
+      const res = await fetch(`/api/dashboard/category-transactions?${params}`);
       const data = (await res.json().catch(() => null)) as
         | { items?: CategoryTx[]; error?: string }
         | null;
@@ -109,7 +113,7 @@ export default function CategoryDonutChart(props: {
             <path d="M12 7v5l3 2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </span>
-        <p className="chart-empty-title">אין הוצאות החודש עדיין</p>
+        <p className="chart-empty-title">אין הוצאות בחודש הזה</p>
         <p className="chart-empty-sub">ברגע שתוסיף תנועות, תראה כאן פילוח לפי קטגוריה ותובנות</p>
       </div>
     );
