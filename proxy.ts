@@ -4,6 +4,8 @@ import { verifySessionToken, SESSION_COOKIE_NAME } from "@/app/lib/auth/session"
 
 const PUBLIC_PATH_PREFIXES = [
   "/login",
+  // Apple needs the app-site-association file without a redirect.
+  "/.well-known",
   "/setup",
   "/api/auth/logout",
   "/api/auth/setup",
