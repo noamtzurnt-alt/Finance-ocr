@@ -1,5 +1,6 @@
 #!/bin/bash
-# Archive NoamFinance + Notes and upload both to TestFlight. Manual run only.
+# Archive NoamFinance + Notes and upload to TestFlight. Manual run only.
+# Usage: testflight.sh [Scheme ...]   (default: both schemes)
 # Credentials live outside the repo in ~/.appstoreconnect/config:
 #   KEY_ID=...  ISSUER_ID=...  KEY_PATH=/Users/<you>/.appstoreconnect/AuthKey_XXXX.p8
 set -euo pipefail
@@ -32,7 +33,10 @@ PLIST
 
 AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY_PATH" -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID")
 
-for SCHEME in NoamFinance Notes; do
+SCHEMES=("$@")
+[ ${#SCHEMES[@]} -gt 0 ] || SCHEMES=(NoamFinance Notes)
+
+for SCHEME in "${SCHEMES[@]}"; do
   echo "--- $SCHEME (build $BUILD)"
   xcodebuild archive -project "$IOS_DIR/NoamFinance.xcodeproj" -scheme "$SCHEME" \
     -configuration Release -destination 'generic/platform=iOS' \
@@ -41,4 +45,4 @@ for SCHEME in NoamFinance Notes; do
     -exportOptionsPlist "$WORK/ExportOptions.plist" -exportPath "$WORK/export-$SCHEME" "${AUTH[@]}"
 done
 
-echo "Uploaded both apps to TestFlight."
+echo "Uploaded to TestFlight: ${SCHEMES[*]}"

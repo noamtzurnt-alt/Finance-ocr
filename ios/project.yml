@@ -58,7 +58,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.noamfinance.notes
-        PRODUCT_NAME: Notes
+        PRODUCT_NAME: NoamNotes
         INFOPLIST_FILE: Notes/Info.plist
         CODE_SIGN_ENTITLEMENTS: Notes/Notes.entitlements
         CODE_SIGN_ENTITLEMENTS[config=Release]: Notes/Notes.release.entitlements
