@@ -191,6 +191,40 @@ function normalizeNoteBlocks(root: HTMLElement) {
   sel.addRange(next);
 }
 
+function caretRangeAtPoint(root: HTMLElement, x: number, y: number) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const probe = document.createRange();
+  let best: { node: Text; offset: number; dist: number } | null = null;
+  while (walker.nextNode()) {
+    const node = walker.currentNode as Text;
+    const parent = node.parentElement;
+    if (parent) {
+      const box = parent.getBoundingClientRect();
+      if (y < box.top - 10 || y > box.bottom + 10) continue;
+    }
+    const text = node.textContent ?? "";
+    if (!text.length) continue;
+    for (let i = 0; i < text.length; i++) {
+      probe.setStart(node, i);
+      probe.setEnd(node, i + 1);
+      for (const rect of probe.getClientRects()) {
+        if (rect.width <= 0 && rect.height <= 0) continue;
+        if (y < rect.top - 8 || y > rect.bottom + 8) continue;
+        const mid = (rect.left + rect.right) / 2;
+        const offset = x < mid ? i : i + 1;
+        const dx = x < rect.left ? rect.left - x : x > rect.right ? x - rect.right : 0;
+        const dist = dx + Math.abs(y - (rect.top + rect.height / 2)) * 0.2;
+        if (!best || dist < best.dist) best = { node, offset, dist };
+      }
+    }
+  }
+  if (!best) return null;
+  const range = document.createRange();
+  range.setStart(best.node, Math.min(best.offset, best.node.length));
+  range.collapse(true);
+  return range;
+}
+
 function placeCaretInNote(root: HTMLElement, x: number, y: number) {
   const sel = document.getSelection();
   if (!sel) return;
@@ -198,14 +232,16 @@ function placeCaretInNote(root: HTMLElement, x: number, y: number) {
     caretRangeFromPoint?: (px: number, py: number) => Range | null;
     caretPositionFromPoint?: (px: number, py: number) => { offsetNode: Node; offset: number } | null;
   };
-  let range: Range | null = null;
-  if (typeof doc.caretRangeFromPoint === "function") range = doc.caretRangeFromPoint(x, y);
-  else if (typeof doc.caretPositionFromPoint === "function") {
-    const pos = doc.caretPositionFromPoint(x, y);
-    if (pos) {
-      range = document.createRange();
-      range.setStart(pos.offsetNode, pos.offset);
-      range.collapse(true);
+  let range = caretRangeAtPoint(root, x, y);
+  if (!range) {
+    if (typeof doc.caretRangeFromPoint === "function") range = doc.caretRangeFromPoint(x, y);
+    else if (typeof doc.caretPositionFromPoint === "function") {
+      const pos = doc.caretPositionFromPoint(x, y);
+      if (pos) {
+        range = document.createRange();
+        range.setStart(pos.offsetNode, pos.offset);
+        range.collapse(true);
+      }
     }
   }
   if (!range || !root.contains(range.startContainer)) {
@@ -494,6 +530,7 @@ export default function NotesClient(props: {
   const [moveFolderName, setMoveFolderName] = useState("");
 
   const bodyRef = useRef<HTMLDivElement>(null);
+  const caretTap = useRef<{ x: number; y: number; id: number } | null>(null);
   const mountBody = useRef((el: HTMLDivElement | null) => {
     bodyRef.current = el;
   }).current;
@@ -1799,9 +1836,19 @@ export default function NotesClient(props: {
           const raw = e.target;
           if (!(raw instanceof Node)) return;
           if (raw instanceof Element && raw.closest("a, button, input, textarea, [data-note-link]")) return;
+          caretTap.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
           const inText = raw !== root && raw !== scrollRef.current && root.contains(raw);
           if (inText) return;
           e.preventDefault();
+          placeCaretInNote(root, e.clientX, e.clientY);
+        }}
+        onPointerUp={(e) => {
+          const tap = caretTap.current;
+          caretTap.current = null;
+          if (!tap || tap.id !== e.pointerId) return;
+          if (Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 12) return;
+          const root = bodyRef.current;
+          if (!root) return;
           placeCaretInNote(root, e.clientX, e.clientY);
         }}
       >

@@ -3731,7 +3731,7 @@ body.nf-chat-active {
   .notes-swatch{width:2.75rem;height:2.75rem;border-radius:999px;border:1px solid color-mix(in srgb,var(--foreground) 22%,transparent);cursor:pointer;padding:0;touch-action:manipulation}
   .notes-swatch--hl{border-radius:0.3rem}
   .notes-paper-body{min-height:8rem;font-size:1.05rem;line-height:1.6;color:var(--foreground);outline:none;white-space:normal;word-break:break-word}
-  .notes-paper-body--reader{display:block;max-height:none;overflow:visible;min-height:100%;padding:0.9rem 1rem 55vh;cursor:text;font-size:1.7rem;font-weight:700;line-height:1.28;letter-spacing:-0.02em}
+  .notes-paper-body--reader{display:block;max-height:none;overflow:visible;min-height:100%;padding:0.9rem 1rem 55vh;cursor:text;caret-color:var(--brand);-webkit-user-select:text;user-select:text;font-size:1.7rem;font-weight:700;line-height:1.28;letter-spacing:-0.02em}
   .notes-paper-body--reader > :not(:first-child){font-size:1.05rem;font-weight:400;line-height:1.6;letter-spacing:0}
   .notes-paper-body:empty::before{content:attr(data-placeholder);color:var(--muted);pointer-events:none}
   .notes-paper-body h2{margin:1.15rem 0 0.55rem;font-size:1.12rem;font-weight:700}

@@ -6,6 +6,7 @@ import { confirmPresenceWithFaceId, type PresenceCredential } from "@/app/lib/au
 const UNLOCK_KEY = "nf-face-open";
 const APP_KEY = "nf-face-app";
 const CREDS_KEY = "nf-face-creds";
+const HIDDEN_KEY = "nf-face-hidden-at";
 const CHANNEL = "nf-face";
 
 function isIosHomeApp() {
@@ -63,6 +64,36 @@ function writeCreds(creds: PresenceCredential[]) {
   } catch {}
 }
 
+function markUnlocked() {
+  try {
+    sessionStorage.setItem(UNLOCK_KEY, "1");
+    if (isIosHomeApp()) localStorage.setItem(UNLOCK_KEY, "1");
+  } catch {}
+}
+
+function markIosHidden() {
+  try {
+    localStorage.setItem(HIDDEN_KEY, String(Date.now()));
+  } catch {}
+}
+
+function iosResumeWithoutFaceId() {
+  if (!isIosHomeApp()) return false;
+  try {
+    if (sessionStorage.getItem(UNLOCK_KEY) === "1") return true;
+    if (localStorage.getItem(UNLOCK_KEY) !== "1") return false;
+    const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    if (nav?.type === "reload" || nav?.type === "back_forward") return true;
+    const hiddenAt = Number(localStorage.getItem(HIDDEN_KEY) || 0);
+    // iOS sometimes relaunches a backgrounded PWA as a new navigation.
+    // A real swipe-away from the switcher is a home-screen launch without
+    // that recent hide, or after the process has been gone long enough.
+    return hiddenAt > 0 && Date.now() - hiddenAt < 10 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Biometric only when a session starts.
  * On iPhone: after the home-screen app was swiped away.
@@ -107,7 +138,10 @@ export default function ChatFaceIdGate(props: { children: React.ReactNode }) {
     }
     const macApp = mac && (fromDock || sessionStorage.getItem(APP_KEY) === "1");
     if (!isIosHomeApp() && !macApp) return;
-    if (sessionStorage.getItem(UNLOCK_KEY) === "1") return;
+    if (sessionStorage.getItem(UNLOCK_KEY) === "1" || iosResumeWithoutFaceId()) {
+      markUnlocked();
+      return;
+    }
 
     const cached = readCreds();
     credsRef.current = cached;
@@ -117,7 +151,7 @@ export default function ChatFaceIdGate(props: { children: React.ReactNode }) {
     if (macApp) {
       void askOpenTab().then((open) => {
         if (!open) return;
-        sessionStorage.setItem(UNLOCK_KEY, "1");
+        markUnlocked();
         setLocked(false);
       });
     }
@@ -133,13 +167,26 @@ export default function ChatFaceIdGate(props: { children: React.ReactNode }) {
         credsRef.current = creds;
         writeCreds(creds);
         if (!creds.length) {
-          sessionStorage.setItem(UNLOCK_KEY, "1");
+          markUnlocked();
           setLocked(false);
           return;
         }
         setReady(true);
       })
       .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!isIosHomeApp()) return;
+    const onHide = () => {
+      if (document.visibilityState === "hidden") markIosHidden();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    window.addEventListener("pagehide", markIosHidden);
+    return () => {
+      document.removeEventListener("visibilitychange", onHide);
+      window.removeEventListener("pagehide", markIosHidden);
+    };
   }, []);
 
   async function onOpen() {
@@ -150,7 +197,7 @@ export default function ChatFaceIdGate(props: { children: React.ReactNode }) {
     const result = await confirmPresenceWithFaceId(creds);
     setBusy(false);
     if (result.ok) {
-      sessionStorage.setItem(UNLOCK_KEY, "1");
+      markUnlocked();
       setLocked(false);
       return;
     }

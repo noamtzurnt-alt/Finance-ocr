@@ -19,7 +19,6 @@ final class LockModel: ObservableObject {
     @Published private(set) var webFailed = false
     @Published private(set) var reloadToken = 0
 
-    private var leftBackground = false
     private var context: LAContext?
     private var attemptID: UUID?
 
@@ -33,27 +32,14 @@ final class LockModel: ObservableObject {
     }
 
     func sceneEnteredBackground() {
-        leftBackground = true
+        if phase == .authenticating { return }
         coverForSwitcher = true
-        context?.invalidate()
-        context = nil
-        attemptID = nil
-        phase = .locked
-        needsManualRetry = false
-        passcodeFallback = false
-        message = nil
+        // Stay unlocked while backgrounded. Swiping the app away kills this
+        // process, so the next tap on the icon is a cold start with Face ID.
     }
 
     func sceneBecameActive() {
         coverForSwitcher = false
-        let resume = leftBackground
-        leftBackground = false
-        if resume {
-            phase = .locked
-            needsManualRetry = false
-            passcodeFallback = false
-            message = nil
-        }
         guard phase == .locked, !needsManualRetry else { return }
         beginAuthentication(policy: .deviceOwnerAuthenticationWithBiometrics)
     }
