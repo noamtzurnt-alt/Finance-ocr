@@ -676,7 +676,8 @@ export default function NotesClient(props: {
         publishExit(true);
         return;
       }
-      if (dirtyRef.current) return;
+      if (dirtyRef.current || editorOpenRef.current) return;
+      const startedAt = readPlace()?.ts ?? 0;
       void (async () => {
         const res = await fetch("/api/notes/place", { cache: "no-store" }).catch(() => null);
         if (!res?.ok) return;
@@ -684,6 +685,9 @@ export default function NotesClient(props: {
         const remote = parseNotesPlace(data.place);
         const local = readPlace();
         if (!remote || remote.ts <= (local?.ts ?? 0)) return;
+        // The user already tapped something while this check was in flight (right after unlock):
+        // a reload now would throw them back to the list a moment after they opened a note.
+        if (dirtyRef.current || editorOpenRef.current || (local?.ts ?? 0) !== startedAt) return;
         writePlace(remote);
         window.location.reload();
       })();
