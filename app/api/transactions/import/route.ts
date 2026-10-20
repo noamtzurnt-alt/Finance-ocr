@@ -7,21 +7,22 @@ import { classifyTransactions } from "@/app/lib/transactions/classify";
 
 export const runtime = "nodejs";
 
+const rowShape = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  amount: z.string(),
+  vendor: z.string().min(1).max(120),
+  description: z.string().nullable().optional(),
+  categoryId: z.string().min(1).nullable().optional(),
+  chargeDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  cardLast4: z.string().max(8).nullable().optional(),
+  /** 1 for the first row with this date/amount/vendor in the file, 2 for the second, and so on. */
+  occurrence: z.number().int().min(1).max(50).optional(),
+});
+
 const importSchema = z.object({
-  rows: z
-    .array(
-      z.object({
-        date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        amount: z.string(),
-        vendor: z.string().min(1).max(120),
-        description: z.string().nullable().optional(),
-        categoryId: z.string().min(1).nullable().optional(),
-        chargeDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
-        cardLast4: z.string().max(8).nullable().optional(),
-      }),
-    )
-    .max(500)
-    .default([]),
+  rows: z.array(rowShape).max(500).default([]),
+  /** Rows already in the app: only learn their charge date and card, never create or delete. */
+  backfill: z.array(rowShape).max(500).default([]),
   deleteIds: z.array(z.string().uuid()).max(500).default([]),
   cardLast4: z.string().max(8).nullable().optional(),
 });
@@ -107,11 +108,19 @@ export async function POST(req: Request) {
         history,
       });
 
-      const existingKeys = new Set(
-        existing.map((t) =>
-          rowKey(t.date.toISOString().slice(0, 10), t.amount.toString(), t.vendor),
-        ),
-      );
+      // Count-based matching: two identical purchases in the file only match two stored ones.
+      const existingCount = new Map<string, number>();
+      for (const t of existing) {
+        const key = rowKey(t.date.toISOString().slice(0, 10), t.amount.toString(), t.vendor);
+        existingCount.set(key, (existingCount.get(key) ?? 0) + 1);
+      }
+      const seenInFile = new Map<string, number>();
+      const withMatch = calRows.map((r) => {
+        const key = rowKey(r.date, r.amount, r.vendor);
+        const occurrence = (seenInFile.get(key) ?? 0) + 1;
+        seenInFile.set(key, occurrence);
+        return { ...r, occurrence, matchExisting: occurrence <= (existingCount.get(key) ?? 0) };
+      });
 
       return NextResponse.json({
         fileName: file.name,
@@ -121,9 +130,8 @@ export async function POST(req: Request) {
               to: maxDate.toISOString().slice(0, 10),
             }
           : null,
-        calRows: calRows.map((r, index) => ({
+        calRows: withMatch.map((r, index) => ({
           ...r,
-          matchExisting: existingKeys.has(rowKey(r.date, r.amount, r.vendor)),
           ...classifications[index],
         })),
         existingRows: existing.map((t) => ({
@@ -148,7 +156,7 @@ export async function POST(req: Request) {
   const parsed = importSchema.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Invalid input" }, { status: 400 });
 
-  if (parsed.data.rows.length === 0 && parsed.data.deleteIds.length === 0) {
+  if (parsed.data.rows.length === 0 && parsed.data.deleteIds.length === 0 && parsed.data.backfill.length === 0) {
     return NextResponse.json({ error: "אין שינויים לשמירה" }, { status: 400 });
   }
 
@@ -181,6 +189,49 @@ export async function POST(req: Request) {
     deleted = result.count;
   }
 
+  type StoredRef = { id: string };
+  const storedByKey = new Map<string, StoredRef[]>();
+  const storedFor = async (dt: Date, amount: string, vendor: string) => {
+    const key = rowKey(dt.toISOString().slice(0, 10), amount, vendor);
+    let list = storedByKey.get(key);
+    if (!list) {
+      list = await prisma.transaction.findMany({
+        where: { userId: user.id, date: dt, amount, vendor: { equals: vendor, mode: "insensitive" } },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      });
+      storedByKey.set(key, list);
+    }
+    return list;
+  };
+
+  /** The statement is the source of truth for the charge date; the card is only filled when empty. */
+  const learnFromStatement = async (id: string, chargeDate: Date | null, cardLast4: string | null) => {
+    if (chargeDate) {
+      await prisma.transaction.updateMany({ where: { id, userId: user.id }, data: { chargeDate } });
+    }
+    if (cardLast4) {
+      await prisma.transaction.updateMany({ where: { id, userId: user.id, cardLast4: null }, data: { cardLast4 } });
+    }
+  };
+
+  let updated = 0;
+
+  for (const row of parsed.data.backfill) {
+    const dt = parseDateOnly(row.date);
+    const n = Number(row.amount.replace(/,/g, ""));
+    if (!dt || !Number.isFinite(n) || n <= 0) continue;
+    const list = await storedFor(dt, n.toFixed(2), row.vendor.trim());
+    const target = list[(row.occurrence ?? 1) - 1];
+    if (!target) continue;
+    await learnFromStatement(
+      target.id,
+      row.chargeDate ? parseDateOnly(row.chargeDate) : null,
+      row.cardLast4?.trim() || parsed.data.cardLast4?.trim() || null,
+    );
+    updated++;
+  }
+
   for (const row of parsed.data.rows) {
     const dt = parseDateOnly(row.date);
     const n = Number(row.amount.replace(/,/g, ""));
@@ -194,35 +245,18 @@ export async function POST(req: Request) {
     const chargeDate = row.chargeDate ? parseDateOnly(row.chargeDate) : null;
     const cardLast4 = row.cardLast4?.trim() || parsed.data.cardLast4?.trim() || null;
 
-    const existing = await prisma.transaction.findFirst({
-      where: {
-        userId: user.id,
-        date: dt,
-        amount,
-        vendor: { equals: vendor, mode: "insensitive" },
-      },
-      select: { id: true, cardLast4: true },
-    });
-    if (existing) {
-      // Already entered by hand: keep it, but learn the real charge date (and card) from the statement.
-      if (chargeDate) {
-        await prisma.transaction.updateMany({
-          where: { id: existing.id, userId: user.id, chargeDate: null },
-          data: { chargeDate },
-        });
-      }
-      if (cardLast4) {
-        await prisma.transaction.updateMany({
-          where: { id: existing.id, userId: user.id, cardLast4: null },
-          data: { cardLast4 },
-        });
-      }
+    // The Nth identical row in the file is only new when fewer than N are already stored.
+    // Importing the same or an overlapping file again therefore never duplicates anything.
+    const list = await storedFor(dt, amount, vendor);
+    const occurrence = row.occurrence ?? 1;
+    if (list.length >= occurrence) {
+      await learnFromStatement(list[occurrence - 1].id, chargeDate, cardLast4);
       skipped++;
       continue;
     }
 
     try {
-      await prisma.transaction.create({
+      const createdRow = await prisma.transaction.create({
         data: {
           userId: user.id,
           date: dt,
@@ -234,12 +268,14 @@ export async function POST(req: Request) {
           cardLast4,
           chargeDate,
         },
+        select: { id: true },
       });
+      list.push({ id: createdRow.id });
       created++;
     } catch {
       skipped++;
     }
   }
 
-  return NextResponse.json({ ok: true, created, deleted, skipped });
+  return NextResponse.json({ ok: true, created, deleted, skipped, updated });
 }

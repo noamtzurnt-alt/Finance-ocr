@@ -62,7 +62,7 @@ export async function POST(req: Request) {
   try {
     const existing = await prisma.transaction.findFirst({
       where: { id: parsed.data.transactionId, userId: user.id },
-      select: { id: true },
+      select: { id: true, cardLast4: true },
     });
 
     if (!existing) {
@@ -74,7 +74,11 @@ export async function POST(req: Request) {
 
     const updated = await prisma.transaction.update({
       where: { id: existing.id },
-      data: { cardLast4: paymentMethod },
+      // A different card means a different charge date: drop one learned from a statement.
+      data:
+        (existing.cardLast4 ?? null) === (paymentMethod ?? null)
+          ? { cardLast4: paymentMethod }
+          : { cardLast4: paymentMethod, chargeDate: null },
       select: { id: true, vendor: true, cardLast4: true },
     });
 

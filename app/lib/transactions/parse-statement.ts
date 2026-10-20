@@ -200,7 +200,6 @@ function parseMatrix(matrix: string[][]): ParsedStatementRow[] {
 
   const headers = matrix[headerIdx] ?? [];
   const out: ParsedStatementRow[] = [];
-  const seen = new Set<string>();
 
   for (let r = headerIdx + 1; r < matrix.length; r++) {
     const row = matrix[r] ?? [];
@@ -217,9 +216,8 @@ function parseMatrix(matrix: string[][]): ParsedStatementRow[] {
     const description =
       cols.description != null ? cellToString(row[cols.description]).slice(0, 500) || null : null;
     const amount = amountNum.toFixed(2);
-    const key = `${date}|${amount}|${vendor.toLowerCase()}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
+    // Identical rows (same day, amount, vendor) are real repeat purchases: keep them all.
+    // The import matches them against existing transactions one by one.
 
     const raw: Record<string, string> = {};
     headers.forEach((h, i) => {

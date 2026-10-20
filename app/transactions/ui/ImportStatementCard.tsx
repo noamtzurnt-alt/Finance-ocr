@@ -14,6 +14,7 @@ type CalPreviewRow = {
   description: string | null;
   chargeDate?: string | null;
   cardLast4?: string | null;
+  occurrence?: number;
   matchExisting: boolean;
   categoryId: string;
   categoryName: string | null;
@@ -135,6 +136,9 @@ export default function ImportStatementCard(props: {
               amount: string;
               vendor: string;
               description: string | null;
+              chargeDate?: string | null;
+              cardLast4?: string | null;
+              occurrence?: number;
               matchExisting?: boolean;
               categoryId?: string | null;
               categoryName?: string | null;
@@ -168,6 +172,9 @@ export default function ImportStatementCard(props: {
         amount: r.amount,
         vendor: r.vendor,
         description: r.description,
+        chargeDate: r.chargeDate ?? null,
+        cardLast4: r.cardLast4 ?? null,
+        occurrence: r.occurrence ?? 1,
         matchExisting: Boolean(r.matchExisting),
         categoryId: r.categoryId ?? "",
         categoryName: r.categoryName ?? null,
@@ -208,7 +215,8 @@ export default function ImportStatementCard(props: {
     const toCreate = rows.filter((r): r is CalPreviewRow => r.source === "cal" && !r.discarded);
     const toDelete = rows.filter((r): r is ExistingPreviewRow => r.source === "manual" && r.discarded);
 
-    if (toCreate.length === 0 && toDelete.length === 0) {
+    const toLearn = rows.filter((r) => r.source === "cal" && r.discarded && r.matchExisting).length;
+    if (toCreate.length === 0 && toDelete.length === 0 && toLearn === 0) {
       setError("לא נבחרו שינוים, מחק תנועות או השאר תנועות מכאל");
       return;
     }
@@ -227,7 +235,19 @@ export default function ImportStatementCard(props: {
             categoryId: r.categoryId || null,
             chargeDate: r.chargeDate || null,
             cardLast4: r.cardLast4 || null,
+            occurrence: r.occurrence ?? 1,
           })),
+          // Rows already in the app: keep them, only learn the real charge date from the statement.
+          backfill: rows
+            .filter((r): r is CalPreviewRow => r.source === "cal" && r.discarded && r.matchExisting)
+            .map((r) => ({
+              date: r.date,
+              amount: r.amount,
+              vendor: r.vendor,
+              chargeDate: r.chargeDate || null,
+              cardLast4: r.cardLast4 || null,
+              occurrence: r.occurrence ?? 1,
+            })),
           deleteIds: toDelete.map((r) => r.id),
           cardLast4: cardLast4 || null,
         }),
