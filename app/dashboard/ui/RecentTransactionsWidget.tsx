@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ImportStatementCard from "@/app/transactions/ui/ImportStatementCard";
 import type { RecentTransactionItem } from "@/app/lib/dashboard/summary";
 import { categoryColor } from "@/app/lib/ui/category-color";
 import { IconKebab } from "@/app/ui/icons";
@@ -21,7 +22,7 @@ function fmtAmount(n: number) {
   return `${Math.round(Math.abs(n)).toLocaleString("he-IL")} ₪`;
 }
 
-export default function RecentTransactionsWidget(props: { items: RecentTransactionItem[] }) {
+export default function RecentTransactionsWidget(props: { items: RecentTransactionItem[]; onImported?: () => void }) {
   return (
     <div className="card p-5 sm:p-6 dash-enter" style={{ animationDelay: "200ms" }}>
       <div className="card-head">
@@ -31,9 +32,12 @@ export default function RecentTransactionsWidget(props: { items: RecentTransacti
             <p className="recent-tx-sub">{props.items.length} תנועות אחרונות</p>
           ) : null}
         </div>
-        <Link href="/transactions" className="card-kebab" aria-label="כל התנועות">
-          <IconKebab className="h-4 w-4" />
-        </Link>
+        <div className="flex items-center gap-2">
+          <ImportStatementCard onImported={() => props.onImported?.()} />
+          <Link href="/transactions" className="card-kebab" aria-label="כל התנועות">
+            <IconKebab className="h-4 w-4" />
+          </Link>
+        </div>
       </div>
 
       {props.items.length === 0 ? (

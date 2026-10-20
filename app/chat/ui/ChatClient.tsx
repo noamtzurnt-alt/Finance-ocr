@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import ImportStatementCard from "@/app/transactions/ui/ImportStatementCard";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   CHAT_CATEGORY_OTHER_PROMPT,
@@ -149,6 +150,7 @@ export default function ChatClient() {
   const [inlineDraft, setInlineDraft] = useState("");
   const [pendingAddDate, setPendingAddDate] = useState<string | null>(null);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [datePickerDraft, setDatePickerDraft] = useState(() => todayLocalIso());
   const [chatBrand, setChatBrand] = useState<{ name: string; logoUrl: string | null }>({
     name: "Noam Finance",
@@ -1554,6 +1556,13 @@ export default function ChatClient() {
         return;
       }
 
+      if (option.id === "import") {
+        setFlow(CHAT_FLOW_IDLE);
+        disableActiveInlines();
+        setImportOpen(true);
+        return;
+      }
+
       if (option.id === "list") {
         setFlow(CHAT_FLOW_IDLE);
         disableActiveInlines();
@@ -2160,6 +2169,16 @@ export default function ChatClient() {
           </button>
         </div>
       </AppModal>
+
+      <ImportStatementCard
+        hideTrigger
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onImported={() => {
+          appendBotMessage({ id: uid(), text: "הייבוא הסתיים. התנועות והדשבורד עודכנו.", status: "ok" });
+          showFollowUpMenu();
+        }}
+      />
     </div>
   );
 }

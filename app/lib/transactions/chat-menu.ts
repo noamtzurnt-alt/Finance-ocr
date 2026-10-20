@@ -19,6 +19,7 @@ export type MenuOptionId =
   | "list"
   | "list_categories"
   | "budget_plan"
+  | "import"
   | "delete"
   | "edit"
   | "add_category"
@@ -51,6 +52,7 @@ export const MAIN_MENU_OPTIONS: MenuOption[] = [
   { id: "list", label: "תנועות החודש" },
   { id: "list_categories", label: "הצג את כל הקטגוריות" },
   { id: "budget_plan", label: "תקציב ועמידה ביעדים" },
+  { id: "import", label: "ייבוא תנועות מכאל" },
 ];
 
 /** Shown under the transaction list */

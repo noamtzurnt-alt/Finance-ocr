@@ -503,7 +503,7 @@ export default function DashboardCards(props: {
 
         <div className="space-y-6">
           <FinancialGoalsWidget categoryBreakdown={data.categoryBreakdown} categoryBudgets={categoryBudgets} />
-          <RecentTransactionsWidget items={data.recentTransactions} />
+          <RecentTransactionsWidget items={data.recentTransactions} onImported={() => void refreshNow()} />
         </div>
       </div>
     </div>

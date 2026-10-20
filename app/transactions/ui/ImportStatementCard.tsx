@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type BudgetScope = "personal" | "business";
 type Category = { id: string; name: string; budgetScope: BudgetScope };
@@ -38,12 +38,24 @@ type ExistingPreviewRow = {
 type PreviewRow = CalPreviewRow | ExistingPreviewRow;
 
 export default function ImportStatementCard(props: {
-  categories: Category[];
+  /** Optional: when missing, the categories come back with the uploaded file's preview. */
+  categories?: Category[];
   defaultCardLast4?: string;
   onImported: () => void;
+  /** Controlled mode, for opening the importer from another button (chat menu, dashboard). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  hideTrigger?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = props.open ?? openState;
+  const setOpen = (value: boolean) => {
+    setOpenState(value);
+    props.onOpenChange?.(value);
+  };
+  const [loadedCategories, setLoadedCategories] = useState<Category[]>([]);
+  const allCategories = props.categories ?? loadedCategories;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
@@ -53,10 +65,10 @@ export default function ImportStatementCard(props: {
 
   const categoriesByScope = useMemo(
     () => ({
-      personal: props.categories.filter((c) => c.budgetScope === "personal"),
-      business: props.categories.filter((c) => c.budgetScope === "business"),
+      personal: allCategories.filter((c) => c.budgetScope === "personal"),
+      business: allCategories.filter((c) => c.budgetScope === "business"),
     }),
-    [props.categories],
+    [allCategories],
   );
 
   const keptCal = rows.filter((r) => r.source === "cal" && !r.discarded).length;
@@ -64,6 +76,15 @@ export default function ImportStatementCard(props: {
   const trashCal = rows.filter((r) => r.source === "cal" && r.discarded).length;
   const trashManual = rows.filter((r) => r.source === "manual" && r.discarded).length;
   const inPreview = rows.length > 0;
+
+  useEffect(() => {
+    if (props.open) {
+      setRows([]);
+      setFileName(null);
+      setRange(null);
+      setError(null);
+    }
+  }, [props.open]);
 
   function openModal() {
     setOpen(true);
@@ -97,7 +118,7 @@ export default function ImportStatementCard(props: {
   }
 
   function setRowCategory(key: string, categoryId: string) {
-    const category = props.categories.find((item) => item.id === categoryId) ?? null;
+    const category = allCategories.find((item) => item.id === categoryId) ?? null;
     setRows((prev) =>
       prev.map((row) =>
         row.key === key && row.source === "cal"
@@ -130,6 +151,7 @@ export default function ImportStatementCard(props: {
             error?: string;
             fileName?: string;
             range?: { from: string; to: string } | null;
+            categories?: Category[];
             calRows?: Array<{
               date: string;
               amount: string;
@@ -162,6 +184,7 @@ export default function ImportStatementCard(props: {
       }
 
       setRange(body?.range ?? null);
+      if (Array.isArray(body?.categories)) setLoadedCategories(body.categories);
 
       const cal: CalPreviewRow[] = (body?.calRows ?? []).map((r, i) => ({
         key: `cal-${r.date}-${r.vendor}-${r.amount}-${i}`,
@@ -263,9 +286,11 @@ export default function ImportStatementCard(props: {
 
   return (
     <>
-      <button type="button" className="btn btn-ghost text-sm" onClick={openModal}>
-        ייבוא מכאל
-      </button>
+      {props.hideTrigger ? null : (
+        <button type="button" className="btn btn-ghost text-sm" onClick={openModal}>
+          ייבוא מכאל
+        </button>
+      )}
 
       {open ? (
         <div

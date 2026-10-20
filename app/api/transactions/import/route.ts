@@ -118,6 +118,7 @@ export async function POST(req: Request) {
 
       return NextResponse.json({
         fileName: file.name,
+        categories: scopedCategories,
         range: minDate && maxDate
           ? {
               from: minDate.toISOString().slice(0, 10),
