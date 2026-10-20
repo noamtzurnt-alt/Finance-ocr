@@ -38,6 +38,13 @@ type ExistingPreviewRow = {
 
 type PreviewRow = CalPreviewRow | ExistingPreviewRow;
 
+/** The coming 15th, the usual card charge day, as YYYY-MM-DD. */
+function nextFifteenth(now = new Date()) {
+  const month = now.getDate() <= 15 ? now.getMonth() : now.getMonth() + 1;
+  const d = new Date(now.getFullYear(), month, 15);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-15`;
+}
+
 export default function ImportStatementCard(props: {
   /** Optional: when missing, the categories come back with the uploaded file's preview. */
   categories?: Category[];
@@ -63,6 +70,8 @@ export default function ImportStatementCard(props: {
   const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [cardLast4, setCardLast4] = useState(props.defaultCardLast4 ?? "");
+  // For files without a charge-date column (a "charge details" statement): one date for the whole file.
+  const [fileChargeDate, setFileChargeDate] = useState("");
 
   const categoriesByScope = useMemo(
     () => ({
@@ -77,6 +86,7 @@ export default function ImportStatementCard(props: {
   const trashCal = rows.filter((r) => r.source === "cal" && r.discarded).length;
   const trashManual = rows.filter((r) => r.source === "manual" && r.discarded).length;
   const inPreview = rows.length > 0;
+  const needsFileChargeDate = rows.some((r) => r.source === "cal" && !r.chargeDate);
 
   useEffect(() => {
     if (props.open) {
@@ -96,6 +106,7 @@ export default function ImportStatementCard(props: {
   }
 
   function resetPreview() {
+    setFileChargeDate("");
     setRows([]);
     setFileName(null);
     setRange(null);
@@ -223,6 +234,7 @@ export default function ImportStatementCard(props: {
         return a.vendor.localeCompare(b.vendor, "he");
       });
       setRows(merged);
+      setFileChargeDate((current) => current || nextFifteenth());
     } catch {
       setError("שגיאה בהעלאת הקובץ");
       setRows([]);
@@ -401,7 +413,24 @@ export default function ImportStatementCard(props: {
                         maxLength={8}
                       />
                     </div>
+                    {needsFileChargeDate ? (
+                      <div className="w-44">
+                        <label className="text-xs font-medium text-[var(--muted)]">תאריך החיוב של הקובץ</label>
+                        <input
+                          type="date"
+                          className="field mt-1"
+                          value={fileChargeDate}
+                          onChange={(e) => setFileChargeDate(e.target.value)}
+                        />
+                      </div>
+                    ) : null}
                   </div>
+                  {needsFileChargeDate ? (
+                    <p className="text-xs text-[var(--muted)]">
+                      בקובץ הזה אין עמודת תאריך חיוב. תאריך זה יוחל על כל התנועות שבו, והדשבורד יחשב לפיו את החיוב
+                      הקרוב. אם זה פירוט של חיוב עתידי, זה בדרך כלל ה-15 הקרוב.
+                    </p>
+                  ) : null}
 
                   <div className="flex flex-wrap gap-2 text-xs">
                     <span className="rounded-full bg-sky-100 px-2.5 py-1 font-medium text-sky-800">
