@@ -12,6 +12,8 @@ type CalPreviewRow = {
   amount: string;
   vendor: string;
   description: string | null;
+  chargeDate?: string | null;
+  cardLast4?: string | null;
   matchExisting: boolean;
   categoryId: string;
   categoryName: string | null;
@@ -223,6 +225,8 @@ export default function ImportStatementCard(props: {
             vendor: r.vendor,
             description: r.description,
             categoryId: r.categoryId || null,
+            chargeDate: r.chargeDate || null,
+            cardLast4: r.cardLast4 || null,
           })),
           deleteIds: toDelete.map((r) => r.id),
           cardLast4: cardLast4 || null,

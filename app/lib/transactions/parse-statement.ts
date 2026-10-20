@@ -5,6 +5,10 @@ export type ParsedStatementRow = {
   amount: string;
   vendor: string;
   description: string | null;
+  /** YYYY-MM-DD, the day the bank is charged. Only when the file has such a column (CAL export). */
+  chargeDate?: string | null;
+  /** Last 4 digits from the file, when it has a card column. */
+  cardLast4?: string | null;
   raw?: Record<string, string>;
 };
 
@@ -13,6 +17,8 @@ type ColumnMap = {
   amount: number | null;
   vendor: number | null;
   description: number | null;
+  chargeDate: number | null;
+  card: number | null;
 };
 
 function normalizeHeader(h: string) {
@@ -80,6 +86,8 @@ function mapColumns(headers: string[]): ColumnMap {
       /^description$/,
       /סוג עסקה/,
     ]),
+    chargeDate: pickColumn(headers, [/^תאריך חיוב$/, /^מועד חיוב$/, /^billing\s*date$/, /^charge\s*date$/]),
+    card: pickColumn(headers, [/4 ספרות אחרונות/, /^כרטיס$/, /^card$/]),
   };
 }
 
@@ -218,7 +226,10 @@ function parseMatrix(matrix: string[][]): ParsedStatementRow[] {
       if (h?.trim()) raw[h.trim()] = cellToString(row[i]);
     });
 
-    out.push({ date, amount, vendor, description, raw });
+    const chargeDate = cols.chargeDate != null ? parseDate(row[cols.chargeDate]) : null;
+    const cardDigits = cols.card != null ? cellToString(row[cols.card]).replace(/\D/g, "").slice(-4) : "";
+
+    out.push({ date, amount, vendor, description, chargeDate, cardLast4: cardDigits.length === 4 ? cardDigits : null, raw });
   }
 
   return out;

@@ -16,6 +16,8 @@ const importSchema = z.object({
         vendor: z.string().min(1).max(120),
         description: z.string().nullable().optional(),
         categoryId: z.string().min(1).nullable().optional(),
+        chargeDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+        cardLast4: z.string().max(8).nullable().optional(),
       }),
     )
     .max(500)
@@ -189,6 +191,8 @@ export async function POST(req: Request) {
 
     const amount = n.toFixed(2);
     const vendor = row.vendor.trim();
+    const chargeDate = row.chargeDate ? parseDateOnly(row.chargeDate) : null;
+    const cardLast4 = row.cardLast4?.trim() || parsed.data.cardLast4?.trim() || null;
 
     const existing = await prisma.transaction.findFirst({
       where: {
@@ -197,9 +201,22 @@ export async function POST(req: Request) {
         amount,
         vendor: { equals: vendor, mode: "insensitive" },
       },
-      select: { id: true },
+      select: { id: true, cardLast4: true },
     });
     if (existing) {
+      // Already entered by hand: keep it, but learn the real charge date (and card) from the statement.
+      if (chargeDate) {
+        await prisma.transaction.updateMany({
+          where: { id: existing.id, userId: user.id, chargeDate: null },
+          data: { chargeDate },
+        });
+      }
+      if (cardLast4) {
+        await prisma.transaction.updateMany({
+          where: { id: existing.id, userId: user.id, cardLast4: null },
+          data: { cardLast4 },
+        });
+      }
       skipped++;
       continue;
     }
@@ -214,7 +231,8 @@ export async function POST(req: Request) {
           vendor,
           description: row.description?.trim() || null,
           categoryId: row.categoryId && allowedCategoryIds.has(row.categoryId) ? row.categoryId : null,
-          cardLast4: parsed.data.cardLast4?.trim() || null,
+          cardLast4,
+          chargeDate,
         },
       });
       created++;

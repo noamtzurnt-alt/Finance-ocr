@@ -156,6 +156,8 @@ model Transaction {
   description String?
   categoryId  String?
   cardLast4   String?
+  // Real bank charge date for this purchase, taken from a card statement import. Null when unknown.
+  chargeDate  DateTime? @db.Date
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
@@ -165,6 +167,7 @@ model Transaction {
 
   @@index([userId, date])
   @@index([userId, updatedAt])
+  @@index([userId, chargeDate])
 }
 
 model PasskeyCredential {

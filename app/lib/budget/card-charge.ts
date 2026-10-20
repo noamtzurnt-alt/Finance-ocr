@@ -14,11 +14,15 @@ export type UpcomingCardCharge = {
   card: string | null;
   /** YYYY-MM-DD */
   chargeDate: string;
-  /** YYYY-MM-DD, first purchase day included in this charge. */
+  /** YYYY-MM-DD, first purchase day of the estimated window. */
   fromDate: string;
   amount: number;
   count: number;
   daysUntil: number;
+  /** Purchases whose real charge date came from an imported statement. */
+  confirmedCount: number;
+  /** Purchases without a real charge date, placed in this charge by the day-of-month rule. */
+  estimatedCount: number;
 };
 
 async function chargeFor(
@@ -28,24 +32,41 @@ async function chargeFor(
   card: string | null,
   cardFilter: Prisma.TransactionWhereInput,
 ): Promise<UpcomingCardCharge> {
-  const monthOffset = today.getUTCDate() <= day ? 0 : 1;
-  const chargeDate = utcDate(today.getUTCFullYear(), today.getUTCMonth() + monthOffset, day);
-  const from = utcDate(chargeDate.getUTCFullYear(), chargeDate.getUTCMonth() - 1, day);
-
-  const agg = await prisma.transaction.aggregate({
-    where: { userId, date: { gte: from, lt: chargeDate }, ...cardFilter },
-    _sum: { amount: true },
-    _count: { _all: true },
+  // A charge date learned from an imported statement beats the day-of-month rule.
+  const known = await prisma.transaction.findFirst({
+    where: { userId, chargeDate: { gte: today }, ...cardFilter },
+    orderBy: { chargeDate: "asc" },
+    select: { chargeDate: true },
   });
+
+  const monthOffset = today.getUTCDate() <= day ? 0 : 1;
+  const ruleDate = utcDate(today.getUTCFullYear(), today.getUTCMonth() + monthOffset, day);
+  const chargeDate = known?.chargeDate ?? ruleDate;
+  const from = utcDate(chargeDate.getUTCFullYear(), chargeDate.getUTCMonth() - 1, chargeDate.getUTCDate());
+
+  const [confirmed, estimated] = await Promise.all([
+    prisma.transaction.aggregate({
+      where: { userId, chargeDate, ...cardFilter },
+      _sum: { amount: true },
+      _count: { _all: true },
+    }),
+    prisma.transaction.aggregate({
+      where: { userId, chargeDate: null, date: { gte: from, lt: chargeDate }, ...cardFilter },
+      _sum: { amount: true },
+      _count: { _all: true },
+    }),
+  ]);
 
   const msPerDay = 24 * 60 * 60 * 1000;
   return {
     card,
     chargeDate: chargeDate.toISOString().slice(0, 10),
     fromDate: from.toISOString().slice(0, 10),
-    amount: Number(agg._sum.amount ?? 0),
-    count: agg._count._all,
+    amount: Number(confirmed._sum.amount ?? 0) + Number(estimated._sum.amount ?? 0),
+    count: confirmed._count._all + estimated._count._all,
     daysUntil: Math.round((chargeDate.getTime() - today.getTime()) / msPerDay),
+    confirmedCount: confirmed._count._all,
+    estimatedCount: estimated._count._all,
   };
 }
 

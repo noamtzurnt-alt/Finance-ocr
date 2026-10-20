@@ -404,8 +404,13 @@ export default function DashboardCards(props: {
                 </span>
                 <strong className="amount">{fmt(charge.amount)} ₪</strong>
                 <span>
-                  {charge.count} קניות מ־{shortDate(charge.fromDate)} ·{" "}
-                  {charge.daysUntil === 0 ? "יורד היום" : `בעוד ${charge.daysUntil} ימים`}
+                  {charge.count} קניות
+                  {charge.confirmedCount > 0 && charge.estimatedCount === 0
+                    ? " (תאריך חיוב מאושר מהדף)"
+                    : charge.confirmedCount > 0
+                      ? ` (${charge.estimatedCount} בהערכה, מ־${shortDate(charge.fromDate)})`
+                      : ` מ־${shortDate(charge.fromDate)} (הערכה)`}{" "}
+                  · {charge.daysUntil === 0 ? "יורד היום" : `בעוד ${charge.daysUntil} ימים`}
                 </span>
               </div>
             ))}
