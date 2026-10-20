@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type BudgetScope = "personal" | "business";
 type Category = { id: string; name: string; budgetScope: BudgetScope };
@@ -292,9 +293,11 @@ export default function ImportStatementCard(props: {
         </button>
       )}
 
-      {open ? (
+      {open && typeof document !== "undefined"
+        ? createPortal(
         <div
           className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4"
+          style={{ zIndex: 400 }}
           role="dialog"
           aria-modal="true"
         >
@@ -578,7 +581,10 @@ export default function ImportStatementCard(props: {
             </div>
           </div>
         </div>
-      ) : null}
+        ,
+        document.body,
+      )
+        : null}
     </>
   );
 }
