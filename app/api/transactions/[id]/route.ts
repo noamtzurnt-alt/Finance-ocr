@@ -58,18 +58,14 @@ export async function PATCH(req: Request, ctx: { params: Promise<{ id: string }>
   }
   if ("cardLast4" in parsed.data) data.cardLast4 = parsed.data.cardLast4 ?? null;
 
-  // A charge date learned from a card statement belongs to that purchase day and card.
-  // If either changes, the old date is no longer true, so fall back to the estimate.
-  if ("date" in data || "cardLast4" in data) {
+  // A charge date learned from a card statement stays true when only the purchase date is corrected
+  // (the bank already confirmed when this purchase is charged). A different card is a different bill.
+  if ("cardLast4" in data) {
     const current = await prisma.transaction.findFirst({
       where: { id, userId: user.id },
-      select: { date: true, cardLast4: true },
+      select: { cardLast4: true },
     });
-    if (current) {
-      const dateChanged = data.date instanceof Date && data.date.getTime() !== current.date.getTime();
-      const cardChanged = "cardLast4" in data && (data.cardLast4 ?? null) !== (current.cardLast4 ?? null);
-      if (dateChanged || cardChanged) data.chargeDate = null;
-    }
+    if (current && (data.cardLast4 ?? null) !== (current.cardLast4 ?? null)) data.chargeDate = null;
   }
 
   const updated = await prisma.transaction.updateMany({

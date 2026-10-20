@@ -4,6 +4,7 @@ import { requireUser } from "@/app/lib/auth/server";
 import { prisma } from "@/app/lib/prisma";
 import { parseStatementFile } from "@/app/lib/transactions/parse-statement";
 import { classifyTransactions } from "@/app/lib/transactions/classify";
+import { matchKey, pairWithStored, type StoredTx } from "@/app/lib/transactions/import-match";
 
 export const runtime = "nodejs";
 
@@ -15,8 +16,6 @@ const rowShape = z.object({
   categoryId: z.string().min(1).nullable().optional(),
   chargeDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   cardLast4: z.string().max(8).nullable().optional(),
-  /** 1 for the first row with this date/amount/vendor in the file, 2 for the second, and so on. */
-  occurrence: z.number().int().min(1).max(50).optional(),
 });
 
 const importSchema = z.object({
@@ -35,10 +34,6 @@ function parseDateOnly(s: string) {
   const d = Number(m[3]);
   const dt = new Date(Date.UTC(y, mo - 1, d));
   return Number.isNaN(dt.getTime()) ? null : dt;
-}
-
-function rowKey(date: string, amount: string, vendor: string) {
-  return `${date}|${Number(amount).toFixed(2)}|${vendor.trim().toLowerCase()}`;
 }
 
 /** Parse uploaded Excel/CSV from CAL into preview + existing manual rows in range. */
@@ -108,19 +103,18 @@ export async function POST(req: Request) {
         history,
       });
 
-      // Count-based matching: two identical purchases in the file only match two stored ones.
-      const existingCount = new Map<string, number>();
+      // One-to-one matching by day, amount, vendor and card (see import-match.ts).
+      const pool = new Map<string, StoredTx[]>();
       for (const t of existing) {
-        const key = rowKey(t.date.toISOString().slice(0, 10), t.amount.toString(), t.vendor);
-        existingCount.set(key, (existingCount.get(key) ?? 0) + 1);
+        const key = matchKey(t.date.toISOString().slice(0, 10), t.amount.toString(), t.vendor);
+        pool.set(key, [...(pool.get(key) ?? []), { id: t.id, cardLast4: t.cardLast4 }]);
       }
-      const seenInFile = new Map<string, number>();
-      const withMatch = calRows.map((r) => {
-        const key = rowKey(r.date, r.amount, r.vendor);
-        const occurrence = (seenInFile.get(key) ?? 0) + 1;
-        seenInFile.set(key, occurrence);
-        return { ...r, occurrence, matchExisting: occurrence <= (existingCount.get(key) ?? 0) };
-      });
+      const paired = pairWithStored(
+        calRows.map((r) => ({ key: matchKey(r.date, r.amount, r.vendor), card: r.cardLast4 ?? null })),
+        pool,
+        new Set<string>(),
+      );
+      const withMatch = calRows.map((r, i) => ({ ...r, matchExisting: paired[i] != null }));
 
       return NextResponse.json({
         fileName: file.name,
@@ -189,22 +183,6 @@ export async function POST(req: Request) {
     deleted = result.count;
   }
 
-  type StoredRef = { id: string };
-  const storedByKey = new Map<string, StoredRef[]>();
-  const storedFor = async (dt: Date, amount: string, vendor: string) => {
-    const key = rowKey(dt.toISOString().slice(0, 10), amount, vendor);
-    let list = storedByKey.get(key);
-    if (!list) {
-      list = await prisma.transaction.findMany({
-        where: { userId: user.id, date: dt, amount, vendor: { equals: vendor, mode: "insensitive" } },
-        orderBy: { createdAt: "asc" },
-        select: { id: true },
-      });
-      storedByKey.set(key, list);
-    }
-    return list;
-  };
-
   /** The statement is the source of truth for the charge date; the card is only filled when empty. */
   const learnFromStatement = async (id: string, chargeDate: Date | null, cardLast4: string | null) => {
     if (chargeDate) {
@@ -215,63 +193,101 @@ export async function POST(req: Request) {
     }
   };
 
-  let updated = 0;
-
-  for (const row of parsed.data.backfill) {
+  type Prepared = {
+    row: (typeof parsed.data.rows)[number];
+    dt: Date;
+    amount: string;
+    vendor: string;
+    chargeDate: Date | null;
+    cardLast4: string | null;
+    key: string;
+  };
+  const prepare = (row: (typeof parsed.data.rows)[number]): Prepared | null => {
     const dt = parseDateOnly(row.date);
     const n = Number(row.amount.replace(/,/g, ""));
-    if (!dt || !Number.isFinite(n) || n <= 0) continue;
-    const list = await storedFor(dt, n.toFixed(2), row.vendor.trim());
-    const target = list[(row.occurrence ?? 1) - 1];
-    if (!target) continue;
-    await learnFromStatement(
-      target.id,
-      row.chargeDate ? parseDateOnly(row.chargeDate) : null,
-      row.cardLast4?.trim() || parsed.data.cardLast4?.trim() || null,
+    if (!dt || !Number.isFinite(n) || n <= 0 || n > 1_000_000) return null;
+    const amount = n.toFixed(2);
+    const vendor = row.vendor.trim();
+    return {
+      row,
+      dt,
+      amount,
+      vendor,
+      chargeDate: row.chargeDate ? parseDateOnly(row.chargeDate) : null,
+      cardLast4: row.cardLast4?.trim() || parsed.data.cardLast4?.trim() || null,
+      key: matchKey(row.date, amount, vendor),
+    };
+  };
+
+  const preparedBackfill = parsed.data.backfill.map(prepare).filter((p): p is Prepared => p != null);
+  const preparedRows: Array<Prepared | null> = parsed.data.rows.map(prepare);
+  skipped += preparedRows.filter((p) => p == null).length;
+  const valid = preparedRows.filter((p): p is Prepared => p != null);
+
+  // Everything stored for the days and amounts in this request, loaded once.
+  const pool = new Map<string, StoredTx[]>();
+  const loaded = new Set<string>();
+  for (const p of [...preparedBackfill, ...valid]) {
+    if (loaded.has(p.key)) continue;
+    loaded.add(p.key);
+    pool.set(
+      p.key,
+      await prisma.transaction.findMany({
+        where: { userId: user.id, date: p.dt, amount: p.amount, vendor: { equals: p.vendor, mode: "insensitive" } },
+        orderBy: { createdAt: "asc" },
+        select: { id: true, cardLast4: true },
+      }),
     );
+  }
+
+  const used = new Set<string>();
+  let updated = 0;
+
+  // Rows that are already in the app: keep them and only learn the real charge date.
+  const backfillPairs = pairWithStored(
+    preparedBackfill.map((p) => ({ key: p.key, card: p.cardLast4 })),
+    pool,
+    used,
+  );
+  for (let i = 0; i < preparedBackfill.length; i++) {
+    const stored = backfillPairs[i];
+    if (!stored) continue;
+    await learnFromStatement(stored.id, preparedBackfill[i].chargeDate, preparedBackfill[i].cardLast4);
     updated++;
   }
 
-  for (const row of parsed.data.rows) {
-    const dt = parseDateOnly(row.date);
-    const n = Number(row.amount.replace(/,/g, ""));
-    if (!dt || !Number.isFinite(n) || n <= 0 || n > 1_000_000) {
+  // New rows. A row that turns out to exist already (second submit, or a file imported twice)
+  // is not created again, it only refreshes the charge date.
+  const rowPairs = pairWithStored(
+    valid.map((p) => ({ key: p.key, card: p.cardLast4 })),
+    pool,
+    used,
+  );
+  for (let i = 0; i < valid.length; i++) {
+    const p = valid[i];
+    const stored = rowPairs[i];
+    if (stored) {
+      await learnFromStatement(stored.id, p.chargeDate, p.cardLast4);
       skipped++;
       continue;
     }
-
-    const amount = n.toFixed(2);
-    const vendor = row.vendor.trim();
-    const chargeDate = row.chargeDate ? parseDateOnly(row.chargeDate) : null;
-    const cardLast4 = row.cardLast4?.trim() || parsed.data.cardLast4?.trim() || null;
-
-    // The Nth identical row in the file is only new when fewer than N are already stored.
-    // Importing the same or an overlapping file again therefore never duplicates anything.
-    const list = await storedFor(dt, amount, vendor);
-    const occurrence = row.occurrence ?? 1;
-    if (list.length >= occurrence) {
-      await learnFromStatement(list[occurrence - 1].id, chargeDate, cardLast4);
-      skipped++;
-      continue;
-    }
-
     try {
       const createdRow = await prisma.transaction.create({
         data: {
           userId: user.id,
-          date: dt,
-          amount,
+          date: p.dt,
+          amount: p.amount,
           currency: "ILS",
-          vendor,
-          description: row.description?.trim() || null,
-          categoryId: row.categoryId && allowedCategoryIds.has(row.categoryId) ? row.categoryId : null,
-          cardLast4,
-          chargeDate,
+          vendor: p.vendor,
+          description: p.row.description?.trim() || null,
+          categoryId: p.row.categoryId && allowedCategoryIds.has(p.row.categoryId) ? p.row.categoryId : null,
+          cardLast4: p.cardLast4,
+          chargeDate: p.chargeDate,
         },
         select: { id: true },
       });
-      list.push({ id: createdRow.id });
       created++;
+      used.add(createdRow.id);
     } catch {
       skipped++;
     }
